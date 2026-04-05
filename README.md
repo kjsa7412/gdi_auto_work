@@ -308,3 +308,159 @@ cp fix_request.md work/fix/1.Prep/
 | Cache 통합 | `cache_integration_report.md` |
 | DB Fallback 통합 | `cache_db_fallback_integration_report.md` |
 | Build-Deploy 연결 | `build_deploy_integration_report.md` |
+
+---
+
+## 시스템 설계 철학
+
+이 시스템은 단순한 "프롬프트 모음"이 아니라, **통제형 에이전트 파이프라인**이다. 핵심 특성은 다음과 같다.
+
+- 자율형이 아니라 **통제형** 시스템
+- 대화형 추론이 아니라 **manifest 기반 단계 실행** 시스템
+- 문맥 누적형이 아니라 **context 격리형** 시스템
+- 1회 생성형이 아니라 **수정·보정 루프 내장** 시스템
+- AI 단독 결정이 아니라 **사람 검토를 끼운 half-automated** 구조
+
+이 해석은 single-active workspace, manifest/schema 검증 우선, skeleton 기반 생성, archive 입력 금지를 원칙으로 두고, workflow를 `analyze → (사용자 검토) → build → (fix if needed) → clean`으로 정의한 점에서 직접 읽힌다.
+
+---
+
+### 1. 통제전략: "자율성 최소화, 결정 가능성 최대화"
+
+AI의 자유도를 의도적으로 낮추는 것이 이 시스템의 가장 큰 특징이다.
+
+- 동시에 하나의 task 또는 fix만 허용하는 **single-active workspace**
+- 입력/출력은 반드시 schema와 manifest를 통과해야 하는 **계약 우선**
+- 자유 생성 금지, **skeleton 기반 생성 강제**
+- archive를 실행 입력으로 쓰지 않는 **과거 분리**
+- build도 곧바로 반영하지 않고 verify와 선택적 deploy 준비를 거치는 **단계화**
+
+AI를 "똑똑한 창작자"로 보는 게 아니라, 정해진 공정 안에서 움직이는 작업 엔진으로 보는 전략이다. command = orchestration, skill = 세부 실행으로 역할을 분리한다.
+
+> **"AI를 믿지 않아서 막는 게 아니라, AI가 잘할 수 있는 범위만 남기고 나머지는 제약으로 고정하는 방식"**
+
+### 2. Manifest 중심성: "프롬프트 시스템이 아니라 실행 계약 시스템"
+
+manifest는 부수 파일이 아니라 중심 개념이다. analyze/build/fix/clean 흐름의 입출력, 상태전이, 검증 규칙을 기계적으로 검증 가능한 **계약층**으로 정의한다.
+
+각 단계가 끝날 때마다 다음을 manifest에 기록한다:
+
+- 무엇을 입력으로 썼는지
+- 무엇을 출력으로 만들었는지
+- 어떤 화면이 추출됐는지
+- 어떤 cache를 썼는지
+- DB fallback이 있었는지
+- 어떤 상태로 끝났는지
+
+> **"대화가 다음 단계를 이어준다"가 아니라 "manifest가 다음 단계를 이어준다"**
+
+실행을 대화 메모리에서 **파일 기반 상태 데이터**로 옮겨 놓은 구조이다.
+
+### 3. 컨텍스트 오염 방지 전략: "문맥을 쌓지 않고, 문맥을 격리한다"
+
+| 전략 | 설명 |
+|------|------|
+| **single-active** | 한 번에 하나의 task 또는 fix만 다룬다. 여러 작업의 화면·규칙·spec·수정 이력이 섞이는 것을 구조적으로 차단 |
+| **archive 입력 금지** | 과거 작업은 남겨 두되 실행 입력으로 쓰지 못한다. 기록 보존과 실행 입력을 분리 |
+| **work 영역 분리** | work/task, work/fix, archive를 분리하여 실행 중인 맥락과 완료된 맥락을 격리 |
+| **spec 이원화** | people_spec(사람 검토용 Markdown)과 machine_spec(build 입력용 YAML)을 분리하여, 사람이 가독성을 위해 넣은 설명이 기계 입력을 오염시키지 않도록 방지 |
+
+> 문맥을 풍부하게 모으는 게 아니라, **문맥을 용도별로 잘라서 오염 없이 전달하는 구조**이다.
+
+### 4. 루프 구조: "선형 파이프라인이 아니라 제한된 피드백 루프"
+
+겉으로 보면 `analyze → build → fix → clean`이므로 선형처럼 보이지만, 실제로는 **제한된 루프 시스템**이다.
+
+- **사용자 검토 루프** — analyze 후 사용자가 final people_spec을 검토/수정한 뒤 다음 단계로 진행 (human-in-the-loop)
+- **fix 루프** — build 이후 영향 범위를 판정하고, 필요하면 재분석/재생성/정책 보정을 트리거. 반복 오류는 시스템 차원 보완 대상
+- **deploy 루프** — build 성공과 deploy 성공을 분리하여 생성과 반영을 같은 단계로 뭉개지 않음
+
+> 허용된 피드백 루프만 갖는 **제어형 루프 시스템**이다.
+
+### 5. 지식 접근 전략: "LLM 기억보다 외부 근거 우선"
+
+AI가 알아서 기억하는 방식보다 **외부 근거 참조**를 우선한다. 기본 모드는 cache-first이고, 부족할 때만 DB lookup을 허용하며, 그 결과를 manifest에 남긴다.
+
+근거 레이어:
+
+```
+PPT → people_spec → machine_spec → convention cache → 정책 파일 → skeleton → manifest → (필요 시) DB lookup
+```
+
+> **내재 기억형이 아니라 외재 근거형 시스템**이다.
+
+### 6. 생성 전략: "자유 생성이 아니라 constrained generation"
+
+생성 자유도를 의도적으로 줄인다:
+
+1. screen-type으로 유형 먼저 고정
+2. template_selection으로 skeleton 조합 결정
+3. skeleton_contract로 placeholder 계약 강제
+4. generate skill은 skeleton 기반 치환만 수행
+5. framework policy 위반 시 실패 처리
+
+> 모델이 전체 결과를 창작하는 게 아니라, **정해진 골격 안에 값만 채우는 방식**이다.
+
+### 7. 상태 기계 특성: "에이전트라기보다 workflow engine"
+
+runtime은 사실상 **workflow engine**이다. idle, task_analyzed, task_built, fix_applied, failed, cleaned 같은 상태가 있고, 각 상태마다 허용 명령과 다음 상태가 정의된다.
+
+command는 "도구"가 아니라 **상태 전이 트리거**이다:
+
+| Command | 상태 전이 |
+|---------|-----------|
+| analyze | idle/task_prepared → task_analyzed |
+| build | task_analyzed → task_built |
+| fix | task_built → fix_applied |
+| clean | 여러 상태 → idle/cleaned |
+
+> **stateful workflow + AI generation modules** 구조이다.
+
+### 8. 인간 개입 전략: "AI 단독 결정 금지 구간"
+
+일부러 사람이 개입해야 하는 지점을 남겨 둔다:
+
+- analyze 후 **people_spec 검토**
+- deploy apply 전 **사용자 확인**
+- fix 이후 **정책 보정 여부 판단**
+- target path 미확정 시 **prepare-only로 멈춤**
+
+> "AI 자동화율 100%"가 아니라, 위험이 큰 결정 구간만 인간 승인 지점으로 남겨 둔 **반자동 시스템**이다.
+
+---
+
+### 강점과 약점
+
+| 강점 | 근거 |
+|------|------|
+| 문맥 오염에 강함 | single-active, archive 분리, spec 이원화 |
+| 재현성이 좋음 | skeleton 강제, manifest 기록 |
+| 실행 이력 추적 용이 | manifest 중심 설계 |
+| 정책/계약 위반 구조적 발견 | schema 검증, self-check |
+| 사람 검토로 품질 손실 감소 | human-in-the-loop |
+
+| 약점 | 설명 |
+|------|------|
+| 초기 설정 복잡 | schema/runtime/command 전체 정의 필요 |
+| 불일치 시 전체 차단 | schema/runtime/command가 어긋나면 동작 불가 |
+| 예외 케이스 유연성 낮음 | 정해진 공정 밖의 상황 대응 어려움 |
+| skeleton 품질 의존 | skeleton과 정책이 부족하면 생성력 급락 |
+| 간단한 작업에도 무거운 공정 | 유연성보다 통제성을 택한 트레이드오프 |
+
+---
+
+### 시스템 요약
+
+| 관점 | 정의 |
+|------|------|
+| 통제전략 | policy-first, schema-first, stateful control |
+| Manifest | 실행 계약이자 단계별 상태 증거물 |
+| Context 관리 | single-active + archive 차단 + spec 분리 기반의 context isolation |
+| 생성 방식 | constrained generation (free-form 금지) |
+| 루프 구조 | user review loop + fix loop + optional deploy loop |
+| 지식 접근 | model memory보다 externalized evidence 우선 |
+| 운영 철학 | autonomous agent보다 **controlled workflow engine** |
+
+> 이 시스템은 본질적으로 "AI가 알아서 다 하는 시스템"이 아니라, **AI를 통제 가능한 공정 안에 넣어 다루는 시스템**이다.
+> LLM-native chat system보다는 **manifest-driven workflow system**에,
+> autonomous agent보다는 **constrained orchestration engine**에 가깝다.

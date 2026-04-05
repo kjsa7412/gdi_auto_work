@@ -42,3 +42,49 @@ representative_skeleton: "system/templates/skeletons/html/form.html"
 representative_reference:
   html: "근거 부족 (dt 모듈에 순수 form 미확인. DTA030_P01 팝업 폼이 가장 유사)"
   note: "SYY015.html은 설명 화면이므로 form skeleton 근거로 부적합. 다른 모듈 추가 분석 필요"
+
+# -----------------------------------------------------------------------------
+# v5 Enrichment (from form-detail.yml → form)
+# 출처: auto_gdi_work_v5/system/templates/screen-types/form-detail.yml
+# -----------------------------------------------------------------------------
+v5_enrichment:
+  source_type: "form-detail"
+  mapped_type: "form"
+
+  match_conditions:
+    - screen_id_suffix: "non-zero"
+    - has_detail_form: true
+    - is_sub_screen: true
+
+  layout:
+    html_class: "data-content-wrapper"
+    sections:
+      - type: search_form
+        container: searchForm
+        optional: true
+      - type: content_fill
+        children:
+          - type: toolbar
+            container: toolbar1
+          - type: form
+            container: postForm
+
+  required_functions:
+    - resetState
+    - createPostForm
+    - createToolbarsAndGrids
+    - onSaveClick
+    - selectInfo
+    - assignHandlers
+
+  required_listeners:
+    - initPgm
+    - activePgm
+    - button.save.click
+
+  confidence_threshold: 0.8
+
+  notes:
+    - "서브화면: sy_menu_info 등록 안 함 (sy_pgm_info만)"
+    - "activePgm(param, isNew)로 부모 파라미터 수신"
+    - "APP_PGM.closePgm(PGM)으로 부모 복귀"

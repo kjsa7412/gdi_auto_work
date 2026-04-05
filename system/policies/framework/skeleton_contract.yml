@@ -276,3 +276,130 @@ required_matrix:
     xml: ["mapper_namespace", "select_sql_id", "main_table"]
     controller: ["module_group", "sub_group", "module_id", "controller_class", "service_class", "service_instance", "request_base_path"]
     service: ["module_group", "sub_group", "module_id", "service_class", "mapper_namespace"]
+
+# -----------------------------------------------------------------------------
+# v5 Artifact Structure Contract
+# 출처: auto_gdi_work_v5/policies/framework/skeleton_contract.yml
+#       auto_gdi_work_v5/policies/framework/controller_generation.yml
+# -----------------------------------------------------------------------------
+artifact_structure_contract:
+  html:
+    required_structure:
+      - "IIFE wrapper"
+      - "PGM declaration"
+      - "listener initialization"
+      - "resetState function"
+      - "UI creation functions"
+      - "event handlers"
+      - "data operations"
+      - "assign handlers block"
+    validation: "all required_functions from screen-type must exist"
+
+  xml:
+    required_structure:
+      - "mapper with lowercase namespace"
+      - "select statements with resultType='java.util.Map'"
+      - "audit columns in INSERT/UPDATE"
+      - "current_timestamp usage"
+    validation: "no forbidden patterns from forbidden_apis.yml"
+
+  controller:
+    generation_rule: >
+      기본적으로 CommonController를 사용하므로 커스텀 Controller를 생성하지 않는다.
+      policies/framework/controller_generation.yml CG-002 조건에 해당하는 경우에만 생성한다.
+      HTML은 platform.url.select/save/saveAll 등 Common 엔드포인트를 사용한다.
+    required_structure_when_custom:
+      - "@Slf4j @Controller class"
+      - "constructor injection"
+      - "@AddUserInfo @LogAction @ResponseBody methods"
+      - "BaseResponse return type"
+      - "try-catch error handling"
+    validation: "all endpoints match XML statement IDs"
+
+  service:
+    generation_rule: >
+      기본적으로 CommonService를 사용하므로 커스텀 Service를 생성하지 않는다.
+      Controller와 동일한 조건(CG-002)에 해당하는 경우에만 생성한다.
+    required_structure_when_custom:
+      - "@Service extends BaseService"
+      - "SqlSessionTemplate reader/writer"
+      - "@Transactional on write methods"
+      - "namespace.statementId format"
+    validation: "read methods use reader, write methods use writer"
+
+  sql:
+    audit_columns:
+      insert:
+        - firs_reg_pgm_id
+        - firs_reg_dts
+        - firs_reg_user_id
+        - firs_reg_ip
+        - fina_reg_pgm_id
+        - fina_reg_dts
+        - fina_reg_user_id
+        - fina_reg_ip
+      update:
+        - fina_reg_pgm_id
+        - fina_reg_dts
+        - fina_reg_user_id
+        - fina_reg_ip
+      naming_rule: >
+        감사컬럼명은 DDL에 정의된 이름을 그대로 사용한다.
+        에이전트가 약어를 추론하여 변형하는 것을 금지한다.
+        정확한 접두사: firs_reg (O), fina_reg (O)
+        금지 변형: frst_reg (X), first_reg (X), fist_reg (X), fnl_reg (X)
+    menu_registration:
+      menu_id_pattern: "CTE + COALESCE(existing pgm_id lookup, MAX+1) — 하드코딩 금지"
+      required: true
+      condition: "sy_menu_info INSERT 생성 시"
+    validation: "all audit column names must match DDL exactly"
+
+  rules:
+    - id: SC-001
+      description: "skeleton 미사용 시 생성 거부"
+      condition: "generate without skeleton"
+      action: "block generation, require skeleton selection"
+      severity: critical
+
+    - id: SC-002
+      description: "감사컬럼명 DDL 원문 사용 강제"
+      condition: "SQL generation with audit columns"
+      action: "use exact column names from contracts.sql.audit_columns, never infer abbreviations"
+      severity: critical
+
+    - id: CG-001
+      description: "CommonController 우선 사용 원칙"
+      condition: "모든 화면 생성 시"
+      action: >
+        기본적으로 CommonController/CommonService를 사용한다.
+        HTML에서 platform.url.select, platform.url.save, platform.url.saveAll 등
+        표준 엔드포인트를 호출하며, statement 파라미터로 XML mapper를 지정한다.
+        커스텀 Controller/Service는 생성하지 않는 것이 기본이다.
+      severity: critical
+
+    - id: CG-002
+      description: "커스텀 Controller/Service 생성 조건"
+      condition: "아래 조건 중 하나 이상 해당 시에만 커스텀 생성"
+      action: >
+        커스텀 Controller/Service가 필요한 경우:
+        1. 암호화/복호화 처리 (FrameCubeOneUtil 등)
+        2. 복잡한 비즈니스 로직 (조건부 분기 INSERT/UPDATE, 계산 로직)
+        3. 외부 API 연동
+        4. 파일 업로드/다운로드 (CommonController 파일 기능으로 불충분한 경우)
+        5. 프로시저 호출 후 추가 가공
+        6. 트랜잭션 내 다중 테이블 조건부 처리 (단순 saveAll로 불가능한 경우)
+        7. 기능정의서에 명시적으로 "커스텀 로직 필요"로 태깅된 경우
+      severity: critical
+
+    - id: CG-003
+      description: "커스텀 Controller/Service 불필요 판단 기준"
+      condition: "아래 조건 모두 해당 시 Common 사용"
+      action: >
+        CommonController로 충분한 경우 (커스텀 생성 금지):
+        1. 단순 SELECT (단건/다건/페이징)
+        2. 단순 INSERT/UPDATE/DELETE (단일 statement)
+        3. 다건 저장 (saveAll — 복수 statement를 Param.add로 전달)
+        4. 코드헬프 조회
+        5. 상태 체크 후 저장/삭제 차단 (이 로직은 HTML에서 처리)
+        위 경우 모두 platform.url.* 표준 엔드포인트 + statement 파라미터로 처리 가능
+      severity: critical

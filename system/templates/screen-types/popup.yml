@@ -45,3 +45,46 @@ representative_reference:
   html_input: "C:/GitLap/FERP/.../templates/project/dt/dta/DTA030_P01.html"
   html_upload: "C:/GitLap/FERP/.../templates/project/dt/dtj/DTJ010_P01.html"
   html_confirm: "C:/GitLap/FERP/.../templates/project/dt/DT_DUPL_CONFIRM_P01.html"
+
+# -----------------------------------------------------------------------------
+# v5 Enrichment (from popup-grid.yml → popup)
+# 출처: auto_gdi_work_v5/system/templates/screen-types/popup-grid.yml
+# -----------------------------------------------------------------------------
+v5_enrichment:
+  source_type: "popup-grid"
+  mapped_type: "popup"
+
+  match_conditions:
+    - screen_id_suffix: "_P"
+    - is_popup: true
+
+  layout:
+    html_class: "data-modal"
+    sections:
+      - type: modal_content
+        children:
+          - type: form
+            container: postForm
+          - type: grid
+            container: grid1
+            optional: true
+      - type: modal_footer
+        buttons:
+          - label: "확인"
+            id: btnOk
+          - label: "취소"
+            id: btnCancel
+
+  required_functions:
+    - createPostForm
+    - assignHandlers
+
+  required_listeners:
+    - initPgm
+    - activePgm
+
+  confidence_threshold: 0.85
+
+  notes:
+    - "topTitleButtonFragment 금지"
+    - "APP_PGM.getOpenParam(PGM)으로 파라미터 수신"

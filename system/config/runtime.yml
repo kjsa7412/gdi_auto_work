@@ -52,17 +52,24 @@ commands:
         - "work/task/2.Working/manifests/analyze.manifest.yml"
     success_state: "task_analyzed"
     failure_state: "failed"
-    next_command: "user_review (사용자가 people_spec_final 검토)"
+    next_command: "build (사용자가 final/people_spec.md 검토/수정 후 실행)"
 
   build:
-    purpose: "people_spec과 machine_spec을 읽어 machine_spec(final) + 코드 산출물을 생성"
+    purpose: "review skill로 final/machine_spec.yml을 확정한 뒤, generate skill로 코드 산출물을 생성"
     start_condition:
-      required_state: ["task_reviewed"]
+      required_state: ["task_analyzed"]
       required_files:
         - "work/task/2.Working/original/people_spec.md"
         - "work/task/2.Working/original/machine_spec.yml"
         - "work/task/2.Working/final/people_spec.md"
         - "work/task/2.Working/manifests/analyze.manifest.yml"
+    skills_used:
+      - name: "review"
+        purpose: "original vs final people_spec diff → final/machine_spec.yml 생성"
+        order: 1
+      - name: "generate"
+        purpose: "final/machine_spec.yml → skeleton 기반 코드 생성"
+        order: 2
     inputs:
       required:
         - "work/task/2.Working/original/people_spec.md"
@@ -139,7 +146,7 @@ commands:
   clean:
     purpose: "work 전체를 archive로 이동하고 active context 초기화"
     start_condition:
-      required_state: ["task_analyzed", "task_reviewed", "task_built", "fix_applied", "failed"]
+      required_state: ["task_analyzed", "task_built", "fix_applied", "failed"]
     inputs:
       required:
         - "work/**"
@@ -159,6 +166,11 @@ commands:
 # =============================================================================
 # 상태 전이 모델
 # =============================================================================
+# task_reviewed 상태 제거됨. build가 task_analyzed에서 직접 시작하며,
+# 내부적으로 review skill을 호출하여 final/machine_spec.yml을 생성한다.
+#
+# 흐름: analyze → (사용자 검토) → build(review+generate) → fix → clean
+#
 state_machine:
   states:
     idle:
@@ -176,25 +188,18 @@ state_machine:
       next_on_error: "failed"
 
     task_analyzed:
-      description: "analyze 완료. people_spec/machine_spec 생성됨"
+      description: "analyze 완료. people_spec/machine_spec 생성됨. 사용자가 final/people_spec.md를 검토/수정 후 /build 실행"
       entry_condition: "analyze 성공 (analyze.manifest.yml 존재)"
-      allowed_commands: ["clean"]
-      allowed_inputs: ["사용자가 people_spec_final 수정"]
-      next_on_success: "task_reviewed"
-      next_on_error: "failed"
-
-    task_reviewed:
-      description: "사용자가 people_spec_final 검토 완료"
-      entry_condition: "사용자가 review 확인"
       allowed_commands: ["build", "clean"]
-      next_on_success: "task_built"
+      allowed_inputs: ["사용자가 final/people_spec.md 수정"]
+      next_on_success: "task_built (via /build)"
       next_on_error: "failed"
 
     task_built:
-      description: "build 완료. 코드 산출물 생성됨"
+      description: "build 완료. final/machine_spec.yml 확정 + 코드 산출물 생성됨"
       entry_condition: "build 성공 (build.manifest.yml + verify_result.yml 존재)"
       allowed_commands: ["fix", "clean"]
-      next_on_success: "fix_prepared 또는 cleaned"
+      next_on_success: "fix_applied 또는 cleaned"
       next_on_error: "failed"
 
     fix_prepared:

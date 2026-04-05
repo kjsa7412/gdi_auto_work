@@ -145,3 +145,34 @@ selection_flow:
     action: "placeholder 값 매핑"
   - step: 6
     action: "skeleton에 placeholder 치환하여 생성"
+
+# -----------------------------------------------------------------------------
+# v5 Confidence Rules (TS-001 ~ TS-003)
+# 출처: auto_gdi_work_v5/policies/framework/template_selection.yml
+# -----------------------------------------------------------------------------
+confidence_rules:
+  - id: TS-001
+    description: "화면유형별 템플릿 매핑"
+    condition: "screen_type determined"
+    action: "select matching template from screen-types/*.yml"
+    severity: critical
+
+  - id: TS-002
+    description: "confidence 미달 시 수작업 전환"
+    condition: "template_match_confidence < threshold"
+    action: "set manual_required: true"
+    severity: critical
+    requires_manual_review: true
+
+  - id: TS-003
+    description: "skeleton contract 강제"
+    condition: "template selected"
+    action: "load corresponding skeleton and verify required_functions present"
+    severity: critical
+
+  confidence_threshold:
+    default: 0.8
+    manual_review_fallback: >
+      confidence가 threshold 미만이면 자동 생성을 중단하고
+      manual_required: true를 설정하여 수작업 검토로 전환한다.
+      수작업 전환 시 선택 근거와 confidence 값을 함께 보고한다.

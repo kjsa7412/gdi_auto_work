@@ -27,11 +27,12 @@
         "clean": ".claude/commands/clean.md"
       },
       "skills": {
+        "review": ".claude/skills/review.md",
         "generate": ".claude/skills/generate.md",
         "deploy": ".claude/skills/deploy.md",
         "system-fix": ".claude/skills/system-fix.md"
       },
-      "flow": "analyze → (user_review) → build → (fix if needed) → clean",
+      "flow": "analyze → (사용자 검토) → build [review skill → generate skill] → (fix if needed) → clean",
       "state_machine": "system/config/runtime.yml"
     },
     "paths": "system/config/paths.yml",

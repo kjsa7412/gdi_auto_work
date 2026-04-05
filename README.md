@@ -34,22 +34,25 @@ DB 코드/테이블/뷰/함수 정보는 `system/cache/convention/`에 캐시한
 ## 실행 흐름
 
 ```
-/analyze → (사용자 검토) → /build → (/fix if needed) → /clean
+/analyze → (사용자 검토) → /build (+deploy prepare) → (/fix if needed) → /clean
 ```
 
 | 단계 | Command | 입력 | 산출물 | 상태 전이 |
 |------|---------|------|--------|-----------|
 | 분석 | `/analyze` | PPT (1.Prep/) | people_spec, machine_spec (original+final) | idle → task_analyzed |
 | 검토 | 사용자 수동 | final/people_spec.md 수정 | — | — |
-| 빌드 | `/build` | people_spec + machine_spec | final/machine_spec + HTML/XML/Java 코드 | task_analyzed → task_built |
+| 빌드 | `/build` | people_spec + machine_spec | final/machine_spec + HTML/XML/Java 코드 + deploy_summary | task_analyzed → task_built |
 | 수정 | `/fix` | fix 요청 (fix/1.Prep/) | 패치된 산출물 | task_built → fix_applied |
 | 정리 | `/clean` | work/ 전체 | archive/work_{timestamp}/ | → idle |
 | 캐시 | `/cache-refresh` | DB | convention cache *.txt | (상태 변경 없음) |
 
 ### /build 내부 구조
-build는 두 개의 skill을 순서대로 호출한다:
+build는 세 개의 skill을 순서대로 호출한다:
 1. **review skill** — original vs final people_spec diff 분석 → **final/machine_spec.yml 생성**
 2. **generate skill** — final/machine_spec.yml → skeleton 치환 → 코드 생성 + self-check
+3. **deploy skill** (선택적, prepare-only) — deliverables → target path 계산 → deploy_summary 생성
+
+deploy는 verify_result.status가 pass 또는 warn이고 deliverables가 존재할 때만 실행된다. deploy 실패는 build 실패가 아니다.
 
 build 이후 모든 단계는 **final/machine_spec.yml만을 기준**으로 진행한다.
 
@@ -89,7 +92,7 @@ gdi_auto_work/
 │   ├── skills/            # Command가 호출하는 하위 skill
 │   │   ├── review.md      # people_spec diff → machine_spec 생성
 │   │   ├── generate.md    # skeleton 치환 → 코드 생성
-│   │   ├── deploy.md      # 산출물 배포 준비
+│   │   ├── deploy.md      # 산출물 배포 (prepare-only/apply 이원화)
 │   │   └── system-fix.md  # 구조적 오류 → 정책/skeleton 보정 제안
 │   └── settings.json
 │
@@ -113,12 +116,13 @@ gdi_auto_work/
 │   │   ├── screen-types/           # 화면유형 정의 (list/list-detail/form/popup)
 │   │   └── spec/                   # people_spec/machine_spec 템플릿
 │   │
-│   ├── schemas/                    # JSON Schema (manifest/spec/context 검증)
+│   ├── schemas/                    # JSON Schema (manifest/spec/context/deploy 검증)
 │   │
 │   └── policies/
 │       ├── analyze/                # PPT 추출, 태그 분류, 화면유형 판정
 │       ├── framework/              # 레이아웃, 패턴, skeleton 계약, 금지 API
-│       ├── runtime/                # 경로 접근, DB 접근, 격리, 생명주기
+│       ├── runtime/                # 경로 접근, DB 접근, 격리, 생명주기, deploy 정책
+│       │   └── deploy_policy.yml   # deploy 실행 정책 (모드, 진입조건, 충돌처리)
 │       └── verify/                 # self-check 규칙
 │
 ├── work/                           # 활성 작업 영역
@@ -136,7 +140,7 @@ gdi_auto_work/
 │   │   │   └── generated/          # 생성된 코드
 │   │   └── 3.Result/
 │   │       ├── deliverables/       # 최종 산출물
-│   │       └── report/             # 빌드 보고서
+│   │       └── report/             # 빌드 보고서 + deploy_summary.yml
 │   └── fix/
 │       ├── 1.Prep/                 # fix 요청 파일
 │       ├── 2.Working/              # fix 중간 산출물
@@ -241,10 +245,11 @@ cache miss → DB fallback (SELECT only) → cache 보강
 ### Runtime 정책 (`system/policies/runtime/`)
 | 파일 | 역할 |
 |------|------|
-| `allowed_paths.yml` | command별 읽기/쓰기/금지 경로 |
+| `allowed_paths.yml` | command별 읽기/쓰기/금지 경로 + deploy 경로 |
 | `db_access.yml` | DB 접속정보, cache-first 원칙, fallback 규칙 |
-| `context_isolation.yml` | task/fix 격리, lock 형식, active_context 갱신 시점 |
+| `context_isolation.yml` | task/fix 격리, lock 형식, active_context 갱신 시점, deploy 격리 |
 | `lifecycle.yml` | 필수 산출물 검증, unresolved 정책, failed 복구 |
+| `deploy_policy.yml` | deploy 모드(prepare-only/apply), 진입조건, 충돌처리, 실패영향 |
 
 ---
 
@@ -255,8 +260,9 @@ cache miss → DB fallback (SELECT only) → cache 보강
 | Manifest | 생성 command | 주요 필드 |
 |----------|-------------|-----------|
 | `analyze.manifest.yml` | /analyze | status, screens[], cache refresh 결과, unresolved |
-| `build.manifest.yml` | /build | status, selected_templates, artifact_plan, cache 사용 현황 |
-| `verify_result.yml` | /build, /fix | checks[], cache_checks[], warnings[], errors[] |
+| `build.manifest.yml` | /build | status, selected_templates, artifact_plan, cache 사용 현황, deploy 결과 |
+| `verify_result.yml` | /build, /fix | checks[], cache_checks[], warnings[], errors[], deploy_checks[] |
+| `deploy_summary.yml` | /build (선택적) | mode, status, target_paths[], warnings[], conflicts[] |
 | `fix.manifest.yml` | /fix | issue_type, impact_scope, cache mismatch, actions_taken |
 
 각 manifest는 `system/schemas/*.schema.json`으로 구조 검증 가능하다.
@@ -301,3 +307,4 @@ cp fix_request.md work/fix/1.Prep/
 | v5 이식 | `migration_report_v1.md`, `migration_todo_v1.md` |
 | Cache 통합 | `cache_integration_report.md` |
 | DB Fallback 통합 | `cache_db_fallback_integration_report.md` |
+| Build-Deploy 연결 | `build_deploy_integration_report.md` |

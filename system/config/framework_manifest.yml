@@ -1,0 +1,154 @@
+# =============================================================================
+# framework_manifest.yml
+# 프레임워크 분석 결과 종합 매니페스트
+# 근거: C:\gdi\src\main 전체 구조 + FERP dt 모듈 레퍼런스 분석
+# =============================================================================
+
+framework:
+  id: "gdi-ferp-framework"
+  name: "GDI FERP Backoffice Framework"
+  version: "1.0"
+  base_package: "com.sjinc"
+
+  source_roots:
+    java: "src/main/java/com/sjinc"
+    resources: "src/main/resources"
+    templates: "src/main/resources/templates"
+    mappers: "src/main/resources/mapper"
+    static_assets: "src/main/resources/static/assets"
+
+  packages:
+    framework: "com.sjinc.frame"
+    project_base: "com.sjinc.proj.base"
+    project_common: "com.sjinc.proj.common"
+    project_modules: "com.sjinc.proj"
+
+  supported_artifacts:
+    - type: "controller"
+      extension: ".java"
+      location: "src/main/java/com/sjinc/proj/{module_group}/{sub_group}/{module_id}/"
+      naming: "{ModuleId}Controller.java"
+      mandatory: false
+
+    - type: "service"
+      extension: ".java"
+      location: "src/main/java/com/sjinc/proj/{module_group}/{sub_group}/{module_id}/"
+      naming: "{ModuleId}Service.java"
+      mandatory: false
+
+    - type: "xml_mapper"
+      extension: ".xml"
+      location: "src/main/resources/mapper/sjerp/{module_group}/{sub_group}/"
+      naming: "{module_id}.xml"
+      mandatory: true
+
+    - type: "html_template"
+      extension: ".html"
+      location: "src/main/resources/templates/project/{module_group}/{sub_group}/"
+      naming: "{MODULE_ID}.html"
+      mandatory: true
+
+  mandatory_artifacts:
+    - "xml_mapper"
+    - "html_template"
+
+  optional_artifacts:
+    - "controller"
+    - "service"
+
+  supported_screen_types:
+    - "list"
+    - "list-detail"
+    - "form"
+    - "popup"
+
+  naming_reference: "system/config/naming.yml"
+
+  pattern_references:
+    controller: "system/policies/framework/controller_patterns.yml"
+    service: "system/policies/framework/service_patterns.yml"
+    xml_mapper: "system/policies/framework/xml_patterns.yml"
+    html_template: "system/policies/framework/html_patterns.yml"
+    layout: "system/policies/framework/layout_rules.yml"
+    forbidden: "system/policies/framework/forbidden_apis.yml"
+    template_selection: "system/policies/framework/template_selection.yml"
+    skeleton_contract: "system/policies/framework/skeleton_contract.yml"
+
+  skeleton_required: true
+  skeleton_contract_reference: "system/policies/framework/skeleton_contract.yml"
+
+  convention_priority: true
+  convention_cache_path: "system/cache/convention/"
+
+  unresolved_policy:
+    action: "block_and_report"
+    description: "미해결 항목 발견 시 생성 중단 후 보고서에 명시"
+    allowed_placeholders: false
+
+  tech_stack:
+    language: "Java"
+    jdk_version: "17+"
+    framework: "Spring Boot"
+    template_engine: "Thymeleaf"
+    orm: "MyBatis"
+    database: "PostgreSQL"
+    connection_pool: "HikariCP"
+    frontend_ui: "Webix"
+    css_framework: "Bootstrap 5"
+    js_library: "jQuery"
+
+  base_classes:
+    controller: "com.sjinc.proj.base.BaseController"
+    service: "com.sjinc.proj.base.BaseService"
+    parameter: "com.sjinc.proj.base.BaseParm"
+    parameter_all: "com.sjinc.proj.base.BaseParmAll"
+    response: "com.sjinc.proj.base.BaseResponse"
+    result_code: "com.sjinc.proj.base.ResultCode"
+    login_user: "com.sjinc.proj.login.LoginUserVo"
+
+  common_services:
+    data_access: "com.sjinc.proj.common.CommonService"
+    data_controller: "com.sjinc.proj.common.CommonController"
+    file_service: "com.sjinc.proj.file.FileService"
+    log_service: "com.sjinc.frame.service.FrameLogService"
+
+  common_endpoints:
+    select_list: "/common/select"
+    select_one: "/common/selectOne"
+    select_list_w: "/common/selectW"
+    select_one_w: "/common/selectOneW"
+    select_pager: "/common/selectPager"
+    save: "/common/save"
+    save_list: "/common/saveList"
+    save_all: "/common/saveAll"
+    procedure: "/common/procedure"
+    upload: "/common/upload"
+    download: "/common/download"
+
+  ui_entry:
+    controller: "com.sjinc.proj.ui.UiController"
+    page_entry: "/ui"
+    modal_entry: "/view"
+    model_attributes:
+      - "PGM"
+      - "PGM_INFO"
+      - "PGM_AUTH"
+      - "PARAM"
+
+  annotations:
+    add_user_info: "com.sjinc.frame.annotation.AddUserInfo"
+    log_action: "com.sjinc.frame.annotation.LogAction"
+
+  frontend_js:
+    platform: "platformForm.js, platformUtil.js"
+    http_client: "httpclient.js"
+    ui_components: "ui.js"
+    utilities: "utils.js"
+    frame: "frame.js"
+    popup: "popup.js"
+    loading: "loading.js"
+    pagination: "pagenavi.js"
+    key_util: "keyUtil.js"
+    local_storage: "localStorageUtil.js"
+    excel: "excel.worker.js"
+    webix_custom: "webix.custom.js, webix.custom2.js, webix.custom3.js"

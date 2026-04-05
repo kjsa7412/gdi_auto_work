@@ -1,0 +1,187 @@
+# =============================================================================
+# forbidden_apis.yml
+# 금지 패턴 정의서
+# 근거: GDI 프레임워크 + FERP dt 모듈 레퍼런스 분석
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# 전체 금지 원칙
+# -----------------------------------------------------------------------------
+principle: "프레임워크가 제공하는 공통 구조와 skeleton 기반 생성만 허용. 자유 구현 금지."
+
+# -----------------------------------------------------------------------------
+# HTML/프론트엔드 금지 패턴
+# -----------------------------------------------------------------------------
+html_forbidden:
+
+  - id: "F-HTML-001"
+    pattern: "순수 자유 HTML 구조 작성"
+    description: "data-page, data-content-wrapper 등 프레임워크 CSS 클래스를 사용하지 않는 임의 HTML 구조"
+    reason: "프레임워크 CSS/JS가 data-* 클래스 기반으로 동작하여 레이아웃 깨짐"
+    대안: "layout_rules.yml에 정의된 구조 패턴 사용"
+    근거: "DTA010.html, DTJ010.html 등 모든 레퍼런스가 data-page 구조 준수"
+
+  - id: "F-HTML-002"
+    pattern: "순수 HTML form/table 태그 사용"
+    description: "<form>, <table> 태그로 폼/그리드 직접 구성"
+    reason: "webix.ui dataForm/datagrid 컴포넌트 사용이 표준"
+    대안: "webix.ui({view: 'dataForm'}) 또는 webix.ui({view: 'datagrid'})"
+    근거: "모든 레퍼런스 HTML에서 webix.ui 기반 폼/그리드 사용"
+
+  - id: "F-HTML-003"
+    pattern: "jQuery AJAX 직접 호출"
+    description: "$.ajax(), $.post(), $.get(), fetch() 등 직접 HTTP 호출"
+    reason: "platform.post()가 인증, 에러 처리, 로딩 표시 등을 통합 관리"
+    대안: "platform.post(platform.url.select, param, callback)"
+    근거: "httpclient.js에서 platform.post() 정의, 모든 레퍼런스에서 사용"
+
+  - id: "F-HTML-004"
+    pattern: "전역 함수/변수 선언"
+    description: "IIFE 외부에서 function 선언 또는 var/let/const 전역 선언"
+    reason: "다중 화면 로드 시 전역 네임스페이스 오염"
+    대안: "(function(){ const PGM = ...; const listener = platform.listener[PGM]; })();"
+    근거: "모든 레퍼런스 HTML이 IIFE + listener 패턴 사용"
+
+  - id: "F-HTML-005"
+    pattern: "DOM ID에 PGM prefix 미사용"
+    description: "고정 문자열 id 사용 (예: id=\"searchForm\")"
+    reason: "탭/팝업 환경에서 동일 화면 다중 로드 시 ID 충돌"
+    대안: "th:id=\"|${PGM}searchForm|\" 패턴 사용"
+    근거: "모든 레퍼런스에서 ${PGM} prefix 사용"
+
+  - id: "F-HTML-006"
+    pattern: "공통 layout fragment 미사용"
+    description: "top_title_button fragment를 포함하지 않는 화면"
+    reason: "제목 바, 툴바 영역 누락으로 UX 일관성 깨짐"
+    대안: "<th:block th:replace=\"~{frame/top_title_button :: topTitleButtonFragment}\"></th:block>"
+    근거: "C:/gdi/src/main/resources/templates/frame/top_title_button.html"
+
+  - id: "F-HTML-007"
+    pattern: "임의 외부 JS 파일 생성"
+    description: "화면별 별도 .js 파일 생성"
+    reason: "프레임워크 패턴은 HTML 내 inline script"
+    대안: "HTML 내 <script th:inline=\"javascript\"> 블록에 작성"
+    근거: "모든 레퍼런스 HTML이 inline script 사용"
+
+# -----------------------------------------------------------------------------
+# Controller 금지 패턴
+# -----------------------------------------------------------------------------
+controller_forbidden:
+
+  - id: "F-CTRL-001"
+    pattern: "skeleton 미사용 직접 생성"
+    description: "정의된 패턴을 따르지 않는 자유 Controller 작성"
+    reason: "어노테이션, 예외처리, 응답 형식 일관성 깨짐"
+    대안: "controller_patterns.yml 표준 패턴 준수"
+
+  - id: "F-CTRL-002"
+    pattern: "규칙 없는 임의 URL 매핑"
+    description: "naming.yml의 request_mapping 규칙을 따르지 않는 URL"
+    reason: "URL 체계 혼란, 권한 관리 어려움"
+    대안: "@RequestMapping(\"/{module_id}\") + /{action}"
+
+  - id: "F-CTRL-003"
+    pattern: "Controller에서 직접 SqlSessionTemplate 사용"
+    description: "Service 계층을 거치지 않고 DB 직접 접근"
+    reason: "트랜잭션 관리 불가, 레이어드 아키텍처 위반"
+    대안: "CommonService 또는 전용 Service를 통해 호출"
+
+  - id: "F-CTRL-004"
+    pattern: "GET 메서드 사용"
+    description: "@GetMapping 또는 RequestMethod.GET 사용"
+    reason: "보안상 POST 통일 (URL에 파라미터 노출 방지)"
+    대안: "RequestMethod.POST"
+    근거: "모든 레퍼런스 Controller에서 POST만 사용"
+
+  - id: "F-CTRL-005"
+    pattern: "@Autowired 필드 주입"
+    description: "필드에 직접 @Autowired 사용"
+    reason: "테스트 어려움, 불변성 보장 불가"
+    대안: "생성자 주입"
+
+  - id: "F-CTRL-006"
+    pattern: "Controller에서 비즈니스 로직 직접 구현"
+    description: "데이터 가공, 검증, 반복 처리 등을 Controller에 직접 작성"
+    reason: "관심사 분리 원칙 위반"
+    대안: "Service 계층에 위임"
+
+# -----------------------------------------------------------------------------
+# Service 금지 패턴
+# -----------------------------------------------------------------------------
+service_forbidden:
+
+  - id: "F-SVC-001"
+    pattern: "Service에서 HttpServletRequest 직접 접근"
+    description: "HttpServletRequest를 Service 메서드 파라미터로 수신"
+    reason: "웹 계층과 비즈니스 계층 결합"
+    대안: "Controller에서 필요 정보를 Map 또는 LoginUserVo로 추출하여 전달"
+
+  - id: "F-SVC-002"
+    pattern: "Service에서 BaseResponse 생성/반환"
+    description: "Service가 BaseResponse 타입을 반환"
+    reason: "응답 래핑은 Controller 책임"
+    대안: "Service는 데이터(Map, List) 또는 void 반환"
+
+  - id: "F-SVC-003"
+    pattern: "인터페이스/구현체 분리"
+    description: "ServiceInterface + ServiceImpl 패턴"
+    reason: "프레임워크 관행: 구현 클래스 직접 사용"
+    대안: "단일 Service 클래스"
+
+# -----------------------------------------------------------------------------
+# XML Mapper 금지 패턴
+# -----------------------------------------------------------------------------
+xml_forbidden:
+
+  - id: "F-XML-001"
+    pattern: "XML namespace 규칙 위반"
+    description: "namespace가 모듈ID와 불일치"
+    reason: "statement 참조 시 namespace.sqlId 패턴 깨짐"
+    대안: "<mapper namespace=\"{module_id}\">"
+
+  - id: "F-XML-002"
+    pattern: "SELECT * 사용"
+    description: "명시적 컬럼 열거 없이 전체 조회"
+    reason: "컬럼 변경 시 사이드이펙트, 성능 저하"
+    대안: "필요 컬럼만 명시적 열거"
+
+  - id: "F-XML-003"
+    pattern: "audit 컬럼 누락"
+    description: "INSERT/UPDATE 시 firs_reg_*/fina_reg_* 감사 컬럼 미포함"
+    reason: "데이터 이력 관리 불가"
+    대안: "8개 감사 컬럼 필수 포함"
+
+  - id: "F-XML-004"
+    pattern: "login_comp_cd 없는 WHERE"
+    description: "comp_cd 필터링 없는 조회/수정/삭제"
+    reason: "멀티 회사 체계에서 데이터 격리 위반"
+    대안: "모든 WHERE 절에 comp_cd = #{login_comp_cd} 필수"
+
+  - id: "F-XML-005"
+    pattern: "DDL 문 포함"
+    description: "CREATE, ALTER, DROP 등 DDL을 Mapper에 포함"
+    reason: "스키마 변경은 DBA 관리 영역"
+    대안: "DBA를 통한 별도 마이그레이션"
+
+  - id: "F-XML-006"
+    pattern: "동적 테이블명/컬럼명 (${}) 사용"
+    description: "${tableName} 등 문자열 치환으로 동적 SQL"
+    reason: "SQL Injection 위험"
+    대안: "#{} prepared statement만 사용"
+
+# -----------------------------------------------------------------------------
+# 화면 생성 금지 패턴
+# -----------------------------------------------------------------------------
+generation_forbidden:
+
+  - id: "F-GEN-001"
+    pattern: "controller/service 연결 없는 화면 생성"
+    description: "전용 로직이 필요한데 CommonController만으로 처리하려는 시도"
+    reason: "복잡한 비즈니스 로직을 프론트에서 처리하게 됨"
+    대안: "비즈니스 복잡도에 따라 전용 Controller/Service 생성"
+
+  - id: "F-GEN-002"
+    pattern: "skeleton 미사용 직접 생성"
+    description: "skeleton_contract.yml의 placeholder 계약을 따르지 않는 생성"
+    reason: "일관성 없는 산출물 품질"
+    대안: "skeleton 기반 생성 + placeholder 치환"

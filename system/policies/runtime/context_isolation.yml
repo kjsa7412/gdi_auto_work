@@ -1,0 +1,49 @@
+version: 1
+
+principles:
+  - "single active workspace only"
+  - "no cross-reference between task and fix unless explicitly allowed"
+  - "no archive input reuse"
+  - "no hidden external input"
+
+isolation:
+  task:
+    readable: ["work/task/**", "system/**"]
+    writable: ["work/task/**", "work/.active_context.yml", "work/.lock"]
+
+  fix:
+    readable: ["work/fix/**", "work/task/2.Working/**", "work/task/3.Result/**", "system/**"]
+    writable: ["work/fix/**", "work/.active_context.yml", "work/.lock"]
+    task_reference:
+      mode: "read_only"
+      condition: "task.status가 built일 때만"
+      writable_in_task: false
+
+  clean:
+    readable: ["work/**"]
+    writable: ["work/**", "archive/**"]
+
+forbidden:
+  - "task may not write into work/fix/**"
+  - "fix may not overwrite original task prep input"
+  - "fix may not modify work/task/** files"
+  - "any command may not read archive as execution input"
+
+lock:
+  format: "UNLOCKED | LOCKED:{type}:{command}"
+  examples:
+    - "UNLOCKED"
+    - "LOCKED:task:analyze"
+    - "LOCKED:task:build"
+    - "LOCKED:fix:fix"
+    - "LOCKED:system:clean"
+  rules:
+    - "command 시작 시 lock 획득"
+    - "command 완료(성공/실패) 시 lock 해제"
+    - "lock 잡혀 있으면 다른 command 실행 금지"
+
+active_context:
+  update_timing:
+    - "command 시작 시: current.* 갱신, lock 획득"
+    - "command 성공 시: task/fix.status 갱신, history 갱신, lock 해제"
+    - "command 실패 시: phase → failed, history.last_error_* 갱신, lock 해제"

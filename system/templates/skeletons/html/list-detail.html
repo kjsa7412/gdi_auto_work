@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:fragment="content(PGM, PARENT)">
+<th:block th:replace="~{frame/top_title_button :: topTitleButtonFragment}"></th:block>
+
+<div class="data-page">
+    <div th:id="|${PGM}searchForm|"></div>
+    <div class="data-content-wrapper">
+        <div class="data-content-5-left">
+            <div th:id="|${PGM}masterGrid|"></div>
+        </div>
+        <div class="data-content-fill">
+            <div th:id="|${PGM}btnToolbar2|"></div>
+            <div th:id="|${PGM}detailGrid|"></div>
+        </div>
+    </div>
+</div>
+
+<script th:inline="javascript">
+(function () {
+    const PGM = /*[[${PGM}]]*/ null;
+    const listener = platform.listener[PGM];
+
+    listener.initPgm = function () {
+
+        // === 상단 툴바 ===
+        listener.toolbar.toolbar = webix.ui({
+            container: `${PGM}btnToolbar`,
+            view: "dataToolbar",
+            elements: [
+                {view: "button", value: "조회[F2]", click: () => { listener.button.search.click(); }},
+                {view: "button", value: "저장[F9]", click: () => { listener.button.save.click(); }},
+                /* OPTIONAL: delete button */
+                {view: "button", value: "초기화[F12]", click: () => { listener.button.init.click(); }}
+            ]
+        });
+
+        // === 검색 폼 ===
+        listener.form.searchForm = webix.ui({
+            container: `${PGM}searchForm`,
+            view: 'dataForm',
+            pgm: PGM,
+            search: true,
+            elements: [
+                {
+                    cols: [
+                        {{search_fields}}
+                    ]
+                }
+            ]
+        });
+
+        // === 마스터 그리드 (좌측) ===
+        listener.grid.masterGrid = webix.ui({
+            container: `${PGM}masterGrid`,
+            view: "datagrid",
+            listener: listener,
+            editable: false,
+            checkable: false,
+            rowNumber: true,
+            sort: true,
+            columns: [
+                {{grid_columns}}
+            ]
+        });
+
+        /* OPTIONAL: detail toolbar */
+        // === 상세 영역 툴바 (우측) ===
+        listener.toolbar.toolbar2 = webix.ui({
+            container: `${PGM}btnToolbar2`,
+            view: "dataToolbar",
+            elements: [
+                {view: "button", value: "저장", click: () => { listener.saveEvent(listener.grid.detailGrid); }}
+            ]
+        });
+
+        // === 상세 그리드 (우측) ===
+        listener.grid.detailGrid = webix.ui({
+            container: `${PGM}detailGrid`,
+            view: "datagrid",
+            listener: listener,
+            editable: true,
+            checkable: true,
+            rowNumber: true,
+            sort: true,
+            /* OPTIONAL: addRowable: true, */
+            columns: [
+                {{detail_fields}}
+            ]
+        });
+    };
+
+    // === 마스터 행 클릭 → 상세 로드 ===
+    listener.gridRow.click = function (record, grid) {
+        if (listener.grid.masterGrid === grid) {
+            const param = listener.form.searchForm.getData();
+            Object.assign(param, record);
+            param.statement = "{{mapper_namespace}}.{{detail_sql_id}}";
+
+            const callback = new Callback(function (result) {
+                if (result.resultCode === RESULT_CODE.OK) {
+                    listener.grid.detailGrid.setData(result.resultData);
+                }
+            });
+            platform.post(platform.url.select, param, callback);
+        }
+    };
+
+    // === 조회 ===
+    listener.button.search.click = function () {
+        if (!listener.form.searchForm.formValidate()) return;
+
+        const param = listener.form.searchForm.getData();
+        param.statement = "{{mapper_namespace}}.{{select_sql_id}}";
+
+        const callback = new Callback(function (result) {
+            if (result.resultCode === RESULT_CODE.OK) {
+                listener.grid.masterGrid.setData(result.resultData);
+                listener.grid.detailGrid.setData([]);
+            }
+        });
+        platform.post(platform.url.select, param, callback);
+    };
+
+    // === 저장 ===
+    listener.button.save.click = function () {
+        if (!listener.grid.detailGrid.checkGridValidation()) return;
+
+        const checkedData = listener.grid.detailGrid.getCheckedData();
+        if (checkedData.length === 0) {
+            popup.alert.show("선택된 데이터가 없습니다.");
+            return;
+        }
+
+        popup.confirm.show("저장 하시겠습니까?", function (confirmYn) {
+            if (confirmYn) {
+                const param = new Param();
+                param.add("{{mapper_namespace}}.{{insert_sql_id}}", checkedData);
+                /* OPTIONAL: param.add("{{mapper_namespace}}.{{delete_sql_id}}", deleteData); */
+
+                const callback = new Callback(function (result) {
+                    if (result.resultCode === RESULT_CODE.OK) {
+                        popup.alert.show("저장되었습니다.");
+                        listener.button.search.click();
+                    }
+                });
+                platform.post(platform.url.saveAll, param.data, callback);
+            }
+        });
+    };
+
+    // === 저장 이벤트 (상세 그리드 개별) ===
+    listener.saveEvent = function (grid) {
+        if (!grid.checkGridValidation()) return;
+        const checkedData = grid.getCheckedData();
+        if (checkedData.length === 0) { popup.alert.show("선택된 데이터가 없습니다."); return; }
+
+        popup.confirm.show("저장 하시겠습니까?", function (confirmYn) {
+            if (confirmYn) {
+                const param = new Param();
+                param.add("{{mapper_namespace}}.{{insert_sql_id}}", checkedData);
+                const callback = new Callback(function (result) {
+                    if (result.resultCode === RESULT_CODE.OK) {
+                        popup.alert.show("저장되었습니다.");
+                        listener.button.search.click();
+                    }
+                });
+                platform.post(platform.url.saveAll, param.data, callback);
+            }
+        });
+    };
+
+    // === 초기화 ===
+    listener.button.init.click = function () {
+        listener.form.searchForm.init();
+        listener.grid.masterGrid.setData([]);
+        listener.grid.detailGrid.setData([]);
+    };
+
+    {{init_script}}
+
+})();
+</script>
+</html>

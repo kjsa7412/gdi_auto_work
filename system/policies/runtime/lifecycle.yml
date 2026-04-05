@@ -1,0 +1,76 @@
+version: 1
+
+zones:
+  prep:
+    purpose: "user-provided input"
+    mutable: true
+    archived_on_clean: true
+
+  working:
+    purpose: "intermediate machine artifacts"
+    mutable: true
+    archived_on_clean: true
+
+  result:
+    purpose: "reviewable or deliverable outputs"
+    mutable: true
+    archived_on_clean: true
+
+  archive:
+    purpose: "history only"
+    mutable: false
+    execution_input: false
+
+clean:
+  strategy: "move-all-then-reset"
+  archive_timestamped: true
+  preserve_directory_shape: true
+  reset_after_archive: true
+
+retention:
+  archive_keep: "forever"
+  working_keep_after_clean: "none"
+
+rules:
+  - "archive is not a source for analyze/build/fix"
+  - "result is not trusted until build or fix completes successfully"
+  - "working artifacts must not be manually edited unless explicitly marked editable"
+
+# 상태 전이 기반 필수 산출물 검증
+mandatory_output_check:
+  analyze:
+    check_files:
+      - "work/task/2.Working/original/people_spec.md"
+      - "work/task/2.Working/original/machine_spec.yml"
+      - "work/task/2.Working/final/people_spec.md"
+      - "work/task/2.Working/manifests/analyze.manifest.yml"
+    on_missing: "fail"
+
+  build:
+    check_files:
+      - "work/task/2.Working/final/machine_spec.yml"
+      - "work/task/2.Working/manifests/build.manifest.yml"
+      - "work/task/2.Working/manifests/verify_result.yml"
+    check_manifest:
+      file: "work/task/2.Working/manifests/build.manifest.yml"
+      required_field: "status"
+      required_value: "completed"
+    on_missing: "fail"
+
+  fix:
+    check_files:
+      - "work/fix/2.Working/manifests/fix.manifest.yml"
+      - "work/fix/2.Working/manifests/verify_result.yml"
+    on_missing: "fail"
+
+# unresolved 처리
+unresolved_policy:
+  analyze: "unresolved 있어도 완료 가능 (경고). people_spec에 미확정 표시"
+  build: "unresolved 있으면 build 차단. 사용자 확인 후 진행"
+  fix: "unresolved 있으면 fix 차단. 추가 정보 요청"
+
+# failed 상태 복구
+failed_recovery:
+  allowed_from_failed: ["clean"]
+  retry_same_command: false
+  description: "failed에서 빠져나오려면 clean 후 처음부터 재시작"

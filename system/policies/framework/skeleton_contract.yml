@@ -1,0 +1,278 @@
+# =============================================================================
+# skeleton_contract.yml
+# Skeleton Placeholder 실제 입력 계약서 (skeleton 파일 기반 보정)
+# Placeholder 표기: {{placeholder_name}}
+# =============================================================================
+
+placeholder_format: "{{name}}"
+
+# -----------------------------------------------------------------------------
+# 공통 Placeholder (모든 아티팩트에서 사용)
+# -----------------------------------------------------------------------------
+common:
+  - name: "screen_id"
+    type: "string"
+    description: "화면 식별자 (대문자)"
+    example: "DTA030"
+    required: true
+    derivation: "module_id.toUpperCase()"
+
+  - name: "screen_name"
+    type: "string"
+    description: "화면 한글명"
+    example: "배분유형관리"
+    required: true
+
+  - name: "module_id"
+    type: "string"
+    description: "모듈 식별자 (소문자)"
+    example: "dta030"
+    required: true
+
+  - name: "module_group"
+    type: "string"
+    description: "모듈 그룹"
+    example: "dt"
+    required: true
+
+  - name: "sub_group"
+    type: "string"
+    description: "서브 그룹"
+    example: "dta"
+    required: true
+
+  - name: "mapper_namespace"
+    type: "string"
+    description: "XML mapper namespace (= module_id)"
+    example: "dta030"
+    required: true
+    derivation: "module_id와 동일"
+
+# -----------------------------------------------------------------------------
+# HTML 전용 Placeholder
+# -----------------------------------------------------------------------------
+html:
+  - name: "search_fields"
+    type: "array_block"
+    description: "검색 폼 필드 정의 블록 (webix.ui dataForm elements 내부)"
+    required: true
+    item_schema:
+      name: "P_ 접두사 파라미터명"
+      label: "한글 레이블"
+      view_type: "DATA_VIEW.*"
+      code_type: "DATA_CODE_TYPE.* (선택)"
+      required: "boolean"
+    example_output: |
+      {view: DATA_VIEW.code, label: "브랜드존", name: "P_brndz_cd", required: true, type: DATA_CODE_TYPE.brndz},
+      {view: DATA_VIEW.date, label: "시작일", name: "P_start_dt"}
+
+  - name: "grid_columns"
+    type: "array_block"
+    description: "그리드 컬럼 정의 블록 (webix.ui datagrid columns 내부)"
+    required: true
+    item_schema:
+      id: "DB 컬럼명"
+      header: "헤더명"
+      editor: "GRID_VIEW.*"
+      width: "number"
+      css: "textCenter/textRight"
+    example_output: |
+      {id: "style_cd", header: "스타일", editor: GRID_VIEW.code, type: DATA_CODE_TYPE.style, fillspace: true, required: true},
+      {id: "qty", header: "수량", editor: GRID_VIEW.text, width: 80, css: "textRight"}
+
+  - name: "detail_fields"
+    type: "array_block"
+    description: "상세/편집 필드 정의 블록 (list-detail 우측, form 메인, popup 폼)"
+    required_for: ["list-detail", "form", "popup"]
+    optional_for: ["list"]
+
+  - name: "action_buttons"
+    type: "array_block"
+    description: "툴바 버튼 정의 블록"
+    required: false
+    note: "기본 버튼(조회/저장/초기화)은 skeleton에 내장. 추가 버튼만 지정"
+
+  - name: "popup_targets"
+    type: "array_block"
+    description: "팝업 호출 정의"
+    required: false
+    item_schema:
+      id: "팝업 ID"
+      view_path: "HTML 경로"
+      width: "number"
+      height: "number"
+      title: "팝업 제목"
+
+  - name: "init_script"
+    type: "string_block"
+    description: "추가 초기화 스크립트"
+    required: false
+    default: ""
+
+# -----------------------------------------------------------------------------
+# XML 전용 Placeholder
+# -----------------------------------------------------------------------------
+xml:
+  - name: "select_sql_id"
+    type: "string"
+    description: "메인 목록 조회 SQL ID"
+    example: "selectMainGrid"
+    required: true
+
+  - name: "detail_sql_id"
+    type: "string"
+    description: "상세 조회 SQL ID"
+    example: "selectDetailInfo"
+    required_for: ["list-detail", "form"]
+
+  - name: "insert_sql_id"
+    type: "string"
+    description: "등록/수정 SQL ID"
+    example: "insertData"
+    required_for: ["list", "list-detail", "form"]
+
+  - name: "delete_sql_id"
+    type: "string"
+    description: "삭제 SQL ID"
+    example: "deleteData"
+    required: false
+
+  - name: "main_table"
+    type: "string"
+    description: "메인 테이블명"
+    example: "sm_dstbt_tp_info"
+    required: true
+
+  - name: "detail_table"
+    type: "string"
+    description: "상세 테이블명"
+    required_for: ["list-detail"]
+
+  - name: "grid_columns_sql"
+    type: "string_block"
+    description: "SELECT 절 컬럼 나열"
+    required: true
+
+  - name: "detail_columns_sql"
+    type: "string_block"
+    description: "상세 SELECT 절 컬럼"
+    required_for: ["list-detail", "form"]
+
+  - name: "search_conditions_sql"
+    type: "string_block"
+    description: "동적 WHERE 조건 (<if> 블록)"
+    required: false
+
+  - name: "insert_columns"
+    type: "string_block"
+    description: "INSERT 절 컬럼 나열 (audit 제외)"
+    required_for: ["list", "list-detail", "form"]
+
+  - name: "insert_values"
+    type: "string_block"
+    description: "VALUES 절 (audit 제외)"
+    required_for: ["list", "list-detail", "form"]
+
+  - name: "pk_columns"
+    type: "string"
+    description: "ON CONFLICT PK 컬럼"
+    required_for: ["list", "list-detail", "form"]
+
+  - name: "update_set_columns"
+    type: "string_block"
+    description: "DO UPDATE SET 절 (audit 제외)"
+    required_for: ["list", "list-detail", "form"]
+
+  - name: "order_columns"
+    type: "string"
+    description: "ORDER BY 절"
+    required: true
+
+# -----------------------------------------------------------------------------
+# Controller 전용 Placeholder
+# -----------------------------------------------------------------------------
+controller:
+  - name: "controller_class"
+    type: "string"
+    description: "Controller 클래스명"
+    example: "Dta030Controller"
+    required: true
+    derivation: "ModuleId + 'Controller'"
+
+  - name: "service_class"
+    type: "string"
+    description: "Service 클래스명"
+    example: "Dta030Service"
+    required: true
+    derivation: "ModuleId + 'Service'"
+
+  - name: "service_instance"
+    type: "string"
+    description: "Service 인스턴스 변수명"
+    example: "dta030Service"
+    required: true
+    derivation: "moduleId + 'Service'"
+
+  - name: "request_base_path"
+    type: "string"
+    description: "@RequestMapping 기본 경로"
+    example: "dta030"
+    required: true
+    derivation: "module_id와 동일"
+
+  - name: "required_imports"
+    type: "string_block"
+    description: "추가 import 문"
+    required: false
+    default: ""
+
+# -----------------------------------------------------------------------------
+# Service 전용 Placeholder
+# -----------------------------------------------------------------------------
+service:
+  - name: "service_class"
+    type: "string"
+    description: "Service 클래스명"
+    required: true
+
+  - name: "required_imports"
+    type: "string_block"
+    description: "추가 import 문"
+    required: false
+    default: ""
+
+# -----------------------------------------------------------------------------
+# Placeholder 누락 시 처리 규칙
+# -----------------------------------------------------------------------------
+missing_policy:
+  required_missing: "생성 중단 + 누락 항목 보고"
+  optional_missing: "해당 OPTIONAL 블록 비활성화 (제거 또는 주석 유지)"
+  array_empty: "빈 블록 삽입 (// TODO: 정의 필요)"
+
+# -----------------------------------------------------------------------------
+# Screen Type별 필수 Placeholder 매트릭스
+# -----------------------------------------------------------------------------
+required_matrix:
+  list:
+    html: ["screen_id", "search_fields", "grid_columns", "mapper_namespace", "select_sql_id"]
+    xml: ["mapper_namespace", "select_sql_id", "main_table", "grid_columns_sql", "order_columns"]
+    controller: ["module_group", "sub_group", "module_id", "controller_class", "service_class", "service_instance", "request_base_path"]
+    service: ["module_group", "sub_group", "module_id", "service_class", "mapper_namespace"]
+
+  list_detail:
+    html: ["screen_id", "search_fields", "grid_columns", "detail_fields", "mapper_namespace", "select_sql_id", "detail_sql_id", "insert_sql_id"]
+    xml: ["mapper_namespace", "select_sql_id", "detail_sql_id", "insert_sql_id", "delete_sql_id", "main_table", "detail_table"]
+    controller: ["module_group", "sub_group", "module_id", "controller_class", "service_class", "service_instance", "request_base_path"]
+    service: ["module_group", "sub_group", "module_id", "service_class", "mapper_namespace", "insert_sql_id"]
+
+  form:
+    html: ["screen_id", "detail_fields", "mapper_namespace", "insert_sql_id"]
+    xml: ["mapper_namespace", "select_sql_id", "insert_sql_id", "main_table"]
+    controller: ["module_group", "sub_group", "module_id", "controller_class", "service_class", "service_instance", "request_base_path"]
+    service: ["module_group", "sub_group", "module_id", "service_class", "mapper_namespace", "insert_sql_id"]
+
+  popup:
+    html: ["screen_id", "detail_fields"]
+    xml: ["mapper_namespace", "select_sql_id", "main_table"]
+    controller: ["module_group", "sub_group", "module_id", "controller_class", "service_class", "service_instance", "request_base_path"]
+    service: ["module_group", "sub_group", "module_id", "service_class", "mapper_namespace"]

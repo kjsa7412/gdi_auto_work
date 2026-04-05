@@ -1,0 +1,20 @@
+version: 1
+status: "completed"
+input_fix_file: "work/fix/1.Prep/fix_request.md"
+issue_type: "output_patch"
+impact_scope:
+  reanalyze_required: false
+  rebuild_required: false
+  policy_patch_required: false
+  affected_paths:
+    - "work/task/2.Working/generated/DTA030.html"
+related_task_paths:
+  - "work/task/2.Working/final/machine_spec.yml"
+  - "work/task/3.Result/deliverables/DTA030.html"
+actions_taken:
+  - type: "patch"
+    target: "DTA030.html"
+    description: "그리드 컬럼 순서 변경"
+verify_result_path: "work/fix/2.Working/manifests/verify_result.yml"
+started_at: "2026-04-05T14:00:00+09:00"
+completed_at: "2026-04-05T14:05:00+09:00"

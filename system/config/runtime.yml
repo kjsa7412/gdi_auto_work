@@ -1,0 +1,232 @@
+version: 1
+
+mode:
+  workspace_model: "single-active"
+  allow_parallel_task_and_fix: false
+  archive_readable: true
+  archive_as_runtime_input: false
+
+guards:
+  require_lock_file: true
+  require_active_context: true
+  fail_if_task_and_fix_both_populated: true
+  fail_if_archive_referenced_as_input: true
+
+# =============================================================================
+# 실행 단계별 계약
+# =============================================================================
+commands:
+
+  analyze:
+    purpose: "Prep의 PPT를 읽어 people_spec(original), machine_spec(original), people_spec(final)을 생성"
+    start_condition:
+      required_state: ["idle", "task_prepared"]
+      required_files:
+        - "work/task/1.Prep/*.pptx"
+    inputs:
+      required:
+        - "work/task/1.Prep/*.pptx"
+      optional:
+        - "system/config/framework_manifest.yml"
+        - "system/config/naming.yml"
+        - "system/cache/convention/**"
+      readable:
+        - "system/**"
+        - "work/task/1.Prep/**"
+      writable:
+        - "work/task/2.Working/**"
+        - "work/.active_context.yml"
+        - "work/.lock"
+      forbidden:
+        - "work/fix/**"
+        - "archive/**"
+        - "system/templates/skeletons/**"
+    outputs:
+      intermediate:
+        - "work/task/2.Working/extracted/**"
+        - "work/task/2.Working/classified/**"
+      required:
+        - "work/task/2.Working/original/people_spec.md"
+        - "work/task/2.Working/original/machine_spec.yml"
+        - "work/task/2.Working/final/people_spec.md"
+        - "work/task/2.Working/manifests/analyze.manifest.yml"
+    success_state: "task_analyzed"
+    failure_state: "failed"
+    next_command: "user_review (사용자가 people_spec_final 검토)"
+
+  build:
+    purpose: "people_spec과 machine_spec을 읽어 machine_spec(final) + 코드 산출물을 생성"
+    start_condition:
+      required_state: ["task_reviewed"]
+      required_files:
+        - "work/task/2.Working/original/people_spec.md"
+        - "work/task/2.Working/original/machine_spec.yml"
+        - "work/task/2.Working/final/people_spec.md"
+        - "work/task/2.Working/manifests/analyze.manifest.yml"
+    inputs:
+      required:
+        - "work/task/2.Working/original/people_spec.md"
+        - "work/task/2.Working/original/machine_spec.yml"
+        - "work/task/2.Working/final/people_spec.md"
+      optional:
+        - "system/cache/convention/**"
+      readable:
+        - "system/**"
+        - "work/task/**"
+      writable:
+        - "work/task/2.Working/final/**"
+        - "work/task/2.Working/mapped/**"
+        - "work/task/2.Working/generated/**"
+        - "work/task/2.Working/manifests/**"
+        - "work/task/3.Result/**"
+        - "work/.active_context.yml"
+        - "work/.lock"
+      forbidden:
+        - "work/fix/**"
+        - "archive/**"
+    outputs:
+      intermediate:
+        - "work/task/2.Working/final/machine_spec.yml"
+        - "work/task/2.Working/mapped/**"
+        - "work/task/2.Working/generated/**"
+      required:
+        - "work/task/2.Working/final/machine_spec.yml"
+        - "work/task/2.Working/manifests/build.manifest.yml"
+        - "work/task/2.Working/manifests/verify_result.yml"
+        - "work/task/3.Result/deliverables/**"
+        - "work/task/3.Result/report/**"
+    success_state: "task_built"
+    failure_state: "failed"
+    next_command: "fix (문제 발견 시) 또는 clean (완료 시)"
+
+  fix:
+    purpose: "fix 요청을 분석하여 영향 범위 판정 후 재분석/재생성/패치를 수행"
+    start_condition:
+      required_state: ["task_built"]
+      required_files:
+        - "work/fix/1.Prep/*"
+    inputs:
+      required:
+        - "work/fix/1.Prep/*"
+      optional:
+        - "work/task/2.Working/**"
+        - "work/task/3.Result/**"
+      readable:
+        - "system/**"
+        - "work/task/**"
+        - "work/fix/**"
+      writable:
+        - "work/fix/2.Working/**"
+        - "work/fix/3.Result/**"
+        - "work/.active_context.yml"
+        - "work/.lock"
+      forbidden:
+        - "archive/**"
+    task_reference_policy:
+      description: "fix는 task 산출물을 읽기 전용으로 참조 가능 (원본 수정 금지)"
+      readable: ["work/task/2.Working/**", "work/task/3.Result/**"]
+      writable_in_task: false
+    outputs:
+      required:
+        - "work/fix/2.Working/manifests/fix.manifest.yml"
+        - "work/fix/2.Working/manifests/verify_result.yml"
+        - "work/fix/3.Result/deliverables/**"
+        - "work/fix/3.Result/report/**"
+    success_state: "fix_applied"
+    failure_state: "failed"
+    next_command: "clean (완료 시) 또는 fix (추가 수정 시)"
+
+  clean:
+    purpose: "work 전체를 archive로 이동하고 active context 초기화"
+    start_condition:
+      required_state: ["task_analyzed", "task_reviewed", "task_built", "fix_applied", "failed"]
+    inputs:
+      required:
+        - "work/**"
+      readable:
+        - "work/**"
+      writable:
+        - "work/**"
+        - "archive/**"
+    action: "archive_then_reset"
+    steps:
+      - "work 하위 전체를 archive/work_{timestamp}/ 로 이동"
+      - "work/.active_context.yml 초기화"
+      - "work/.lock → UNLOCKED"
+    success_state: "idle"
+    failure_state: "failed"
+
+# =============================================================================
+# 상태 전이 모델
+# =============================================================================
+state_machine:
+  states:
+    idle:
+      description: "초기 상태. 작업 없음"
+      entry_condition: "clean 완료 또는 최초 상태"
+      allowed_commands: ["analyze"]
+      next_on_success: "task_prepared"
+      next_on_error: "failed"
+
+    task_prepared:
+      description: "Prep 파일 준비 완료"
+      entry_condition: "1.Prep에 PPT 파일 배치"
+      allowed_commands: ["analyze", "clean"]
+      next_on_success: "task_analyzed"
+      next_on_error: "failed"
+
+    task_analyzed:
+      description: "analyze 완료. people_spec/machine_spec 생성됨"
+      entry_condition: "analyze 성공 (analyze.manifest.yml 존재)"
+      allowed_commands: ["clean"]
+      allowed_inputs: ["사용자가 people_spec_final 수정"]
+      next_on_success: "task_reviewed"
+      next_on_error: "failed"
+
+    task_reviewed:
+      description: "사용자가 people_spec_final 검토 완료"
+      entry_condition: "사용자가 review 확인"
+      allowed_commands: ["build", "clean"]
+      next_on_success: "task_built"
+      next_on_error: "failed"
+
+    task_built:
+      description: "build 완료. 코드 산출물 생성됨"
+      entry_condition: "build 성공 (build.manifest.yml + verify_result.yml 존재)"
+      allowed_commands: ["fix", "clean"]
+      next_on_success: "fix_prepared 또는 cleaned"
+      next_on_error: "failed"
+
+    fix_prepared:
+      description: "fix 요청 파일 준비 완료"
+      entry_condition: "fix/1.Prep에 fix 요청 파일 배치"
+      allowed_commands: ["fix", "clean"]
+      next_on_success: "fix_analyzed"
+      next_on_error: "failed"
+
+    fix_analyzed:
+      description: "fix 영향 분석 완료"
+      entry_condition: "fix 영향 분석 성공"
+      allowed_commands: ["fix", "clean"]
+      next_on_success: "fix_applied"
+      next_on_error: "failed"
+
+    fix_applied:
+      description: "fix 적용 완료"
+      entry_condition: "fix 성공 (fix.manifest.yml + verify_result.yml 존재)"
+      allowed_commands: ["fix", "clean"]
+      next_on_success: "fix_applied 또는 cleaned"
+      next_on_error: "failed"
+
+    cleaned:
+      description: "clean 완료. work가 archive로 이동됨"
+      entry_condition: "clean 성공"
+      allowed_commands: ["analyze"]
+      note: "cleaned 상태는 idle과 동일하게 취급"
+
+    failed:
+      description: "실행 실패"
+      entry_condition: "어떤 command든 실패 시"
+      allowed_commands: ["clean"]
+      retry_policy: "clean 후 처음부터 재시작. 동일 상태에서 재시도 금지"
+      note: "failed에서 빠져나오려면 반드시 clean 수행"

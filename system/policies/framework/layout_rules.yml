@@ -1,0 +1,163 @@
+# =============================================================================
+# layout_rules.yml
+# 레이아웃 규칙 정의
+# 근거: GDI 프레임워크 templates/frame/ + FERP dt 모듈 레퍼런스
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# 프레임 레이아웃 구조
+# -----------------------------------------------------------------------------
+frame_layout:
+  description: "모든 화면은 프레임 레이아웃 내에서 렌더링됨"
+  components:
+    top: "templates/frame/top.html - 상단 네비게이션"
+    left: "templates/frame/left.html - 좌측 사이드바 메뉴"
+    content: "templates/frame/content.html - 메인 콘텐츠 영역"
+    popup: "templates/frame/popup.html - 팝업/모달 컨테이너"
+  rendering:
+    description: "UiController가 pgm_path로 templates/project/{path}.html을 content 영역에 로드"
+  근거: "C:/gdi/src/main/resources/templates/frame/"
+
+# -----------------------------------------------------------------------------
+# 필수 Fragment 포함 규칙
+# -----------------------------------------------------------------------------
+mandatory_fragments:
+  - name: "top_title_button"
+    tag: "<th:block th:replace=\"~{frame/top_title_button :: topTitleButtonFragment}\"></th:block>"
+    position: "HTML 최상단 (html 태그 바로 다음)"
+    purpose: "제목 바 + 상단 툴바 버튼 영역"
+    mandatory: true
+
+  # header와 script는 프레임 레이아웃이 전역으로 로드하므로 개별 화면에서 포함하지 않음
+  # 근거: 레퍼런스 HTML에서 header/script fragment 직접 포함 안 함
+
+# -----------------------------------------------------------------------------
+# 화면 유형별 레이아웃 규칙
+# -----------------------------------------------------------------------------
+screen_layouts:
+
+  list:
+    description: "조회 + 목록 중심"
+    structure:
+      - area: "data-page"
+        children:
+          - area: "searchForm"
+            id_pattern: "${PGM}searchForm"
+            component: "webix.ui dataForm"
+          - area: "data-content-wrapper"
+            children:
+              - area: "data-content-fill"
+                children:
+                  - area: "toolbar"
+                    id_pattern: "${PGM}btnToolbar"
+                    component: "webix.ui dataToolbar"
+                    optional: true
+                  - area: "mainGrid"
+                    id_pattern: "${PGM}mainGrid"
+                    component: "webix.ui datagrid"
+    근거: "DTA010.html"
+
+  list_detail:
+    description: "좌측 목록 + 우측 상세/편집"
+    structure:
+      - area: "data-page"
+        children:
+          - area: "searchForm"
+            id_pattern: "${PGM}searchForm"
+          - area: "data-content-wrapper"
+            children:
+              - area: "data-content-5-left"
+                children:
+                  - area: "leftGrid"
+                    id_pattern: "${PGM}leftGrid"
+              - area: "data-content-fill"
+                children:
+                  - area: "toolbar"
+                    id_pattern: "${PGM}btnToolbar"
+                  - area: "rightGrid 또는 detailForm"
+                    id_pattern: "${PGM}detailGrid"
+    근거: "DTA020.html (좌우 분할)"
+
+  tabbed:
+    description: "탭 기반 다중 화면"
+    structure:
+      - area: "data-page"
+        children:
+          - area: "searchForm"
+            id_pattern: "${PGM}searchForm"
+            optional: true
+          - area: "data-tab"
+            id_pattern: "${PGM}tab"
+            children:
+              - area: "data-tab-header"
+                children:
+                  - area: "data-tab-header-item"
+                    attributes: "data-target=\"tabName\""
+              - area: "data-tab-body"
+                children:
+                  - area: "data-tab-body-item"
+                    attributes: "data-tab=\"tabName\""
+                    content: "th:insert로 탭 fragment 로드"
+    근거: "DTJ010.html, DTL020.html"
+
+  popup:
+    description: "모달 팝업 화면"
+    structure:
+      - area: "data-page"
+        children:
+          - area: "toolbar"
+            id_pattern: "${PGM}btnToolbar"
+            optional: true
+          - area: "form 또는 grid"
+            id_pattern: "${PGM}postForm 또는 ${PGM}popupGrid"
+    근거: "DTA030_P01.html, DTJ010_P01.html"
+
+# -----------------------------------------------------------------------------
+# CSS 클래스 규칙
+# -----------------------------------------------------------------------------
+css_classes:
+  layout:
+    - "data-page: 화면 최상위 컨테이너"
+    - "data-content-wrapper: 콘텐츠 래퍼"
+    - "data-content-fill: 나머지 공간 채움"
+    - "data-content-5-left: 좌측 패널 (약 50%)"
+    - "data-tab: 탭 컨테이너"
+    - "data-tab-header: 탭 헤더"
+    - "data-tab-header-item: 탭 헤더 아이템"
+    - "data-tab-body: 탭 바디"
+    - "data-tab-body-item: 탭 바디 아이템"
+  grid:
+    - "textCenter: 텍스트 가운데 정렬"
+    - "textRight: 텍스트 오른쪽 정렬"
+  state:
+    - "active: 활성 탭/아이템"
+
+# -----------------------------------------------------------------------------
+# DOM ID 규칙
+# -----------------------------------------------------------------------------
+dom_id:
+  prefix: "${PGM}"
+  pattern: "${PGM}{componentName}"
+  mandatory: true
+  reason: "같은 화면이 탭/팝업으로 다중 로드될 수 있어 ID 충돌 방지 필수"
+  examples:
+    - "${PGM}searchForm"
+    - "${PGM}mainGrid"
+    - "${PGM}btnToolbar"
+    - "${PGM}tab"
+    - "${PGM}detailGrid"
+    - "${PGM}popupGrid"
+    - "${PGM}postForm"
+
+# -----------------------------------------------------------------------------
+# 금지 레이아웃 패턴
+# -----------------------------------------------------------------------------
+forbidden:
+  - pattern: "고정 HTML id (PGM prefix 없이)"
+    reason: "다중 인스턴스 환경에서 DOM ID 충돌"
+  - pattern: "frame fragment 미포함"
+    reason: "top_title_button 필수"
+  - pattern: "자유 HTML 구조 (data-page 외부 컨텐츠)"
+    reason: "프레임워크 CSS/JS가 data-page 기반으로 동작"
+  - pattern: "CSS framework 태그 직접 사용 (Bootstrap grid 등)"
+    reason: "data-content-* 클래스 사용으로 통일"

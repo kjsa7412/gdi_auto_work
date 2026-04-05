@@ -1,0 +1,40 @@
+{
+  "permissions": {
+    "allow": [
+      "Read",
+      "Glob",
+      "Grep",
+      "Edit",
+      "Write",
+      "Bash(*)"
+    ]
+  },
+  "project": {
+    "name": "gdi-auto-work",
+    "description": "GDI FERP 화면 자동 생성 시스템",
+    "principles": [
+      "single-active workspace: 동시에 하나의 task 또는 fix만 실행",
+      "skeleton 기반 생성: 자유 코드 생성 금지",
+      "archive history only: archive를 실행 입력으로 사용 금지",
+      "manifest/schema 검증 우선: 입출력은 반드시 schema 기반 검증",
+      "work 중심 실행: 모든 작업은 work/ 하위에서 수행"
+    ],
+    "workflow": {
+      "commands": {
+        "analyze": ".claude/commands/analyze.md",
+        "build": ".claude/commands/build.md",
+        "fix": ".claude/commands/fix.md",
+        "clean": ".claude/commands/clean.md"
+      },
+      "skills": {
+        "generate": ".claude/skills/generate.md",
+        "deploy": ".claude/skills/deploy.md",
+        "system-fix": ".claude/skills/system-fix.md"
+      },
+      "flow": "analyze → (user_review) → build → (fix if needed) → clean",
+      "state_machine": "system/config/runtime.yml"
+    },
+    "paths": "system/config/paths.yml",
+    "runtime": "system/config/runtime.yml"
+  }
+}

@@ -1,0 +1,109 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "framework_manifest.schema.json",
+  "title": "Framework Manifest",
+  "description": "Schema for framework_manifest.yml",
+  "type": "object",
+  "required": ["framework"],
+  "additionalProperties": false,
+  "properties": {
+    "framework": {
+      "type": "object",
+      "required": [
+        "id", "name", "source_roots", "packages",
+        "supported_artifacts", "mandatory_artifacts",
+        "supported_screen_types", "naming_reference",
+        "skeleton_required", "convention_priority",
+        "tech_stack", "base_classes", "common_endpoints", "ui_entry"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Unique framework identifier"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Human-readable framework name"
+        },
+        "source_roots": {
+          "type": "object",
+          "description": "Root directories for various source types",
+          "additionalProperties": { "type": "string" }
+        },
+        "packages": {
+          "type": "object",
+          "description": "Package/namespace mappings",
+          "additionalProperties": { "type": "string" }
+        },
+        "supported_artifacts": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1,
+          "description": "List of artifact types this framework can generate"
+        },
+        "mandatory_artifacts": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Artifact types that must always be generated"
+        },
+        "supported_screen_types": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["list", "list-detail", "form", "popup"]
+          },
+          "minItems": 1,
+          "description": "Screen types supported by this framework"
+        },
+        "naming_reference": {
+          "type": "object",
+          "description": "Naming conventions and patterns used by the framework",
+          "additionalProperties": true
+        },
+        "skeleton_required": {
+          "type": "boolean",
+          "description": "Whether skeleton templates are required for generation"
+        },
+        "convention_priority": {
+          "type": "boolean",
+          "description": "Whether framework conventions take priority over AI inference"
+        },
+        "tech_stack": {
+          "type": "object",
+          "description": "Technology stack details",
+          "properties": {
+            "language": { "type": "string" },
+            "framework": { "type": "string" },
+            "build_tool": { "type": "string" },
+            "ui_library": { "type": "string" },
+            "db": { "type": "string" }
+          },
+          "additionalProperties": true
+        },
+        "base_classes": {
+          "type": "object",
+          "description": "Base class mappings for generated code",
+          "additionalProperties": { "type": "string" }
+        },
+        "common_endpoints": {
+          "type": "object",
+          "description": "Common endpoint patterns",
+          "additionalProperties": true
+        },
+        "ui_entry": {
+          "type": "object",
+          "description": "UI entry point configuration",
+          "properties": {
+            "menu_config_path": { "type": "string" },
+            "route_pattern": { "type": "string" },
+            "default_layout": { "type": "string" }
+          },
+          "additionalProperties": true
+        }
+      }
+    }
+  }
+}

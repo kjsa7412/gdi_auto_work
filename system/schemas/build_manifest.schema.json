@@ -1,0 +1,111 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "build_manifest.schema.json",
+  "title": "Build Manifest",
+  "description": "Schema for build.manifest.yml",
+  "type": "object",
+  "required": ["version", "status", "inputs", "outputs", "selected_templates", "artifact_plan", "started_at", "completed_at"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+(\\.\\d+)?$"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["completed", "failed"]
+    },
+    "inputs": {
+      "type": "object",
+      "required": ["people_spec_original", "people_spec_final", "machine_spec_original"],
+      "additionalProperties": false,
+      "properties": {
+        "people_spec_original": {
+          "type": "string"
+        },
+        "people_spec_final": {
+          "type": "string"
+        },
+        "machine_spec_original": {
+          "type": "string"
+        }
+      }
+    },
+    "outputs": {
+      "type": "object",
+      "required": ["machine_spec_final", "generated_paths", "deliverables_path", "report_path"],
+      "additionalProperties": false,
+      "properties": {
+        "machine_spec_final": {
+          "type": "string"
+        },
+        "generated_paths": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "deliverables_path": {
+          "type": "string"
+        },
+        "report_path": {
+          "type": "string"
+        }
+      }
+    },
+    "selected_templates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "artifact_type": { "type": "string" },
+          "template_path": { "type": "string" },
+          "skeleton_path": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "artifact_plan": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "artifact_type": { "type": "string" },
+          "target_path": { "type": "string" },
+          "status": { "type": "string", "enum": ["planned", "generated", "skipped", "failed"] }
+        },
+        "additionalProperties": false
+      }
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "completed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "violations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "rule": { "type": "string" },
+          "description": { "type": "string" },
+          "severity": { "type": "string", "enum": ["error", "warning", "info"] }
+        },
+        "additionalProperties": false
+      }
+    },
+    "self_check": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "check_id": { "type": "string" },
+          "result": { "type": "string", "enum": ["pass", "warn", "fail"] },
+          "message": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    }
+  }
+}

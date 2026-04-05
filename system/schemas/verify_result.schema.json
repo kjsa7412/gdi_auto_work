@@ -1,0 +1,61 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "verify_result.schema.json",
+  "title": "Verify Result",
+  "description": "Schema for verify_result.yml",
+  "type": "object",
+  "required": ["version", "stage", "status", "checks", "generated_at"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+(\\.\\d+)?$"
+    },
+    "stage": {
+      "type": "string",
+      "enum": ["build", "fix"]
+    },
+    "status": {
+      "type": "string",
+      "enum": ["pass", "warn", "fail"]
+    },
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "description", "result", "message"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique check identifier"
+          },
+          "description": {
+            "type": "string",
+            "description": "Human-readable description of the check"
+          },
+          "result": {
+            "type": "string",
+            "enum": ["pass", "warn", "fail"]
+          },
+          "message": {
+            "type": "string",
+            "description": "Detail message about the check result"
+          }
+        }
+      }
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "warnings": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "errors": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}

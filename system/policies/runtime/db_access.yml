@@ -1,0 +1,26 @@
+version: 1
+
+default_mode: "cache-first"
+
+access_levels:
+  sync:
+    allowed_commands: ["analyze"]
+    allowed_actions: ["select", "copy"]
+    purpose: "refresh convention cache"
+
+  lookup:
+    allowed_commands: ["analyze", "build", "fix"]
+    allowed_actions: ["select"]
+    purpose: "supplement cache when missing"
+
+rules:
+  - id: DB-001
+    rule: "grep or cache lookup must be attempted before direct db lookup"
+  - id: DB-002
+    rule: "insert update delete ddl are forbidden"
+  - id: DB-003
+    rule: "only task-related structures may be queried"
+  - id: DB-004
+    rule: "lookup reason must be recorded in manifest"
+  - id: DB-005
+    rule: "large unbounded select is forbidden except sync cache refresh"

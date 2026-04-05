@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:fragment="content(PGM, PARENT)">
+<th:block th:replace="~{frame/top_title_button :: topTitleButtonFragment}"></th:block>
+
+<div class="data-page">
+    <!-- OPTIONAL: search form for search-type popup -->
+    <div th:id="|${PGM}searchForm|"></div>
+    <div class="data-content-wrapper">
+        <div class="data-content-fill">
+            <!-- VARIANT: form for input-type popup -->
+            <div th:id="|${PGM}postForm|"></div>
+            <!-- VARIANT: grid for search/confirm-type popup -->
+            <div th:id="|${PGM}popupGrid|"></div>
+        </div>
+    </div>
+</div>
+
+<script th:inline="javascript">
+(function () {
+    const PGM = /*[[${PGM}]]*/ null;
+    const listener = platform.listener[PGM];
+    const dataModal = listener.modal;
+    const modalParam = listener.modalParam;
+
+    listener.initPgm = function () {
+
+        // === 팝업 툴바 ===
+        listener.toolbar.toolbar = webix.ui({
+            container: `${PGM}btnToolbar`,
+            view: "dataToolbar",
+            elements: [
+                /* VARIANT: input-type - 확인 버튼 */
+                {view: "button", value: "확인", click: () => { listener.button.save.click(); }},
+                /* VARIANT: search-type - 조회/선택 버튼 */
+                /* {view: "button", value: "조회", click: () => { listener.button.search.click(); }}, */
+                /* {view: "button", value: "선택", click: () => { listener.button.select.click(); }}, */
+            ]
+        });
+
+        /* VARIANT: input-type popup form */
+        // === 입력 폼 ===
+        listener.form.postForm = webix.ui({
+            container: `${PGM}postForm`,
+            view: 'dataForm',
+            pgm: PGM,
+            elements: [
+                {
+                    cols: [
+                        {{detail_fields}}
+                    ]
+                }
+            ]
+        });
+
+        /* VARIANT: search/confirm-type popup grid */
+        /*
+        listener.grid.popupGrid = webix.ui({
+            container: `${PGM}popupGrid`,
+            view: "datagrid",
+            listener: listener,
+            editable: false,
+            checkable: true,
+            rowNumber: true,
+            columns: [
+                {{grid_columns}}
+            ]
+        });
+        */
+
+        // === 초기 데이터 세팅 ===
+        if (modalParam) {
+            listener.form.postForm.setData(modalParam);
+            listener.form.postForm.refresh();
+        }
+    };
+
+    /* VARIANT: input-type - 확인 후 부모에 반환 */
+    listener.button.save.click = function () {
+        if (!listener.form.postForm.formValidate()) return;
+
+        const formData = listener.form.postForm.getData();
+
+        /* OPTIONAL: server processing before return */
+        /*
+        popup.confirm.show("실행 하시겠습니까?", function (confirmYn) {
+            if (confirmYn) {
+                formData.statement = "{{mapper_namespace}}.{{insert_sql_id}}";
+                const callback = new Callback(function (result) {
+                    if (result.resultCode === RESULT_CODE.OK) {
+                        popup.alert.show("처리되었습니다.");
+                        dataModal.ok(formData);
+                    }
+                });
+                platform.post(platform.url.procedure, formData, callback);
+            }
+        });
+        */
+
+        // 직접 반환
+        dataModal.ok(formData);
+    };
+
+    /* VARIANT: search-type - 조회 */
+    /*
+    listener.button.search.click = function () {
+        const param = listener.form.searchForm.getData();
+        param.statement = "{{mapper_namespace}}.{{select_sql_id}}";
+        const callback = new Callback(function (result) {
+            if (result.resultCode === RESULT_CODE.OK) {
+                listener.grid.popupGrid.setData(result.resultData);
+            }
+        });
+        platform.post(platform.url.select, param, callback);
+    };
+    */
+
+    /* VARIANT: search-type - 선택 후 반환 */
+    /*
+    listener.button.select.click = function () {
+        const selected = listener.grid.popupGrid.getCheckedData();
+        if (selected.length === 0) { popup.alert.show("선택된 데이터가 없습니다."); return; }
+        dataModal.ok(selected);
+    };
+    */
+
+    /* VARIANT: confirm-type - 확인 후 반환 */
+    /*
+    listener.button.save.click = function () {
+        const checkedData = listener.grid.popupGrid.getCheckedData();
+        dataModal.ok({type: 'confirm', list: checkedData});
+    };
+    */
+
+    {{init_script}}
+
+})();
+</script>
+</html>

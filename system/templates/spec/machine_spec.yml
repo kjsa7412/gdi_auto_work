@@ -1,0 +1,47 @@
+version: 1
+screen_id: "{{screen_id}}"
+screen_name: "{{screen_name}}"
+screen_type: "{{screen_type}}"
+module_id: "{{module_id}}"
+module_group: "{{module_group}}"
+sub_group: "{{sub_group}}"
+mapper_namespace: "{{mapper_namespace}}"
+
+skeleton_choice:
+  html: "system/templates/skeletons/html/{{screen_type}}.html"
+  xml: "system/templates/skeletons/xml/{{screen_type}}.xml"
+  controller: null  # 필요 시 경로 지정
+  service: null     # 필요 시 경로 지정
+
+placeholders:
+  search_fields: []
+  grid_columns: []
+  detail_fields: []
+  action_buttons: []
+  popup_targets: []
+
+sql:
+  select_sql_id: "selectMainGrid"
+  detail_sql_id: null
+  insert_sql_id: null
+  delete_sql_id: null
+  main_table: "{{main_table}}"
+  detail_table: null
+  order_columns: "a.comp_cd"
+
+artifacts:
+  html_path: "work/task/2.Working/generated/{{screen_id}}.html"
+  xml_path: "work/task/2.Working/generated/{{module_id}}.xml"
+  controller_path: null
+  service_path: null
+
+controller:
+  required: false
+  class_name: null
+  request_base_path: null
+
+service:
+  required: false
+  class_name: null
+
+unresolved: []

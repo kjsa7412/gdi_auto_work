@@ -1,0 +1,171 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "machine_spec.schema.json",
+  "title": "Machine Spec",
+  "description": "Detailed schema for machine_spec.yml",
+  "type": "object",
+  "required": [
+    "version", "screen_id", "screen_name", "screen_type",
+    "module_id", "module_group", "sub_group", "mapper_namespace",
+    "skeleton_choice", "placeholders", "sql", "artifacts"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+(\\.\\d+)?$"
+    },
+    "screen_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "screen_name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "screen_type": {
+      "type": "string",
+      "enum": ["list", "list-detail", "form", "popup"]
+    },
+    "module_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "module_group": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sub_group": {
+      "type": "string"
+    },
+    "mapper_namespace": {
+      "type": "string",
+      "minLength": 1
+    },
+    "skeleton_choice": {
+      "type": "object",
+      "required": ["html", "xml"],
+      "additionalProperties": false,
+      "properties": {
+        "html": {
+          "type": "string",
+          "description": "Path or identifier for the HTML skeleton template"
+        },
+        "xml": {
+          "type": "string",
+          "description": "Path or identifier for the XML skeleton template"
+        }
+      }
+    },
+    "placeholders": {
+      "type": "object",
+      "required": ["search_fields", "grid_columns"],
+      "additionalProperties": false,
+      "properties": {
+        "search_fields": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "field_id": { "type": "string" },
+              "label": { "type": "string" },
+              "type": { "type": "string" },
+              "required": { "type": "boolean", "default": false }
+            },
+            "additionalProperties": true
+          }
+        },
+        "grid_columns": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "column_id": { "type": "string" },
+              "header": { "type": "string" },
+              "data_type": { "type": "string" },
+              "width": { "type": ["string", "integer"] },
+              "sortable": { "type": "boolean", "default": true },
+              "align": { "type": "string", "enum": ["left", "center", "right"] }
+            },
+            "additionalProperties": true
+          }
+        }
+      }
+    },
+    "sql": {
+      "type": "object",
+      "required": ["select_sql_id", "main_table", "order_columns"],
+      "additionalProperties": false,
+      "properties": {
+        "select_sql_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "main_table": {
+          "type": "string",
+          "minLength": 1
+        },
+        "order_columns": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "artifacts": {
+      "type": "object",
+      "required": ["html_path", "xml_path"],
+      "additionalProperties": false,
+      "properties": {
+        "html_path": {
+          "type": "string"
+        },
+        "xml_path": {
+          "type": "string"
+        }
+      }
+    },
+    "detail_fields": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "field_id": { "type": "string" },
+          "label": { "type": "string" },
+          "type": { "type": "string" },
+          "required": { "type": "boolean" },
+          "editable": { "type": "boolean" }
+        },
+        "additionalProperties": true
+      }
+    },
+    "insert_sql_id": {
+      "type": "string"
+    },
+    "delete_sql_id": {
+      "type": "string"
+    },
+    "controller": {
+      "type": "string",
+      "description": "Fully-qualified controller class or path"
+    },
+    "service": {
+      "type": "string",
+      "description": "Fully-qualified service class or path"
+    },
+    "popup_targets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "popup_id": { "type": "string" },
+          "trigger_field": { "type": "string" },
+          "return_fields": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  }
+}

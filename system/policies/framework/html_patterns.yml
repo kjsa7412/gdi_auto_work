@@ -1,0 +1,438 @@
+# =============================================================================
+# html_patterns.yml
+# HTML 템플릿 패턴 분석 결과
+# 근거: FERP dt 모듈 레퍼런스 HTML 전수 분석
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# 공통 Layout 사용 방식
+# -----------------------------------------------------------------------------
+layout:
+  description: "Thymeleaf fragment 기반 레이아웃 시스템"
+  header_fragment:
+    tag: "<th:block th:replace=\"~{frame/header :: headerFragment}\"></th:block>"
+    content: "CSS 라이브러리 (Webix, Bootstrap, Font Awesome, jQuery-UI)"
+    location: "templates/frame/header.html"
+  script_fragment:
+    tag: "<th:block th:replace=\"~{frame/script :: scriptFragment}\"></th:block>"
+    content: "JS 라이브러리 (jQuery, Webix, Framework 유틸리티)"
+    location: "templates/frame/script.html"
+  top_title_button:
+    tag: "<th:block th:replace=\"~{frame/top_title_button :: topTitleButtonFragment}\"></th:block>"
+    content: "제목 바 + 툴바 버튼 영역"
+    location: "templates/frame/top_title_button.html"
+  근거:
+    - "C:/gdi/src/main/resources/templates/frame/header.html"
+    - "C:/gdi/src/main/resources/templates/frame/script.html"
+    - "C:/gdi/src/main/resources/templates/frame/top_title_button.html"
+
+# -----------------------------------------------------------------------------
+# Fragment/Include 사용 방식
+# -----------------------------------------------------------------------------
+fragment:
+  main_page_declaration:
+    pattern: "th:fragment=\"content(PGM, PARENT)\""
+    description: "모든 화면은 content fragment로 선언"
+    parameters:
+      PGM: "프로그램ID (화면 내 모든 DOM ID prefix)"
+      PARENT: "부모 프로그램ID (탭/팝업에서 부모 참조)"
+
+  tab_inclusion:
+    pattern: "th:insert=\"~{project/{path}/{MODULE_ID}_T{seq} :: content(PGM=|${PGM}TAB{nn}|, PARENT=${PGM})}\""
+    examples:
+      - "th:insert=\"~{project/dt/dtj/DTJ010_T10 :: content(PGM=|${PGM}TAB01|, PARENT=${PGM})}\""
+
+  popup_entry:
+    description: "팝업은 UiController /view 엔드포인트를 통해 로드"
+    mechanism: "DataModalNew.show() → /view POST → fragment 렌더링"
+
+  근거: "DTA010.html, DTJ010.html, DTJ010_T10.html"
+
+# -----------------------------------------------------------------------------
+# HTML 구조 영역
+# -----------------------------------------------------------------------------
+page_structure:
+  root: |
+    <!DOCTYPE html>
+    <html xmlns:th="http://www.thymeleaf.org" th:fragment="content(PGM, PARENT)">
+    <th:block th:replace="~{frame/top_title_button :: topTitleButtonFragment}"></th:block>
+
+  search_form_area:
+    container: "<div th:id=\"|${PGM}searchForm|\"></div>"
+    description: "조회 조건 폼 영역"
+
+  content_wrapper:
+    container: |
+      <div class="data-content-wrapper">
+          <div class="data-content-fill">
+              <!-- 그리드/상세 영역 -->
+          </div>
+      </div>
+    description: "주요 콘텐츠 영역 (그리드, 상세 등)"
+
+  grid_area:
+    container: "<div th:id=\"|${PGM}mainGrid|\"></div>"
+    description: "데이터 그리드 영역"
+
+  tab_area:
+    container: |
+      <div class="data-tab" th:id="|${PGM}tab|">
+          <div class="data-tab-header">
+              <div class="data-tab-header-item active" data-target="tabName">탭 제목</div>
+          </div>
+          <div class="data-tab-body">
+              <div class="data-tab-body-item active" data-tab="tabName"
+                   th:insert="~{path :: content(PGM=|${PGM}TAB01|, PARENT=${PGM})}"></div>
+          </div>
+      </div>
+
+  split_layout:
+    left_panel: "<div class=\"data-content-5-left\">"
+    right_panel: "<div class=\"data-content-fill\">"
+    description: "좌우 분할 레이아웃 (list-detail 화면)"
+
+# -----------------------------------------------------------------------------
+# th:* 속성 사용 방식
+# -----------------------------------------------------------------------------
+thymeleaf_attributes:
+  th_id:
+    pattern: "th:id=\"|${PGM}{suffix}|\""
+    examples:
+      - "th:id=\"|${PGM}searchForm|\""
+      - "th:id=\"|${PGM}mainGrid|\""
+      - "th:id=\"|${PGM}btnToolbar|\""
+      - "th:id=\"|${PGM}tab|\""
+    description: "PGM prefix로 DOM ID 충돌 방지"
+
+  th_fragment:
+    pattern: "th:fragment=\"content(PGM, PARENT)\""
+
+  th_insert:
+    pattern: "th:insert=\"~{path :: content(PGM=expr, PARENT=expr)}\""
+    usage: "탭 콘텐츠 삽입"
+
+  th_replace:
+    pattern: "th:replace=\"~{frame/fragment :: fragmentName}\""
+    usage: "공통 레이아웃 fragment 교체"
+
+  th_inline:
+    pattern: "th:inline=\"javascript\""
+    usage: "Thymeleaf 변수를 JS에서 사용"
+    example: "const PGM = /*[[${PGM}]]*/ null;"
+
+# -----------------------------------------------------------------------------
+# JS 포함 방식
+# -----------------------------------------------------------------------------
+javascript:
+  inclusion:
+    description: "공통 JS는 frame/script.html fragment에서 로드. 화면별 JS는 HTML 내 inline"
+    inline_pattern: |
+      <script th:inline="javascript">
+      (function () {
+          const PGM = /*[[${PGM}]]*/ null;
+          const listener = platform.listener[PGM];
+          // 화면 초기화 및 이벤트 핸들러
+      })();
+      </script>
+
+  listener_architecture:
+    description: "platform.listener[PGM] 객체에 모든 이벤트 핸들러 등록"
+    structure:
+      initPgm: "화면 초기화 함수"
+      form: "폼 인스턴스 (searchForm 등)"
+      grid: "그리드 인스턴스 (mainGrid 등)"
+      toolbar: "툴바 인스턴스"
+      tab: "탭 인스턴스"
+      button: "버튼 이벤트 핸들러"
+      gridEditor: "그리드 편집 이벤트"
+      gridRow: "그리드 행 이벤트 (click, addRow)"
+      modal: "모달 참조 (팝업에서)"
+      modalParam: "모달 파라미터 (팝업에서)"
+      child: "자식 listener (탭에서)"
+      auth: "권한 체크 (PgmPermission)"
+
+# -----------------------------------------------------------------------------
+# Grid/Table 구성 방식
+# -----------------------------------------------------------------------------
+grid:
+  component: "webix.ui datagrid"
+  configuration:
+    container: "`${PGM}mainGrid`"
+    view: "\"datagrid\""
+    listener: "listener"
+    editable: "true/false"
+    checkable: "true/false"
+    rowNumber: "true/false"
+    footer: "true/false"
+    sort: "true/false"
+    addRowable: "true/false"
+    leftSplit: "number (고정 컬럼 수)"
+
+  column_types:
+    text: "GRID_VIEW.text - 텍스트 편집"
+    select: "GRID_VIEW.select - 셀렉트박스"
+    date: "GRID_VIEW.date - 날짜 편집"
+    check: "GRID_VIEW.check - 체크박스"
+    code: "GRID_VIEW.code - 코드 팝업 검색"
+
+  column_properties:
+    - "id: 컬럼ID (DB 컬럼명과 일치)"
+    - "header: 헤더명 (문자열 또는 [{text, colspan}] 멀티라인)"
+    - "editor: GRID_VIEW.* 에디터 타입"
+    - "type: DATA_CODE_TYPE.* (코드 타입)"
+    - "width / fillspace"
+    - "css: 'textCenter', 'textRight' 등"
+    - "required: true/false"
+    - "maxlength: 최대 길이"
+    - "format: dateFormat 등 포매터"
+    - "refElement: 코드 연동 설정"
+    - "targetCols: 코드 선택 시 연동 컬럼"
+    - "footer: summColumn, avgColumn 등"
+
+  근거: "DTA010.html, DTA020.html, DTJ010_T10.html, DTL020.html"
+
+# -----------------------------------------------------------------------------
+# 버튼 ID/Class/Function Naming
+# -----------------------------------------------------------------------------
+buttons:
+  naming:
+    search: "listener.button.search.click"
+    save: "listener.button.save.click"
+    delete: "listener.button.del.click"
+    init: "listener.button.init.click"
+    print: "listener.button.print.click"
+    excel: "listener.button.excel.click"
+    etc1: "listener.button.etc1.click"
+    etc2: "listener.button.etc2.click"
+    spcl1: "listener.button.spcl1.click"
+
+  toolbar_pattern: |
+    listener.toolbar.toolbar = webix.ui({
+        container: `${PGM}btnToolbar`,
+        view: "dataToolbar",
+        elements: [
+            {view: "button", value: "조회[F2]", click: ()=>{listener.button.search.click()}},
+            {view: "button", value: "저장[F9]", click: ()=>{listener.button.save.click()}},
+            {view: "button", value: "초기화[F12]", click: ()=>{listener.button.init.click()}}
+        ]
+    });
+
+  keyboard_shortcuts:
+    F2: "조회"
+    F9: "저장"
+    F12: "초기화"
+    description: "버튼 레이블에 단축키 표기: '조회[F2]'"
+
+# -----------------------------------------------------------------------------
+# 화면 초기화 패턴
+# -----------------------------------------------------------------------------
+initialization:
+  pattern: |
+    listener.initPgm = function () {
+        // 1. 툴바 생성
+        listener.toolbar.toolbar = webix.ui({...});
+        // 2. 검색폼 생성
+        listener.form.searchForm = webix.ui({...});
+        // 3. 그리드 생성
+        listener.grid.mainGrid = webix.ui({...});
+        // 4. 초기 데이터 로드 (필요 시)
+    }
+
+  tab_initialization:
+    pattern: |
+      listener.initPgm = function () {
+          listener.tab.tab1 = new DataTab(`${PGM}tab`, listener);
+          listener.child.tab1.initPgm();
+      }
+      listener.tabChange = function (target) {
+          if (target === 'tabName') listener.child.tab1.initPgm();
+      }
+
+  child_listener_setup:
+    pattern: "listener.setParent(/*[[${PARENT}]]*/ null);"
+    description: "탭 콘텐츠에서 부모 listener 참조 설정"
+
+# -----------------------------------------------------------------------------
+# 팝업 호출 패턴
+# -----------------------------------------------------------------------------
+popup:
+  modal_new:
+    pattern: |
+      const modal = new DataModalNew();
+      const config = new DataModalConfig();
+      config.width = 600;
+      config.height = 400;
+      config.title = "팝업 제목";
+      config.view_path = "/dt/dta/DTA030_P01";
+      config.okCallback = function (params) {
+          // 반환 데이터 처리
+      };
+      modal.setConfig(config);
+      modal.show(searchParam);
+
+  modal_response:
+    pattern: "dataModal.ok(returnData)"
+    description: "팝업에서 부모에게 데이터 반환"
+
+  excel_upload_modal:
+    pattern: |
+      const xlsModal = new DataXlsModal();
+      xlsModal.setSaveUrl("/module/uploadExcel");
+      xlsModal.show(modalParam);
+
+  confirm_popup:
+    pattern: |
+      popup.confirm.show("저장 하시겠습니까?", function (confirmYn) {
+          if (confirmYn) { /* 실행 */ }
+      });
+
+  alert_popup:
+    pattern: "popup.alert.show(\"메시지\")"
+
+# -----------------------------------------------------------------------------
+# 조회/저장/삭제/엑셀 버튼 이벤트 패턴
+# -----------------------------------------------------------------------------
+event_patterns:
+
+  search:
+    pattern: |
+      listener.button.search.click = function () {
+          if (!listener.form.searchForm.formValidate()) return;
+          const param = listener.form.searchForm.getData();
+          param.statement = "namespace.selectSqlId";
+          const callback = new Callback(function (result) {
+              if (result.resultCode === RESULT_CODE.OK) {
+                  listener.grid.mainGrid.setData(result.resultData);
+              }
+          });
+          platform.post(platform.url.select, param, callback);
+      }
+
+  save:
+    pattern: |
+      listener.button.save.click = function () {
+          if (!listener.grid.mainGrid.checkGridValidation()) return;
+          const checkedData = listener.grid.mainGrid.getCheckedData();
+          if (checkedData.length === 0) { popup.alert.show("선택된 데이터가 없습니다."); return; }
+          popup.confirm.show("저장 하시겠습니까?", function (confirmYn) {
+              if (confirmYn) {
+                  const param = new Param();
+                  param.add("namespace.insertSqlId", checkedData);
+                  const callback = new Callback(function (result) {
+                      if (result.resultCode === RESULT_CODE.OK) {
+                          popup.alert.show("저장되었습니다.");
+                          listener.button.search.click();
+                      }
+                  });
+                  platform.post(platform.url.saveAll, param.data, callback);
+              }
+          });
+      }
+
+  delete:
+    pattern: |
+      listener.button.del.click = function () {
+          const checkedData = listener.grid.mainGrid.getCheckedData();
+          popup.confirm.show("삭제 하시겠습니까?", function (confirmYn) {
+              if (confirmYn) {
+                  const param = new Param();
+                  param.add("namespace.deleteSqlId", checkedData);
+                  platform.post(platform.url.saveAll, param.data, callback);
+              }
+          });
+      }
+
+# -----------------------------------------------------------------------------
+# Form 구성 방식
+# -----------------------------------------------------------------------------
+form:
+  component: "webix.ui dataForm"
+  data_view_types:
+    code: "DATA_VIEW.code - 코드 드롭다운/팝업"
+    codeNone: "DATA_VIEW.codeNone - 선택 해제 가능한 코드"
+    codeMulti: "DATA_VIEW.codeMulti - 다중 선택 코드"
+    bliys: "DATA_VIEW.bliys - 브랜드/라인/아이템/연도/시즌 복합"
+    zbliys: "DATA_VIEW.zbliys - 브랜드존 포함 복합"
+    date: "DATA_VIEW.date - 날짜 선택"
+    dateRange2: "DATA_VIEW.dateRange2 - 날짜 범위"
+    select: "DATA_VIEW.select - 일반 셀렉트박스"
+    radio: "DATA_VIEW.radio - 라디오 버튼"
+    text: "DATA_VIEW.text - 텍스트 입력"
+    search: "DATA_VIEW.search - 검색 입력"
+    check: "DATA_VIEW.check - 체크박스"
+    button: "DATA_VIEW.button - 버튼"
+
+  data_code_types:
+    brndz: "DATA_CODE_TYPE.brndz - 브랜드존"
+    style: "DATA_CODE_TYPE.style - 스타일"
+    styleColor: "DATA_CODE_TYPE.styleColor - 스타일 컬러"
+    shop: "DATA_CODE_TYPE.shop - 매장"
+    biza: "DATA_CODE_TYPE.biza - 사업장"
+    code: "DATA_CODE_TYPE.code - 공통코드 (wrk_tp_cd, cd_tp_cd 지정)"
+    empNo: "DATA_CODE_TYPE.empNo - 사원번호"
+    custom: "DATA_CODE_TYPE.custom - 커스텀 (statement 직접 지정)"
+
+  form_configuration:
+    container: "`${PGM}searchForm`"
+    view: "'dataForm'"
+    pgm: "PGM"
+    search: "true (검색폼 여부)"
+    elements: "cols 배열로 필드 구성"
+
+  field_properties:
+    - "view: DATA_VIEW.*"
+    - "label: 필드 레이블"
+    - "name: 파라미터명 (P_ 접두사)"
+    - "required: true/false"
+    - "type: DATA_CODE_TYPE.*"
+    - "defaultValue: 기본값 객체"
+    - "maxlength: 최대 길이"
+    - "format: DATA_TEXT_FORMAT.*"
+    - "param: {wrk_tp_cd, cd_tp_cd} (코드 조회 파라미터)"
+
+# -----------------------------------------------------------------------------
+# Platform 호출 패턴
+# -----------------------------------------------------------------------------
+platform_api:
+  urls:
+    select: "platform.url.select (/common/select)"
+    selectOne: "platform.url.selectOne (/common/selectOne)"
+    save: "platform.url.save (/common/save)"
+    saveAll: "platform.url.saveAll (/common/saveAll)"
+    procedure: "platform.url.procedure (/common/procedure)"
+  custom_url: "platform.post(\"/module/action\", param, callback)"
+  callback_pattern: |
+    const callback = new Callback(function (result) {
+        if (result.resultCode === RESULT_CODE.OK) { /* 성공 */ }
+        else if (result.resultCode === POST_RESULT.WARN) { /* 경고 */ }
+        else { /* 에러 */ }
+    });
+  async_pattern: |
+    const postRequest = (param) => new Promise((resolve, reject) => {
+        const callback = new Callback((result) => {
+            if (result.resultCode === RESULT_CODE.OK) resolve(result.resultData);
+            else reject(result.resultMessage);
+        });
+        platform.post(platform.url.select, param, callback);
+    });
+
+# -----------------------------------------------------------------------------
+# 금지 HTML/JS 작성 방식
+# -----------------------------------------------------------------------------
+forbidden:
+  - pattern: "순수 HTML form 태그 사용"
+    reason: "webix.ui dataForm 사용 필수"
+  - pattern: "순수 HTML table 태그로 그리드 구성"
+    reason: "webix.ui datagrid 사용 필수"
+  - pattern: "jQuery AJAX 직접 호출 ($.ajax, $.post)"
+    reason: "platform.post() 사용 필수"
+  - pattern: "전역 함수 선언"
+    reason: "IIFE + listener 패턴 사용 필수"
+  - pattern: "DOM ID에 PGM prefix 미사용"
+    reason: "탭/팝업 환경에서 ID 충돌 방지 필수"
+  - pattern: "공통 fragment 미포함"
+    reason: "top_title_button fragment 필수 포함"
+  - pattern: "inline style 남용"
+    reason: "css class 사용"
+  - pattern: "외부 JS 파일 직접 생성"
+    reason: "HTML 내 inline script 패턴 준수"

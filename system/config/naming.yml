@@ -1,0 +1,175 @@
+# =============================================================================
+# naming.yml
+# 네이밍 규칙 정의서
+# 근거: GDI 프레임워크 + FERP dt 모듈 레퍼런스 분석
+# =============================================================================
+
+module_id:
+  description: "화면/프로그램 단위 식별자"
+  pattern: "{module_group}{sub_group}{seq}"
+  examples: ["dta030", "syb020", "dtj010"]
+  rules:
+    - type: "강제"
+      rule: "영문 소문자 + 숫자 조합"
+    - type: "강제"
+      rule: "모듈그룹 2자리 + 서브그룹 1자리(영문) + 일련번호 3자리(숫자)"
+    - type: "관행"
+      rule: "일련번호는 010 단위로 증가"
+  근거: "C:/gdi/src/main/java/com/sjinc/proj/sy/syb/syb020/, C:/GitLap/FERP/FERP(TOBE)/ferp-backoffice/.../dt/dta/dta030/"
+
+controller:
+  class_name:
+    pattern: "{ModuleId}Controller"
+    case: "PascalCase"
+    examples: ["Dta030Controller", "DtController"]
+    rules:
+      - type: "강제"
+        rule: "반드시 Controller 접미사"
+      - type: "강제"
+        rule: "모듈ID PascalCase 변환"
+      - type: "관행"
+        rule: "모듈그룹 공통은 {ModuleGroup}Controller"
+    근거: "Dta030Controller.java, DtController.java"
+
+service:
+  class_name:
+    pattern: "{ModuleId}Service"
+    case: "PascalCase"
+    examples: ["Dta030Service", "DtService"]
+    rules:
+      - type: "강제"
+        rule: "반드시 Service 접미사"
+      - type: "강제"
+        rule: "인터페이스/구현체 분리 안 함"
+    근거: "Dta030Service.java, Dtc010Service.java"
+
+request_mapping:
+  class_level:
+    pattern: "/{module_id}"
+    examples: ["@RequestMapping(\"/dta030\")", "@RequestMapping(\"/dtc010\")"]
+    rules:
+      - type: "강제"
+        rule: "모듈ID 소문자 그대로"
+      - type: "강제"
+        rule: "클래스 레벨 @RequestMapping 설정"
+    예외: ["DtController: /dt (모듈그룹 공통)", "CommonController: 클래스 레벨 없음"]
+  method_level:
+    pattern: "/{action}"
+    method: "RequestMethod.POST"
+    examples: ["/uploadExcel", "/validation", "/insertReqDstbt", "/saveAll"]
+    rules:
+      - type: "강제"
+        rule: "POST만 사용"
+      - type: "관행"
+        rule: "camelCase action명"
+      - type: "관행"
+        rule: "접두사: select/insert/update/delete/upload/save/validation"
+
+html:
+  file_name:
+    pattern: "{MODULE_ID}.html"
+    case: "대문자"
+    examples:
+      main: "DTA030.html"
+      popup: "DTA030_P01.html"
+      tab: "DTJ010_T10.html"
+    rules:
+      - type: "강제"
+        rule: "모듈ID 대문자 변환"
+      - type: "강제"
+        rule: "팝업: {MODULE_ID}_P{seq}.html (01~)"
+      - type: "강제"
+        rule: "탭: {MODULE_ID}_T{seq}.html (10, 20, 30...)"
+    location: "templates/project/{module_group}/{sub_group}/"
+    근거: "DTA030.html, DTJ010.html, DTJ010_T10.html, DTA030_P01.html"
+
+xml_mapper:
+  file_name:
+    pattern: "{module_id}.xml"
+    case: "소문자"
+    examples: ["dta030.xml", "dtc010.xml"]
+    location: "mapper/sjerp/{module_group}/{sub_group}/"
+    근거: "dta030.xml, dtb010.xml"
+
+namespace:
+  pattern: "{module_id}"
+  rules:
+    - type: "강제"
+      rule: "mapper namespace는 모듈ID 소문자와 동일"
+    - type: "강제"
+      rule: "1 파일 = 1 namespace"
+  근거: "<mapper namespace=\"dta030\">, <mapper namespace=\"dta020\">"
+
+sql_id:
+  pattern: "{action}{Description}"
+  case: "camelCase"
+  prefixes:
+    select: "조회"
+    insert: "등록/수정(upsert)"
+    update: "수정"
+    delete: "삭제"
+  examples: ["selectDstbtPrdt", "insertData", "deleteDstbt", "updateSizeMovPnltyIndcDtl"]
+  rules:
+    - type: "강제"
+      rule: "select/insert/update/delete 접두사"
+    - type: "관행"
+      rule: "목록: select{Subject}List 또는 selectMainGrid"
+    - type: "관행"
+      rule: "페이징 카운트: {sqlId}Count"
+  statement_reference: "프론트에서 namespace.sqlId (예: dta030.selectDstbtPrdt)"
+
+program_id:
+  pattern: "{MODULE_ID}"
+  case: "대문자"
+  examples: ["DTA030", "DTJ010"]
+  rules:
+    - type: "강제"
+      rule: "UiController /ui 엔드포인트에서 pgm_id로 전달"
+    - type: "강제"
+      rule: "Thymeleaf PGM 변수로 HTML 내 ID prefix 사용"
+  근거: "UiController.java - model.addAttribute(\"PGM\", pgm.get(\"pgm_id\"))"
+
+java_package:
+  pattern: "com.sjinc.proj.{module_group}.{sub_group}.{module_id}"
+  example: "com.sjinc.proj.dt.dta.dta030"
+  rules:
+    - type: "강제"
+      rule: "com.sjinc.proj 하위"
+    - type: "강제"
+      rule: "Controller와 Service는 같은 패키지"
+
+database:
+  table_name:
+    pattern: "{prefix}_{description}"
+    case: "snake_case"
+    prefixes: ["sy_", "sm_", "dt_", "ps_", "ss_"]
+  view_name:
+    pattern: "vw_{description}"
+  function_name:
+    pattern: "fn_{prefix}_{description}"
+    examples: ["fn_ps_get_brndz_nm", "fn_sy_get_code_nm"]
+  stored_procedure:
+    pattern: "sp_{description}"
+  audit_columns:
+    - "firs_reg_pgm_id"
+    - "firs_reg_dts"
+    - "firs_reg_user_id"
+    - "firs_reg_ip"
+    - "fina_reg_pgm_id"
+    - "fina_reg_dts"
+    - "fina_reg_user_id"
+    - "fina_reg_ip"
+
+parameters:
+  search_prefix: "P_"
+  login_prefix: "login_"
+  examples:
+    search: ["P_brndz_cd", "P_brnd_cd", "P_start_dt", "P_end_dt"]
+    login: ["login_comp_cd", "login_emp_no", "login_user_id", "login_user_ip"]
+  rules:
+    - type: "강제"
+      rule: "검색 조건은 P_ 접두사"
+    - type: "강제"
+      rule: "로그인 정보는 login_ 접두사 (@AddUserInfo AOP 자동 주입)"
+    - type: "관행"
+      rule: "저장 데이터는 접두사 없이 컬럼명 그대로"

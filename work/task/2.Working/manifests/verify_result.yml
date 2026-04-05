@@ -1,0 +1,23 @@
+version: 1
+stage: "build"
+status: "pass"
+checks:
+  - id: "placeholder_complete"
+    description: "모든 필수 placeholder가 치환되었는지"
+    result: "pass"
+    message: ""
+  - id: "forbidden_pattern"
+    description: "금지 패턴이 생성물에 포함되지 않았는지"
+    result: "pass"
+    message: ""
+  - id: "naming_convention"
+    description: "네이밍 규칙 준수 여부"
+    result: "pass"
+    message: ""
+  - id: "audit_columns"
+    description: "INSERT에 audit 컬럼 8개 포함 여부"
+    result: "pass"
+    message: ""
+warnings: []
+errors: []
+generated_at: "2026-04-05T11:10:00+09:00"

@@ -1,0 +1,75 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "fix_manifest.schema.json",
+  "title": "Fix Manifest",
+  "description": "Schema for fix.manifest.yml",
+  "type": "object",
+  "required": ["version", "status", "input_fix_file", "issue_type", "impact_scope", "actions_taken", "started_at", "completed_at"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+(\\.\\d+)?$"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["completed", "failed"]
+    },
+    "input_fix_file": {
+      "type": "string",
+      "description": "Path to the input fix request file"
+    },
+    "issue_type": {
+      "type": "string",
+      "enum": ["output_patch", "skeleton_patch", "reanalyze", "rebuild"]
+    },
+    "impact_scope": {
+      "type": "object",
+      "required": ["reanalyze_required", "rebuild_required", "policy_patch_required", "affected_paths"],
+      "additionalProperties": false,
+      "properties": {
+        "reanalyze_required": {
+          "type": "boolean"
+        },
+        "rebuild_required": {
+          "type": "boolean"
+        },
+        "policy_patch_required": {
+          "type": "boolean"
+        },
+        "affected_paths": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "actions_taken": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "action": { "type": "string" },
+          "target_path": { "type": "string" },
+          "result": { "type": "string", "enum": ["success", "skipped", "failed"] },
+          "description": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "completed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "related_task_paths": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "verify_result_path": {
+      "type": "string"
+    }
+  }
+}

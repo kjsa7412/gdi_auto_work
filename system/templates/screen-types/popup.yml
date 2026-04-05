@@ -1,0 +1,47 @@
+# popup.yml - 팝업 화면 유형 (skeleton 선택 기준서)
+
+type_id: "popup"
+type_name: "팝업 화면"
+
+definition: "부모 화면에서 DataModalNew로 호출되는 모달 서브 화면."
+
+identification_criteria:
+  - "DataModalNew/DataXlsModal로 호출"
+  - "독립 실행 아닌 서브 화면"
+  - "파일명 _P{seq} 접미사"
+  - "listener.modal, listener.modalParam 사용"
+
+subtypes:
+  popup_search: "조회 후 선택 반환"
+  popup_input: "입력 후 저장 또는 반환"
+  popup_confirm: "확인 후 선택 반환"
+
+required_areas:
+  - { area: "modal_form_or_grid", component: "webix.ui dataForm 또는 datagrid" }
+optional_areas:
+  - { area: "toolbar", component: "webix.ui dataToolbar" }
+  - { area: "search_form", component: "webix.ui dataForm", note: "조회형 팝업" }
+
+required_artifacts:
+  - { type: "html", skeleton: "system/templates/skeletons/html/popup.html" }
+optional_artifacts:
+  - { type: "xml", skeleton: "system/templates/skeletons/xml/popup.xml", condition: "전용 SQL 필요" }
+  - { type: "controller", skeleton: "system/templates/skeletons/controller/popup.java", condition: "서버 처리 필요" }
+  - { type: "service", skeleton: "system/templates/skeletons/service/popup.java", condition: "controller 필요 시" }
+
+required_placeholders:
+  - "screen_id"
+  - "detail_fields"
+optional_placeholders:
+  - "search_fields"
+  - "grid_columns"
+  - "mapper_namespace"
+  - "select_sql_id"
+  - "insert_sql_id"
+  - "init_script"
+
+representative_skeleton: "system/templates/skeletons/html/popup.html"
+representative_reference:
+  html_input: "C:/GitLap/FERP/.../templates/project/dt/dta/DTA030_P01.html"
+  html_upload: "C:/GitLap/FERP/.../templates/project/dt/dtj/DTJ010_P01.html"
+  html_confirm: "C:/GitLap/FERP/.../templates/project/dt/DT_DUPL_CONFIRM_P01.html"

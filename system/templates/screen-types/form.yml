@@ -1,0 +1,44 @@
+# form.yml - 입력 화면 유형 (skeleton 선택 기준서)
+
+type_id: "form"
+type_name: "입력 화면"
+
+definition: "단건 데이터 입력/수정 폼 중심 화면. 저장 버튼으로 서버 전송."
+
+identification_criteria:
+  - "주요 기능이 데이터 입력/수정"
+  - "그리드가 주요 요소가 아님"
+  - "폼 필드가 화면 대부분 차지"
+  - "독립 화면 (팝업 아님)"
+
+required_areas:
+  - { area: "main_form", component: "webix.ui dataForm" }
+optional_areas:
+  - { area: "search_form", component: "webix.ui dataForm", note: "수정 모드 검색용" }
+  - { area: "sub_grid", component: "webix.ui datagrid", note: "하위 목록" }
+  - { area: "toolbar", component: "webix.ui dataToolbar" }
+
+required_artifacts:
+  - { type: "html", skeleton: "system/templates/skeletons/html/form.html" }
+  - { type: "xml", skeleton: "system/templates/skeletons/xml/form.xml" }
+optional_artifacts:
+  - { type: "controller", skeleton: "system/templates/skeletons/controller/form.java", condition: "파일/다중테이블/검증" }
+  - { type: "service", skeleton: "system/templates/skeletons/service/form.java", condition: "controller 필요 시" }
+
+required_placeholders:
+  - "screen_id"
+  - "mapper_namespace"
+  - "detail_fields"
+  - "insert_sql_id"
+  - "main_table"
+optional_placeholders:
+  - "search_fields"
+  - "select_sql_id"
+  - "grid_columns"
+  - "delete_sql_id"
+  - "init_script"
+
+representative_skeleton: "system/templates/skeletons/html/form.html"
+representative_reference:
+  html: "근거 부족 (dt 모듈에 순수 form 미확인. DTA030_P01 팝업 폼이 가장 유사)"
+  note: "SYY015.html은 설명 화면이므로 form skeleton 근거로 부적합. 다른 모듈 추가 분석 필요"

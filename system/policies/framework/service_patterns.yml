@@ -1,0 +1,238 @@
+# =============================================================================
+# service_patterns.yml
+# Service 패턴 분석 결과
+# 근거: FERP dt 모듈 레퍼런스 Service 전수 분석
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# 인터페이스/구현체 구조
+# -----------------------------------------------------------------------------
+interface_structure:
+  has_interface: false
+  description: "인터페이스 없이 구현 클래스 직접 사용"
+  근거: "Dta030Service, DtService, Dtc010Service 등 모든 레퍼런스에서 인터페이스 미사용"
+
+# -----------------------------------------------------------------------------
+# 기본 클래스 구조
+# -----------------------------------------------------------------------------
+class_structure:
+  annotations:
+    - "@Service"
+    - "@Slf4j"
+  extends: "BaseService"
+  dependency_injection:
+    method: "생성자 주입"
+    # GDI 프레임워크: SqlSessionTemplate 1개 (txManager)
+    # FERP 레퍼런스: reader/writer 분리 (ferpReaderSqlSessionTemplate, ferpWriterSqlSessionTemplate)
+    gdi_pattern:
+      - "SqlSessionTemplate sqlSessionTemplate (단일)"
+    ferp_pattern:
+      - "SqlSessionTemplate ferpWriterSqlSessionTemplate (쓰기용)"
+      - "SqlSessionTemplate ferpReaderSqlSessionTemplate (읽기용)"
+    optional:
+      - "ObjectMapper objectMapper (JSON 변환 필요 시)"
+      - "CommonService commonService (공통 조회 필요 시)"
+  example:
+    code: |
+      @Service
+      @Slf4j
+      public class Dta030Service extends BaseService {
+          private final SqlSessionTemplate ferpWriterSqlSessionTemplate;
+          private final SqlSessionTemplate ferpReaderSqlSessionTemplate;
+          private final ObjectMapper objectMapper;
+          public Dta030Service(
+              SqlSessionTemplate ferpWriterSqlSessionTemplate,
+              SqlSessionTemplate ferpReaderSqlSessionTemplate,
+              ObjectMapper objectMapper) {
+              this.ferpWriterSqlSessionTemplate = ferpWriterSqlSessionTemplate;
+              this.ferpReaderSqlSessionTemplate = ferpReaderSqlSessionTemplate;
+              this.objectMapper = objectMapper;
+          }
+      }
+  근거:
+    - "C:/GitLap/FERP/.../dt/dta/dta030/Dta030Service.java"
+    - "C:/GitLap/FERP/.../dt/DtService.java"
+    - "C:/gdi/src/main/java/com/sjinc/proj/common/CommonService.java"
+
+# -----------------------------------------------------------------------------
+# 서비스 클래스 역할 경계
+# -----------------------------------------------------------------------------
+role_boundary:
+  service_responsibilities:
+    - "비즈니스 로직 수행"
+    - "데이터 검증 (validation)"
+    - "데이터 변환/가공"
+    - "트랜잭션 관리"
+    - "Mapper(MyBatis) 호출"
+    - "벌크 데이터 처리 최적화"
+  not_service_responsibilities:
+    - "HTTP 요청/응답 처리 (Controller 담당)"
+    - "로그인 사용자 추출 (Controller에서 전달)"
+    - "BaseResponse 생성 (Controller 담당)"
+
+# -----------------------------------------------------------------------------
+# CRUD 메서드 패턴
+# -----------------------------------------------------------------------------
+crud_patterns:
+
+  read:
+    single:
+      method: "sqlSessionTemplate.selectOne(statement, param)"
+      return_type: "Map<String, Object>"
+    list:
+      method: "sqlSessionTemplate.selectList(statement, param)"
+      return_type: "List<Map<String, Object>>"
+
+  write:
+    insert:
+      method: "sqlSessionTemplate.insert(statement, param)"
+      return_type: "int (affected rows)"
+    update:
+      method: "sqlSessionTemplate.update(statement, param)"
+      return_type: "int (affected rows)"
+    delete:
+      method: "sqlSessionTemplate.delete(statement, param)"
+      return_type: "int (affected rows)"
+
+  bulk_insert:
+    description: "List를 순회하며 개별 insert"
+    pattern: |
+      for (Map<String, Object> item : dataList) {
+          sqlSessionTemplate.insert(statement, item);
+      }
+
+# -----------------------------------------------------------------------------
+# 트랜잭션 처리 패턴
+# -----------------------------------------------------------------------------
+transaction:
+  gdi_pattern:
+    annotation: "@Transactional(value = \"txManager\")"
+    description: "GDI 프레임워크의 단일 트랜잭션 매니저"
+  ferp_pattern:
+    write: "@Transactional(value = \"txManagerFerpWriter\")"
+    read_only: "@Transactional(readOnly = true)"
+    nested: "@Transactional(propagation = Propagation.REQUIRES_NEW)"
+  usage_rules:
+    - "쓰기 작업(insert/update/delete)은 반드시 @Transactional"
+    - "읽기 전용은 @Transactional(readOnly = true) 또는 트랜잭션 없음"
+    - "부분 실패 허용 시 REQUIRES_NEW로 개별 트랜잭션 분리"
+  example_nested:
+    description: "연쇄 insert에서 개별 건 실패 허용"
+    code: |
+      @Transactional(propagation = Propagation.REQUIRES_NEW)
+      public void insertPair(Map<String, Object> param) {
+          if ("Y".equals(param.get("reqSendYn"))) {
+              writer.insert("dt.insertReqSend", param);
+          }
+          writer.insert("dt.insertOutwhReq", param);
+      }
+    근거: "DtService.java - insertPair() 메서드"
+
+# -----------------------------------------------------------------------------
+# Mapper 호출 패턴
+# -----------------------------------------------------------------------------
+mapper_call:
+  statement_format: "\"namespace.sqlId\""
+  examples:
+    - "reader.selectList(\"dta030.selectDstbtPrdt\", param)"
+    - "writer.insert(\"dta030.insertData\", param)"
+    - "writer.delete(\"dta030.deleteDstbt\", param)"
+  login_info_injection:
+    description: "Controller에서 LoginUserVo 추출 후 param Map에 login_ 접두사로 주입"
+    pattern: |
+      param.put("login_comp_cd", loginUserVo.getLogin_comp_cd());
+      param.put("login_emp_no", loginUserVo.getLogin_emp_no());
+      param.put("login_user_id", loginUserVo.getLogin_user_id());
+      param.put("login_user_ip", loginUserVo.getLogin_user_ip());
+  근거: "Dta030Service.java, Dtc010Service.java, DtService.java"
+
+# -----------------------------------------------------------------------------
+# Parameter/Return 타입 패턴
+# -----------------------------------------------------------------------------
+param_return:
+  parameter_types:
+    - "Map<String, Object> (가장 일반적)"
+    - "BaseParm (CommonService 경유 시)"
+    - "LoginUserVo (별도 파라미터로 수신)"
+    - "List<Map<String, Object>> (배치 저장 시)"
+  return_types:
+    - "List<Map<String, Object>> (목록 반환)"
+    - "Map<String, Object> (단건 반환)"
+    - "int (영향받은 행 수)"
+    - "void (반환 불필요 시)"
+
+# -----------------------------------------------------------------------------
+# 저장 처리 시 공통 전처리/후처리
+# -----------------------------------------------------------------------------
+save_preprocessing:
+  login_info:
+    description: "저장 전 login 정보를 각 데이터 항목에 주입"
+    pattern: |
+      for (Map<String, Object> item : dataList) {
+          item.put("login_comp_cd", loginUserVo.getLogin_comp_cd());
+          item.put("login_emp_no", loginUserVo.getLogin_emp_no());
+          item.put("login_user_id", loginUserVo.getLogin_user_id());
+          item.put("login_user_ip", loginUserVo.getLogin_user_ip());
+          item.put("reg_pgm_id", param.get("reg_pgm_id"));
+      }
+  근거: "Dta030Service, Dtb020Service, Dtc010Service - 모든 저장 메서드에서 반복"
+
+# -----------------------------------------------------------------------------
+# 데이터 검증 패턴 (Validation)
+# -----------------------------------------------------------------------------
+validation_pattern:
+  description: "엑셀 업로드 등에서 데이터를 검증하고 결과를 리스트로 반환"
+  steps:
+    - "1. 데이터 리스트 수신"
+    - "2. 룩업 코드를 Set으로 수집 (중복 제거)"
+    - "3. DB에서 한 번에 조회 (배치 최적화)"
+    - "4. 조회 결과를 HashMap으로 변환 (O(1) 검색)"
+    - "5. 각 행별 검증 수행"
+    - "6. valid/remark 플래그 설정"
+  example:
+    code: |
+      // 1. 코드 수집
+      Set<String> shopCodes = new HashSet<>();
+      for (Map<String, Object> row : dataList) {
+          shopCodes.add((String) row.get("shop_cd"));
+      }
+      // 2. 일괄 조회
+      List<Map<String, Object>> dbShops = reader.selectList("code.selectShopList", codeParam);
+      // 3. Map으로 변환
+      Map<String, Map<String, Object>> shopMap = dbShops.stream()
+          .collect(Collectors.toMap(s -> (String)s.get("shop_cd"), s -> s));
+      // 4. 검증
+      for (Map<String, Object> row : dataList) {
+          if (!shopMap.containsKey(row.get("shop_cd"))) {
+              row.put("valid", "N");
+              row.put("remark", "존재하지 않는 매장코드");
+          }
+      }
+  근거: "Dta030Service.validation(), Dtb020Service.validation()"
+
+# -----------------------------------------------------------------------------
+# 예외 처리 패턴
+# -----------------------------------------------------------------------------
+exception_handling:
+  standard:
+    description: "Service에서는 예외를 던지고, Controller에서 catch"
+    custom_exception: "FramePostgresException"
+    custom_code: "FramePostgresExceptionCode.CUSTOM_P9999"
+  duplicate_key:
+    code: "FramePostgresExceptionCode.DUPLICATE_KEY"
+    description: "PK 중복 시 감지"
+
+# -----------------------------------------------------------------------------
+# 금지 구현 방식
+# -----------------------------------------------------------------------------
+forbidden:
+  - pattern: "Service에서 HttpServletRequest 직접 접근"
+    reason: "Controller에서 필요 정보를 추출하여 전달"
+  - pattern: "Service에서 BaseResponse 생성"
+    reason: "Controller 담당"
+  - pattern: "@Autowired 필드 주입"
+    reason: "생성자 주입으로 통일"
+  - pattern: "인터페이스 분리"
+    reason: "프레임워크 관행: 구현 클래스 직접 사용"
+  - pattern: "Service에서 다른 Service 직접 호출 (순환 의존)"
+    reason: "SqlSessionTemplate을 통한 mapper 호출로 통일"

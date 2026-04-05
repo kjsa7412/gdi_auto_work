@@ -1,0 +1,147 @@
+# =============================================================================
+# template_selection.yml
+# 화면 유형별 skeleton 조합 선택 규칙 (skeleton 실제 파일 기반 보정)
+# =============================================================================
+
+# Placeholder 표기: {{placeholder_name}}
+
+principles:
+  - "skeleton 없이 자유 생성 금지"
+  - "화면 유형이 결정되면 해당 유형의 skeleton 조합을 자동 선택"
+  - "필수 아티팩트는 반드시 생성, 선택 아티팩트는 조건부"
+  - "skeleton 미존재 시 생성 실패 처리"
+
+# -----------------------------------------------------------------------------
+# list 화면
+# -----------------------------------------------------------------------------
+list:
+  description: "조회 + 목록 중심 화면"
+  skeletons:
+    html: "system/templates/skeletons/html/list.html"
+    xml: "system/templates/skeletons/xml/list.xml"
+    controller: "system/templates/skeletons/controller/list.java"
+    service: "system/templates/skeletons/service/list.java"
+  mandatory: ["html", "xml"]
+  optional: ["controller", "service"]
+  controller_required_when:
+    - "엑셀 업로드 기능 포함"
+    - "서버 사이드 검증 필요"
+    - "파일 처리 필요"
+  service_required_when: "controller가 필요한 경우 항상 함께 생성"
+  common_controller_sufficient: true
+  구분_규칙: "상세 영역 없이 검색폼+그리드만 있으면 list"
+
+# -----------------------------------------------------------------------------
+# list-detail 화면
+# -----------------------------------------------------------------------------
+list_detail:
+  description: "조회 + 목록 + 상세/편집 화면"
+  skeletons:
+    html: "system/templates/skeletons/html/list-detail.html"
+    xml: "system/templates/skeletons/xml/list-detail.xml"
+    controller: "system/templates/skeletons/controller/list-detail.java"
+    service: "system/templates/skeletons/service/list-detail.java"
+  mandatory: ["html", "xml"]
+  optional: ["controller", "service"]
+  controller_required_when:
+    - "복잡한 트랜잭션 (다중 테이블 저장)"
+    - "서버 사이드 검증 필요"
+    - "엑셀 업로드 기능 포함"
+  service_required_when: "controller가 필요한 경우 항상 함께 생성"
+  common_controller_sufficient: "단순 saveAll이면 CommonController 사용 가능"
+  구분_규칙: "마스터 목록 선택 → 상세 표시/편집 흐름이 있으면 list-detail. 좌우 분할 또는 탭 구조"
+  list와_구분: "상세/편집 영역이 별도로 존재하면 list-detail, 그리드 내 직접 편집만이면 list"
+
+# -----------------------------------------------------------------------------
+# form 화면
+# -----------------------------------------------------------------------------
+form:
+  description: "단건 입력/수정 중심 화면"
+  skeletons:
+    html: "system/templates/skeletons/html/form.html"
+    xml: "system/templates/skeletons/xml/form.xml"
+    controller: "system/templates/skeletons/controller/form.java"
+    service: "system/templates/skeletons/service/form.java"
+  mandatory: ["html", "xml"]
+  optional: ["controller", "service"]
+  controller_required_when:
+    - "파일 첨부 기능"
+    - "다중 테이블 트랜잭션"
+    - "서버 사이드 검증"
+  service_required_when: "controller가 필요한 경우 항상 함께 생성"
+  common_controller_sufficient: "단순 단건 저장이면 CommonController /common/save 사용"
+  구분_규칙: "그리드 없이 폼 필드 중심이면 form"
+  popup과_구분: "독립 화면이면 form, 모달 호출이면 popup"
+
+# -----------------------------------------------------------------------------
+# popup 화면
+# -----------------------------------------------------------------------------
+popup:
+  description: "팝업/모달 화면"
+  skeletons:
+    html: "system/templates/skeletons/html/popup.html"
+    xml: "system/templates/skeletons/xml/popup.xml"
+    controller: "system/templates/skeletons/controller/popup.java"
+    service: "system/templates/skeletons/service/popup.java"
+  mandatory: ["html"]
+  optional: ["xml", "controller", "service"]
+  subtypes:
+    popup_search:
+      xml_required: false
+      controller_required: false
+    popup_input:
+      xml_required: "전용 SQL 필요 시"
+      controller_required: "서버 처리 필요 시"
+    popup_confirm:
+      xml_required: false
+      controller_required: false
+  구분_규칙: "DataModalNew로 호출되는 모달 화면이면 popup"
+
+# -----------------------------------------------------------------------------
+# 추가 기능별 skeleton 블록 조건
+# -----------------------------------------------------------------------------
+feature_blocks:
+  excel_upload:
+    description: "엑셀 업로드 기능"
+    requires: ["controller", "service"]
+    controller_block: "OPTIONAL: excel upload block"
+    service_block: "OPTIONAL: excel upload block"
+    html_block: "OPTIONAL: excel button"
+  excel_download:
+    description: "엑셀 다운로드 기능"
+    requires: []
+    html_block: "OPTIONAL: excel button"
+  validation:
+    description: "서버 사이드 검증"
+    requires: ["controller", "service"]
+    controller_block: "OPTIONAL: validation block"
+    service_block: "OPTIONAL: validation block"
+  delete:
+    description: "삭제 기능"
+    html_block: "OPTIONAL: delete button"
+    xml_block: "OPTIONAL: delete block"
+
+# -----------------------------------------------------------------------------
+# 실패 처리 규칙
+# -----------------------------------------------------------------------------
+failure_rules:
+  skeleton_not_found: "생성 중단 + 에러 보고"
+  required_placeholder_missing: "생성 중단 + 누락 항목 보고"
+  freeform_generation: "금지. skeleton 기반만 허용"
+
+# -----------------------------------------------------------------------------
+# 선택 결정 흐름
+# -----------------------------------------------------------------------------
+selection_flow:
+  - step: 1
+    action: "화면 유형 결정 (list/list-detail/form/popup)"
+  - step: 2
+    action: "필수 skeleton 확정"
+  - step: 3
+    action: "선택 아티팩트 판단 (비즈니스 복잡도, 기능 요구사항)"
+  - step: 4
+    action: "OPTIONAL 블록 활성화/비활성화 결정"
+  - step: 5
+    action: "placeholder 값 매핑"
+  - step: 6
+    action: "skeleton에 placeholder 치환하여 생성"

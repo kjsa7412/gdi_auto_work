@@ -1,0 +1,270 @@
+# =============================================================================
+# controller_patterns.yml
+# Controller 패턴 분석 결과
+# 근거: FERP dt 모듈 레퍼런스 Controller 전수 분석
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# 기본 클래스 구조
+# -----------------------------------------------------------------------------
+class_structure:
+  description: "모든 전용 Controller는 동일한 구조를 따름"
+  annotations:
+    - "@Slf4j"
+    - "@Controller"
+    - "@RequestMapping(\"/{module_id}\")"
+  extends: "없음 (BaseController 상속은 선택적)"
+  # 근거: Dta030Controller는 BaseController 미상속, GDI의 Syb020Controller는 상속
+  dependency_injection:
+    method: "생성자 주입"
+    common_dependencies:
+      - "CommonService commonService"
+      - "{ModuleId}Service {moduleId}Service"
+    optional_dependencies:
+      - "HttpServletRequest request (메서드 파라미터로 수신)"
+  example:
+    file: "Dta030Controller.java"
+    code: |
+      @Slf4j
+      @Controller
+      @RequestMapping("/dta030")
+      public class Dta030Controller {
+          private final CommonService commonService;
+          private final Dta030Service dta030Service;
+          public Dta030Controller(CommonService commonService, Dta030Service dta030Service) {
+              this.commonService = commonService;
+              this.dta030Service = dta030Service;
+          }
+      }
+  근거:
+    - "C:/GitLap/FERP/.../dt/dta/dta030/Dta030Controller.java"
+    - "C:/GitLap/FERP/.../dt/dtc/dtc010/Dtc010Controller.java"
+    - "C:/GitLap/FERP/.../dt/dtm/dtm050/Dtm050Controller.java"
+
+# -----------------------------------------------------------------------------
+# 공통 Annotation
+# -----------------------------------------------------------------------------
+annotations:
+  standard:
+    - name: "@Slf4j"
+      level: "class"
+      purpose: "로깅"
+      mandatory: true
+
+    - name: "@Controller"
+      level: "class"
+      purpose: "Spring MVC Controller"
+      mandatory: true
+
+    - name: "@RequestMapping"
+      level: "class"
+      purpose: "기본 URL 경로"
+      mandatory: true
+
+    - name: "@AddUserInfo"
+      level: "method"
+      purpose: "AOP로 login 정보를 파라미터 Map에 자동 주입"
+      mandatory: true
+      description: "login_comp_cd, login_emp_no, login_user_id, login_user_ip 등을 HashMap에 자동 삽입"
+
+    - name: "@LogAction"
+      level: "method"
+      purpose: "액션 로그 기록"
+      mandatory: false
+      description: "주요 저장/삭제 등 데이터 변경 작업에 사용"
+
+    - name: "@ResponseBody"
+      level: "method"
+      purpose: "JSON 응답 반환"
+      mandatory: true
+
+    - name: "@Validated"
+      level: "parameter"
+      purpose: "Bean Validation 적용"
+      mandatory: true
+      description: "BaseParm의 @NotBlank statement 검증"
+
+  근거:
+    - "Dta030Controller.java: @AddUserInfo @LogAction @ResponseBody"
+    - "Dtc010Controller.java: @AddUserInfo @ResponseBody"
+    - "CommonController.java: @AddUserInfo @ResponseBody @Validated"
+
+# -----------------------------------------------------------------------------
+# Request Mapping 방식
+# -----------------------------------------------------------------------------
+request_mapping:
+  class_level:
+    pattern: "@RequestMapping(\"/{module_id}\")"
+    examples:
+      - "@RequestMapping(\"/dta030\")"
+      - "@RequestMapping(\"/dtc010\")"
+  method_level:
+    pattern: "@RequestMapping(value = \"/{action}\", method = RequestMethod.POST)"
+    http_method: "POST만 사용"
+    get_forbidden: true
+  근거: "모든 레퍼런스 Controller에서 POST만 확인됨"
+
+# -----------------------------------------------------------------------------
+# 화면 진입 메서드 패턴
+# -----------------------------------------------------------------------------
+page_entry:
+  description: "화면 진입은 UiController가 전담. 개별 Controller에 화면 진입 메서드 없음"
+  mechanism: "UiController.ui() → model에 PGM/PGM_AUTH 세팅 → templates/project/{path}.html 반환"
+  근거: "C:/gdi/src/main/java/com/sjinc/proj/ui/UiController.java"
+
+# -----------------------------------------------------------------------------
+# 조회/저장/삭제/엑셀/팝업 호출 패턴
+# -----------------------------------------------------------------------------
+method_patterns:
+
+  # 단순 조회/저장은 CommonController를 통해 처리됨 (전용 Controller 불필요)
+  common_data_operations:
+    description: "단순 CRUD는 CommonController가 처리. 프론트에서 statement로 직접 호출"
+    select: "platform.post(platform.url.select, {statement: 'namespace.sqlId', ...})"
+    save: "platform.post(platform.url.save, {statement: 'namespace.sqlId', ...})"
+    save_all: "platform.post(platform.url.saveAll, [{statement, data}, ...])"
+
+  # 전용 Controller가 필요한 경우
+  excel_upload:
+    description: "엑셀 업로드 + 파싱 + 검증이 필요한 경우"
+    pattern: |
+      @AddUserInfo @LogAction @ResponseBody
+      @RequestMapping(value = "/uploadExcel", method = RequestMethod.POST)
+      public BaseResponse uploadExcel(HttpServletRequest request, @RequestBody BaseParm param) {
+          Map<String, String> fileInfo = commonService.selectOneAsT("file.selectFile", param);
+          LoginUserVo loginUserVo = (LoginUserVo) request.getAttribute(FrameConstants.LOGIN_USER_ATTR);
+          Resource resource = FrameFileUtil.loadAsResource("", filePath, fileName);
+          File file = resource.getFile();
+          List<Map<String, Object>> xlsData = ExcelUtil.getList(file);
+          // Service에서 검증 수행
+          List<Map<String, Object>> result = service.validateAndEnrich(xlsData, loginUserVo);
+          return BaseResponse.Ok(result);
+      }
+    근거: "Dta030Controller.uploadRtDrct(), Dtb020Controller.uploadExcel()"
+
+  validation:
+    description: "서버 사이드 데이터 검증이 필요한 경우"
+    pattern: |
+      @AddUserInfo @ResponseBody
+      @RequestMapping(value = "/validation", method = RequestMethod.POST)
+      public BaseResponse validation(HttpServletRequest request, @RequestBody BaseParm param) {
+          LoginUserVo loginUserVo = (LoginUserVo) request.getAttribute(FrameConstants.LOGIN_USER_ATTR);
+          List<Map<String, Object>> result = service.validation(param, loginUserVo);
+          return BaseResponse.Ok(result);
+      }
+    근거: "Dta030Controller.validation(), Dta050Controller.validation()"
+
+  custom_save:
+    description: "복잡한 저장 로직 (트랜잭션 분리, 연쇄 insert 등)"
+    pattern: |
+      @AddUserInfo @LogAction @ResponseBody
+      @RequestMapping(value = "/insertReqDstbt", method = RequestMethod.POST)
+      public BaseResponse insertReqDstbt(HttpServletRequest request, @RequestBody BaseParm param) {
+          LoginUserVo loginUserVo = (LoginUserVo) request.getAttribute(FrameConstants.LOGIN_USER_ATTR);
+          service.insertReqDstbt(param, loginUserVo);
+          return BaseResponse.Ok();
+      }
+    근거: "Dtc010Controller.insertReqDstbt(), Dtc010Controller.deleteReqDstbt()"
+
+  select_with_logic:
+    description: "단순 조회가 아닌 가공이 필요한 조회"
+    pattern: |
+      @AddUserInfo @ResponseBody
+      @RequestMapping(value = "/selectCustom", method = RequestMethod.POST)
+      public BaseResponse selectCustom(HttpServletRequest request, @RequestBody BaseParm param) {
+          List<Map<String, Object>> result = service.selectWithLogic(param);
+          return BaseResponse.Ok(result);
+      }
+    근거: "Dtm050Controller.selectRasrtOutwhCrrs(), Dtm050Controller.selectRasrtInwhCrrs()"
+
+# -----------------------------------------------------------------------------
+# Parameter 수신 방식
+# -----------------------------------------------------------------------------
+parameter_handling:
+  standard:
+    - type: "HttpServletRequest request"
+      purpose: "LoginUserVo 추출, 사용자 정보"
+    - type: "@RequestBody BaseParm param"
+      purpose: "JSON 요청 본문 (statement + 데이터)"
+    - type: "@Validated"
+      purpose: "statement NotBlank 검증"
+  login_user_extraction:
+    code: "LoginUserVo loginUserVo = (LoginUserVo) request.getAttribute(FrameConstants.LOGIN_USER_ATTR);"
+  근거: "모든 레퍼런스 Controller 메서드에서 동일 패턴"
+
+# -----------------------------------------------------------------------------
+# Model 사용 방식
+# -----------------------------------------------------------------------------
+model_usage:
+  description: "전용 Controller에서 Model 사용 안 함. UiController만 Model 사용"
+  reason: "모든 데이터는 JSON API로 주고받음. 화면 렌더링은 UiController 전담"
+
+# -----------------------------------------------------------------------------
+# 반환 타입 패턴
+# -----------------------------------------------------------------------------
+return_types:
+  standard: "BaseResponse"
+  patterns:
+    success: "BaseResponse.Ok() 또는 BaseResponse.Ok(data)"
+    warning: "BaseResponse.Warn(message)"
+    error: "BaseResponse.Error(message)"
+  exception_handling: |
+    try {
+        // 비즈니스 로직
+        return BaseResponse.Ok(result);
+    } catch (FramePostgresException ex) {
+        if (FramePostgresExceptionCode.CUSTOM_P9999.getCode().equals(ex.getSqlState())) {
+            return BaseResponse.Warn(ex.getMessage());
+        }
+        return BaseResponse.Error(ex.getMessage());
+    } catch (Exception ex) {
+        log.error(ex.getMessage());
+        return BaseResponse.Error(ex.getMessage());
+    }
+  근거: "CommonController.java, Dtc010Controller.java - 동일 예외처리 패턴"
+
+# -----------------------------------------------------------------------------
+# Service 호출 패턴
+# -----------------------------------------------------------------------------
+service_call:
+  common_service:
+    select: "commonService.selectOneAsT(\"namespace.sqlId\", param)"
+    select_list: "commonService.selectList(\"namespace.sqlId\", param)"
+  module_service:
+    pattern: "{moduleId}Service.{methodName}(param, loginUserVo)"
+    description: "LoginUserVo를 별도 파라미터로 전달"
+  근거: "Dta030Controller: commonService.selectOneAsT, dta030Service.validation"
+
+# -----------------------------------------------------------------------------
+# 표준 패턴 vs 비표준 패턴
+# -----------------------------------------------------------------------------
+standard_patterns:
+  - "생성자 주입"
+  - "@AddUserInfo + @ResponseBody + @RequestMapping(POST)"
+  - "BaseParm 수신 → LoginUserVo 추출 → Service 호출 → BaseResponse 반환"
+  - "try-catch에서 FramePostgresException 구분 처리"
+
+non_standard_patterns:
+  - pattern: "@Autowired 필드 주입"
+    status: "금지"
+    reason: "생성자 주입으로 통일"
+  - pattern: "GET 메서드 사용"
+    status: "금지"
+    reason: "데이터 조회 포함 모든 API는 POST"
+  - pattern: "Controller에서 직접 SqlSessionTemplate 사용"
+    status: "금지"
+    reason: "반드시 Service를 통해 호출"
+  - pattern: "Controller에서 비즈니스 로직 직접 구현"
+    status: "금지"
+    reason: "Controller는 라우팅과 응답 래핑만 담당"
+
+# -----------------------------------------------------------------------------
+# 금지 구현 방식
+# -----------------------------------------------------------------------------
+forbidden:
+  - "Controller에서 직접 DB 접근 (SqlSessionTemplate 직접 사용)"
+  - "Model에 데이터를 담아 화면에 전달하는 방식 (UiController 제외)"
+  - "ResponseEntity 반환 (파일 다운로드 제외)"
+  - "@GetMapping 사용"
+  - "Controller에 트랜잭션 어노테이션 (@Transactional)"
+  - "request.getParameter() 로 파라미터 수신 (BaseParm/@RequestBody 사용)"

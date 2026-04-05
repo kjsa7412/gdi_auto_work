@@ -1,0 +1,45 @@
+# list.yml - 목록 화면 유형 (skeleton 선택 기준서)
+
+type_id: "list"
+type_name: "목록 화면"
+
+definition: "검색 조건 + 데이터 목록 그리드 중심 화면. 그리드 내 직접 편집/저장 가능."
+
+identification_criteria:
+  - "주요 기능이 조회 + 목록 표시"
+  - "별도 상세/편집 영역 없음"
+  - "검색폼 + 그리드 2영역 구조"
+
+required_areas:
+  - { area: "search_form", component: "webix.ui dataForm" }
+  - { area: "main_grid", component: "webix.ui datagrid" }
+optional_areas:
+  - { area: "toolbar", component: "webix.ui dataToolbar" }
+
+required_artifacts:
+  - { type: "html", skeleton: "system/templates/skeletons/html/list.html" }
+  - { type: "xml", skeleton: "system/templates/skeletons/xml/list.xml" }
+optional_artifacts:
+  - { type: "controller", skeleton: "system/templates/skeletons/controller/list.java", condition: "엑셀업로드/파일/검증" }
+  - { type: "service", skeleton: "system/templates/skeletons/service/list.java", condition: "controller 필요 시" }
+
+required_placeholders:
+  - "screen_id"
+  - "mapper_namespace"
+  - "search_fields"
+  - "grid_columns"
+  - "select_sql_id"
+  - "main_table"
+  - "grid_columns_sql"
+  - "order_columns"
+optional_placeholders:
+  - "insert_sql_id"
+  - "delete_sql_id"
+  - "popup_targets"
+  - "init_script"
+  - "action_buttons"
+
+representative_skeleton: "system/templates/skeletons/html/list.html"
+representative_reference:
+  html: "C:/GitLap/FERP/.../templates/project/dt/dta/DTA010.html"
+  xml: "C:/GitLap/FERP/.../mapper/sjerp/dt/dta/dta010.xml"

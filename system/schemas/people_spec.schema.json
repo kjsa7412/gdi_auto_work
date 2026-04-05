@@ -1,0 +1,43 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "people_spec.schema.json",
+  "title": "People Spec",
+  "description": "Minimal schema for people_spec.md. The meta block is expected as YAML frontmatter in the markdown file.",
+  "type": "object",
+  "required": ["meta", "sections"],
+  "additionalProperties": false,
+  "properties": {
+    "meta": {
+      "type": "object",
+      "description": "YAML frontmatter metadata extracted from the markdown file",
+      "required": ["screen_id", "screen_name", "screen_type"],
+      "additionalProperties": true,
+      "properties": {
+        "screen_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Unique screen identifier"
+        },
+        "screen_name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Human-readable screen name"
+        },
+        "screen_type": {
+          "type": "string",
+          "enum": ["list", "list-detail", "form", "popup"],
+          "description": "Type of screen layout"
+        }
+      }
+    },
+    "sections": {
+      "type": "array",
+      "description": "Section headers that must exist in the markdown document",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 1
+    }
+  }
+}

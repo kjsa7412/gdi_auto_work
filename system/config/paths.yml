@@ -1,0 +1,85 @@
+version: 1
+
+root:
+  project: "."
+  system: "system"
+  work: "work"
+  archive: "archive"
+  claude: ".claude"
+
+workspace:
+  active_context: "work/.active_context.yml"
+  lock_file: "work/.lock"
+
+task:
+  prep: "work/task/1.Prep"
+  working: "work/task/2.Working"
+  result: "work/task/3.Result"
+
+  original: "work/task/2.Working/original"
+  final: "work/task/2.Working/final"
+  manifests: "work/task/2.Working/manifests"
+
+  extracted: "work/task/2.Working/extracted"
+  classified: "work/task/2.Working/classified"
+  mapped: "work/task/2.Working/mapped"
+  generated: "work/task/2.Working/generated"
+
+  review: "work/task/3.Result/review"
+  deliverables: "work/task/3.Result/deliverables"
+  report: "work/task/3.Result/report"
+
+fix:
+  prep: "work/fix/1.Prep"
+  working: "work/fix/2.Working"
+  result: "work/fix/3.Result"
+
+  manifests: "work/fix/2.Working/manifests"
+  analyzed: "work/fix/2.Working/analyzed"
+  patched: "work/fix/2.Working/patched"
+  regenerated: "work/fix/2.Working/regenerated"
+
+  deliverables: "work/fix/3.Result/deliverables"
+  report: "work/fix/3.Result/report"
+
+system:
+  config: "system/config"
+  cache: "system/cache/convention"
+  cache_sql: "system/cache/convention/sql"
+  templates: "system/templates"
+  skeletons_html: "system/templates/skeletons/html"
+  skeletons_xml: "system/templates/skeletons/xml"
+  skeletons_controller: "system/templates/skeletons/controller"
+  skeletons_service: "system/templates/skeletons/service"
+  screen_types: "system/templates/screen-types"
+  spec_templates: "system/templates/spec"
+  schemas: "system/schemas"
+  policies_analyze: "system/policies/analyze"
+  policies_framework: "system/policies/framework"
+  policies_runtime: "system/policies/runtime"
+  policies_verify: "system/policies/verify"
+  runtime_active_task: "system/runtime/active/task"
+  runtime_active_fix: "system/runtime/active/fix"
+  runtime_logs: "system/runtime/logs"
+
+archive:
+  root_pattern: "archive/work_{timestamp}"
+  task: "archive/work_{timestamp}/task"
+  fix: "archive/work_{timestamp}/fix"
+
+inputs:
+  task_ppt_extensions: [".ppt", ".pptx"]
+  fix_extensions: [".md", ".txt", ".png", ".jpg", ".jpeg", ".webp"]
+
+outputs:
+  task_people_spec_original: "work/task/2.Working/original/people_spec.md"
+  task_machine_spec_original: "work/task/2.Working/original/machine_spec.yml"
+  task_people_spec_final: "work/task/2.Working/final/people_spec.md"
+  task_machine_spec_final: "work/task/2.Working/final/machine_spec.yml"
+
+  task_analyze_manifest: "work/task/2.Working/manifests/analyze.manifest.yml"
+  task_build_manifest: "work/task/2.Working/manifests/build.manifest.yml"
+  task_verify_result: "work/task/2.Working/manifests/verify_result.yml"
+
+  fix_manifest: "work/fix/2.Working/manifests/fix.manifest.yml"
+  fix_verify_result: "work/fix/2.Working/manifests/verify_result.yml"

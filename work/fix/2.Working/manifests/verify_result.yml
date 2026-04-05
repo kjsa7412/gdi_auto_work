@@ -1,0 +1,15 @@
+version: 1
+stage: "fix"
+status: "pass"
+checks:
+  - id: "patch_applied"
+    description: "패치가 정상 적용되었는지"
+    result: "pass"
+    message: ""
+  - id: "no_regression"
+    description: "기존 산출물 회귀 여부"
+    result: "pass"
+    message: ""
+warnings: []
+errors: []
+generated_at: "2026-04-05T14:05:00+09:00"

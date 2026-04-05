@@ -1,0 +1,30 @@
+version: 1
+workspace_mode: "single-active"
+current:
+  type: null
+  phase: "idle"
+  command: null
+  started_at: null
+  updated_at: null
+  manifest_path: null
+  lock_owner: null
+  retry_count: 0
+task:
+  status: "empty"
+  input_files: []
+  last_analyze_at: null
+  last_build_at: null
+  people_spec_original_path: null
+  people_spec_final_path: null
+  machine_spec_original_path: null
+  machine_spec_final_path: null
+fix:
+  status: "empty"
+  input_files: []
+  last_fix_at: null
+  related_task_paths: []
+history:
+  last_success_command: null
+  last_success_at: null
+  last_error_command: null
+  last_error_at: null

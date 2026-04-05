@@ -1,0 +1,139 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "active_context.schema.json",
+  "title": "Active Context",
+  "description": "Schema for work/.active_context.yml",
+  "type": "object",
+  "required": ["workspace_mode", "current", "task", "fix", "history"],
+  "additionalProperties": false,
+  "properties": {
+    "workspace_mode": {
+      "type": "string",
+      "description": "Current workspace operating mode",
+      "enum": ["task", "fix", "idle"]
+    },
+    "current": {
+      "type": "object",
+      "description": "Current operation context",
+      "required": ["type", "phase", "command", "started_at", "updated_at"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["task", "fix", "none"]
+        },
+        "phase": {
+          "type": "string",
+          "enum": ["idle", "analyze", "build", "fix", "verify"]
+        },
+        "command": {
+          "type": "string",
+          "description": "The command currently being executed"
+        },
+        "started_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "manifest_path": {
+          "type": "string",
+          "description": "Path to the current manifest file"
+        },
+        "lock_owner": {
+          "type": "string",
+          "description": "Identifier of the process holding the lock"
+        },
+        "retry_count": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0
+        }
+      }
+    },
+    "task": {
+      "type": "object",
+      "description": "Task-mode state tracking",
+      "required": ["status", "input_files", "last_analyze_at", "last_build_at"],
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["pending", "analyzing", "analyzed", "building", "built", "verifying", "completed", "failed"]
+        },
+        "input_files": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "last_analyze_at": {
+          "type": ["string", "null"],
+          "format": "date-time"
+        },
+        "last_build_at": {
+          "type": ["string", "null"],
+          "format": "date-time"
+        },
+        "people_spec_original_path": {
+          "type": "string"
+        },
+        "people_spec_final_path": {
+          "type": "string"
+        },
+        "machine_spec_original_path": {
+          "type": "string"
+        },
+        "machine_spec_final_path": {
+          "type": "string"
+        }
+      }
+    },
+    "fix": {
+      "type": "object",
+      "description": "Fix-mode state tracking",
+      "required": ["status", "input_files", "last_fix_at"],
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["idle", "fixing", "fixed", "verifying", "completed", "failed"]
+        },
+        "input_files": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "last_fix_at": {
+          "type": ["string", "null"],
+          "format": "date-time"
+        },
+        "related_task_paths": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "history": {
+      "type": "object",
+      "description": "Recent execution history",
+      "required": ["last_success_command", "last_success_at", "last_error_command", "last_error_at"],
+      "additionalProperties": false,
+      "properties": {
+        "last_success_command": {
+          "type": ["string", "null"]
+        },
+        "last_success_at": {
+          "type": ["string", "null"],
+          "format": "date-time"
+        },
+        "last_error_command": {
+          "type": ["string", "null"]
+        },
+        "last_error_at": {
+          "type": ["string", "null"],
+          "format": "date-time"
+        }
+      }
+    }
+  }
+}

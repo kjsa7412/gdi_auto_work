@@ -1,0 +1,85 @@
+version: 1
+
+# manifest 기반 실행 통제 규칙으로 보정
+
+commands:
+  analyze:
+    allowed_inputs:
+      - "work/task/1.Prep/**"
+      - "system/cache/convention/**"
+      - "system/config/**"
+      - "system/templates/spec/**"
+      - "system/policies/analyze/**"
+      - "system/policies/runtime/**"
+      - "system/policies/framework/**"
+      - "system/schemas/**"
+    allowed_outputs:
+      - "work/task/2.Working/extracted/**"
+      - "work/task/2.Working/classified/**"
+      - "work/task/2.Working/original/**"
+      - "work/task/2.Working/final/**"
+      - "work/task/2.Working/manifests/analyze.manifest.yml"
+      - "work/.active_context.yml"
+      - "work/.lock"
+    mandatory_outputs:
+      - "work/task/2.Working/original/people_spec.md"
+      - "work/task/2.Working/original/machine_spec.yml"
+      - "work/task/2.Working/final/people_spec.md"
+      - "work/task/2.Working/manifests/analyze.manifest.yml"
+
+  build:
+    allowed_inputs:
+      - "work/task/2.Working/original/**"
+      - "work/task/2.Working/final/**"
+      - "work/task/2.Working/manifests/analyze.manifest.yml"
+      - "system/templates/**"
+      - "system/policies/framework/**"
+      - "system/policies/verify/**"
+      - "system/config/**"
+      - "system/cache/**"
+      - "system/schemas/**"
+    allowed_outputs:
+      - "work/task/2.Working/final/machine_spec.yml"
+      - "work/task/2.Working/mapped/**"
+      - "work/task/2.Working/generated/**"
+      - "work/task/2.Working/manifests/build.manifest.yml"
+      - "work/task/2.Working/manifests/verify_result.yml"
+      - "work/task/3.Result/**"
+      - "work/.active_context.yml"
+      - "work/.lock"
+    mandatory_outputs:
+      - "work/task/2.Working/final/machine_spec.yml"
+      - "work/task/2.Working/manifests/build.manifest.yml"
+      - "work/task/2.Working/manifests/verify_result.yml"
+      - "work/task/3.Result/deliverables/**"
+
+  fix:
+    allowed_inputs:
+      - "work/fix/1.Prep/**"
+      - "work/task/2.Working/**"
+      - "work/task/3.Result/**"
+      - "system/policies/**"
+      - "system/templates/**"
+      - "system/config/**"
+      - "system/schemas/**"
+    allowed_outputs:
+      - "work/fix/2.Working/**"
+      - "work/fix/3.Result/**"
+      - "work/.active_context.yml"
+      - "work/.lock"
+    mandatory_outputs:
+      - "work/fix/2.Working/manifests/fix.manifest.yml"
+      - "work/fix/2.Working/manifests/verify_result.yml"
+    task_reference_mode: "read_only"
+
+  clean:
+    allowed_inputs:
+      - "work/**"
+      - "system/config/paths.yml"
+    allowed_outputs:
+      - "archive/work_*/**"
+      - "work/.active_context.yml"
+      - "work/.lock"
+
+global_forbidden_as_input:
+  - "archive/**"

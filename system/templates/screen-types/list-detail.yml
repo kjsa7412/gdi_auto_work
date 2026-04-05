@@ -1,0 +1,47 @@
+# list-detail.yml - 목록-상세 화면 유형 (skeleton 선택 기준서)
+
+type_id: "list-detail"
+type_name: "목록-상세 화면"
+
+definition: "마스터 목록 선택 → 상세 표시/편집. 좌우 분할 또는 탭 구조."
+
+identification_criteria:
+  - "목록 선택 → 상세 표시 흐름 존재"
+  - "화면이 목록 + 상세/편집 영역으로 분할"
+  - "마스터-디테일 관계 데이터"
+
+required_areas:
+  - { area: "search_form", component: "webix.ui dataForm" }
+  - { area: "master_grid", component: "webix.ui datagrid" }
+  - { area: "detail_area", component: "webix.ui datagrid 또는 dataForm" }
+optional_areas:
+  - { area: "toolbar", component: "webix.ui dataToolbar" }
+  - { area: "tab_area", component: "DataTab" }
+
+required_artifacts:
+  - { type: "html", skeleton: "system/templates/skeletons/html/list-detail.html" }
+  - { type: "xml", skeleton: "system/templates/skeletons/xml/list-detail.xml" }
+optional_artifacts:
+  - { type: "controller", skeleton: "system/templates/skeletons/controller/list-detail.java", condition: "복잡 트랜잭션/검증" }
+  - { type: "service", skeleton: "system/templates/skeletons/service/list-detail.java", condition: "controller 필요 시" }
+
+required_placeholders:
+  - "screen_id"
+  - "mapper_namespace"
+  - "search_fields"
+  - "grid_columns"
+  - "detail_fields"
+  - "select_sql_id"
+  - "detail_sql_id"
+  - "insert_sql_id"
+  - "main_table"
+  - "detail_table"
+optional_placeholders:
+  - "delete_sql_id"
+  - "popup_targets"
+  - "init_script"
+
+representative_skeleton: "system/templates/skeletons/html/list-detail.html"
+representative_reference:
+  html: "C:/GitLap/FERP/.../templates/project/dt/dta/DTA020.html"
+  xml: "C:/GitLap/FERP/.../mapper/sjerp/dt/dta/dta020.xml"

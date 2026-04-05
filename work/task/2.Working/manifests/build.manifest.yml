@@ -1,0 +1,28 @@
+version: 1
+status: "completed"
+inputs:
+  people_spec_original: "work/task/2.Working/original/people_spec.md"
+  people_spec_final: "work/task/2.Working/final/people_spec.md"
+  machine_spec_original: "work/task/2.Working/original/machine_spec.yml"
+outputs:
+  machine_spec_final: "work/task/2.Working/final/machine_spec.yml"
+  generated_paths:
+    - "work/task/2.Working/generated/DTA030.html"
+    - "work/task/2.Working/generated/dta030.xml"
+  deliverables_path: "work/task/3.Result/deliverables"
+  report_path: "work/task/3.Result/report"
+selected_templates:
+  - screen_id: "DTA030"
+    html: "system/templates/skeletons/html/list.html"
+    xml: "system/templates/skeletons/xml/list.xml"
+artifact_plan:
+  - screen_id: "DTA030"
+    artifacts: ["html", "xml"]
+    controller_required: false
+    service_required: false
+violations: []
+self_check:
+  - id: "placeholder_complete"
+    result: "pass"
+started_at: "2026-04-05T11:00:00+09:00"
+completed_at: "2026-04-05T11:10:00+09:00"

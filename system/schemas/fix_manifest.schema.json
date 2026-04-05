@@ -70,6 +70,15 @@
     },
     "verify_result_path": {
       "type": "string"
+    },
+    "cache": {
+      "type": "object",
+      "properties": {
+        "used": {"type": "boolean"},
+        "categories_used": {"type": "array", "items": {"type": "string"}},
+        "mismatch_detected": {"type": "boolean"},
+        "db_fallback_used": {"type": "boolean"}
+      }
     }
   }
 }

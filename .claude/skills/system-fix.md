@@ -24,6 +24,7 @@ fix.manifest의 issue_type과 fix 요청 내용을 분석하여 원인을 분류
   - framework policy 누락
   - template_selection 규칙 부정확
   - naming 규칙 불완전
+  - **convention cache 불일치**: cache의 코드/테이블/함수 정보와 실제 산출물이 맞지 않음 → cache refresh 또는 SQL 보정 필요
 
 ### 2. 보완 대상 식별
 오류 원인에 따라 수정이 필요한 시스템 파일을 식별:
@@ -37,6 +38,7 @@ fix.manifest의 issue_type과 fix 요청 내용을 분석하여 원인을 분류
 | screen-type 정의 부족 | `system/templates/screen-types/*.yml` |
 | naming 규칙 불완전 | `system/config/naming.yml` |
 | runtime 계약 누락 | `system/config/runtime.yml`, `system/policies/runtime/*.yml` |
+| cache-산출물 불일치 | `system/cache/convention/*.txt` 갱신 또는 `system/cache/convention/sql/*.sql` 보정 |
 
 ### 3. 자동 패치 가능/불가 판단
 - **자동 패치 가능**: 명확한 규칙 추가, 패턴 보완 등 → patch proposal 생성

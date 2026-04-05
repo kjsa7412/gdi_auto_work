@@ -10,6 +10,12 @@ checks:
     description: "기존 산출물 회귀 여부"
     result: "pass"
     message: ""
+cache_checks:
+  - category: "table"
+    target: "dt_dstbt_req_list"
+    result: "found"
+    message: ""
+cache_warnings: []
 warnings: []
 errors: []
 generated_at: "2026-04-05T14:05:00+09:00"

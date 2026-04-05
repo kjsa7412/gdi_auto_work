@@ -24,5 +24,10 @@ violations: []
 self_check:
   - id: "placeholder_complete"
     result: "pass"
+cache:
+  used: true
+  categories_used: ["code", "table", "function"]
+  insufficient: false
+  db_fallback_used: false
 started_at: "2026-04-05T11:00:00+09:00"
 completed_at: "2026-04-05T11:10:00+09:00"

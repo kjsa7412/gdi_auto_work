@@ -12,6 +12,16 @@ guards:
   fail_if_task_and_fix_both_populated: true
   fail_if_archive_referenced_as_input: true
 
+cache:
+  path: "system/cache/convention/"
+  principle: "cache-first"
+  refresh_commands: ["analyze", "cache-refresh"]
+  analyze_refresh: "analyze 시작 시 무조건 1회 수행"
+  standalone_refresh: "/cache-refresh command로 독립 실행 가능"
+  read_only_commands: ["build", "fix"]
+  db_fallback: "cache-first 후 부족 시에만"
+  policy: "system/policies/runtime/db_access.yml"
+
 # =============================================================================
 # 실행 단계별 계약
 # =============================================================================

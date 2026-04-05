@@ -1,26 +1,71 @@
 version: 1
 
 default_mode: "cache-first"
+description: "convention cache를 우선 참조하고, 부족한 경우에만 DB fallback 허용"
+
+# =============================================================================
+# DB 접속 정보
+# =============================================================================
+connection:
+  host: "10.10.1.100"
+  port: 5466
+  database: "GDI_SERVICE"
+  user: "sjinc"
+  password: "sjinc12#$"
+  tool: "psql"  # PGPASSWORD 환경변수 + psql CLI 사용
+  usage: |
+    PGPASSWORD='sjinc12#$' psql -h 10.10.1.100 -p 5466 -U sjinc -d GDI_SERVICE -f {sql_file} -o {output_file} -t -A
+
+cache_first_principle:
+  description: "모든 데이터 조회는 system/cache/convention/ 를 먼저 확인한다"
+  cache_path: "system/cache/convention/"
+  cache_files:
+    code: "system/cache/convention/code.txt"
+    table: "system/cache/convention/table.txt"
+    view: "system/cache/convention/view.txt"
+    function: "system/cache/convention/function.txt"
+    trigger: "system/cache/convention/trigger.txt"
+  refresh_sql_path: "system/cache/convention/sql/"
+
+cache_refresh:
+  allowed_commands: ["analyze", "cache-refresh"]
+  forbidden_commands: ["build", "fix", "clean"]
+  analyze_behavior: "analyze 시작 시 무조건 1회 수행 (조건 판정 없음)"
+  cache_refresh_behavior: "/cache-refresh command로 독립 실행 가능 (어떤 상태에서든)"
+    - "사용자 명시적 요청"
+  refresh_method: "sql/*.sql 실행 → *.txt 저장"
+  failure_handling:
+    cache_exists: "warning 후 기존 cache로 계속"
+    cache_empty: "warning 후 cache 없이 진행 (DB fallback 허용)"
+    db_unreachable: "warning 후 cache 없이 진행"
+
+db_fallback:
+  allowed_commands: ["analyze", "build", "fix"]
+  condition: "cache-first 조회 후 부족한 경우에만"
+  allowed_actions: ["select"]
+  forbidden_actions: ["insert", "update", "delete", "ddl"]
+  must_record_in_manifest: true
 
 access_levels:
   sync:
     allowed_commands: ["analyze"]
-    allowed_actions: ["select", "copy"]
-    purpose: "refresh convention cache"
-
+    allowed_actions: ["select"]
+    purpose: "convention cache refresh"
   lookup:
     allowed_commands: ["analyze", "build", "fix"]
     allowed_actions: ["select"]
-    purpose: "supplement cache when missing"
+    purpose: "cache 보충 조회"
 
 rules:
   - id: DB-001
-    rule: "grep or cache lookup must be attempted before direct db lookup"
+    rule: "cache lookup을 먼저 시도한 후에만 DB 직접 조회 허용"
   - id: DB-002
-    rule: "insert update delete ddl are forbidden"
+    rule: "INSERT/UPDATE/DELETE/DDL 금지"
   - id: DB-003
-    rule: "only task-related structures may be queried"
+    rule: "task 관련 구조만 조회 가능"
   - id: DB-004
-    rule: "lookup reason must be recorded in manifest"
+    rule: "DB fallback 사용 시 manifest에 기록 필수"
   - id: DB-005
-    rule: "large unbounded select is forbidden except sync cache refresh"
+    rule: "대량 unbounded SELECT는 cache refresh 시에만 허용"
+  - id: DB-006
+    rule: "archive는 cache refresh source가 될 수 없음"

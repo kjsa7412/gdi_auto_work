@@ -19,6 +19,7 @@ commands:
       - "work/task/2.Working/original/**"
       - "work/task/2.Working/final/**"
       - "work/task/2.Working/manifests/analyze.manifest.yml"
+      - "system/cache/convention/**"
       - "work/.active_context.yml"
       - "work/.lock"
     mandatory_outputs:
@@ -37,6 +38,7 @@ commands:
       - "system/policies/verify/**"
       - "system/config/**"
       - "system/cache/**"
+      - "system/cache/convention/**"
       - "system/schemas/**"
     allowed_outputs:
       - "work/task/2.Working/final/machine_spec.yml"
@@ -61,6 +63,7 @@ commands:
       - "system/policies/**"
       - "system/templates/**"
       - "system/config/**"
+      - "system/cache/convention/**"
       - "system/schemas/**"
     allowed_outputs:
       - "work/fix/2.Working/**"

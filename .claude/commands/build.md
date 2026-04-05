@@ -26,6 +26,7 @@
 - `system/templates/skeletons/**`
 - `system/config/naming.yml`
 - `system/schemas/machine_spec.schema.json`, `build_manifest.schema.json`, `verify_result.schema.json`
+- `system/cache/convention/*.txt` — convention cache (cache-first 참조)
 
 ## 수행 절차
 
@@ -62,7 +63,22 @@ review skill 반환:
 
 **review 실패 시 즉시 build 중단.** unresolved 존재 시 사용자에게 안내 후 중단.
 
-### 4. Generate Skill 호출 → 코드 생성
+### 4. Convention Cache 참조 검증
+final/machine_spec.yml의 테이블명, 컬럼명, 코드 정의, SQL ID가 convention cache와 일치하는지 검증한다.
+
+**검증 항목**:
+- `main_table`이 `system/cache/convention/table.txt`에 존재하는지
+- `detail_table`이 존재하는지 (list-detail인 경우)
+- 코드 타입이 `system/cache/convention/code.txt`에 정의되어 있는지
+- 함수 참조(fn_*)가 `system/cache/convention/function.txt`에 존재하는지
+
+**cache 부재/불일치 시**:
+- cache가 비어 있으면: warning 기록 후 검증 skip (cache_insufficient: true)
+- cache에 해당 항목이 없으면: warning 기록 (DB fallback은 하지 않음. build는 cache refresh 안 함)
+
+**결과 기록**: build.manifest에 cache.used, cache.categories_used, cache.insufficient, cache.db_fallback_used 기록
+
+### 5. Generate Skill 호출 → 코드 생성
 review가 성공하면, **이후 모든 단계는 final/machine_spec.yml만을 기준으로 진행한다.**
 
 `generate` skill에 전달:
@@ -76,18 +92,18 @@ generate skill 반환:
 - `self_check[]`
 - `violations[]`
 
-### 5. Verify Result 생성
+### 6. Verify Result 생성
 `work/task/2.Working/manifests/verify_result.yml`:
 - checks: placeholder_complete, forbidden_pattern, naming_convention, audit_columns, comp_cd_filter
 
-### 6. 위반 처리
+### 7. 위반 처리
 errors → 보정 시도, 불가 시 failed. warnings → 경고 후 계속.
 
-### 7. Deliverables/Report 정리
+### 8. Deliverables/Report 정리
 generated → `work/task/3.Result/deliverables/`
 보고서 → `work/task/3.Result/report/build_report.md`
 
-### 8. build.manifest 완료
+### 9. build.manifest 완료
 ```yaml
 status: "completed"
 inputs:
@@ -106,7 +122,7 @@ violations: []
 self_check: [...]
 ```
 
-### 9. Active Context 갱신
+### 10. Active Context 갱신
 ```
 current.phase: "task_built"
 task.status: "built"
@@ -115,7 +131,7 @@ task.machine_spec_final_path: "work/task/2.Working/final/machine_spec.yml"
 work/.lock ← "UNLOCKED"
 ```
 
-### 10. 결과 보고
+### 11. 결과 보고
 - review diff 요약 (변경 사항)
 - 생성 파일 목록
 - verify 결과 요약

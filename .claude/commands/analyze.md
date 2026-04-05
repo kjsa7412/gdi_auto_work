@@ -23,6 +23,8 @@ work/task/1.Prep에 배치된 PPT 파일을 분석하여 people_spec(original), 
 - `system/schemas/people_spec.schema.json`
 - `system/schemas/machine_spec.schema.json`
 - `system/cache/convention/**`
+- `system/cache/convention/*.txt` — convention cache (code/table/view/function/trigger)
+- `system/cache/convention/sql/*.sql` — cache refresh용 SQL
 - `system/policies/runtime/allowed_paths.yml`
 
 ## 수행 절차
@@ -31,22 +33,41 @@ work/task/1.Prep에 배치된 PPT 파일을 분석하여 people_spec(original), 
 - `work/.lock` ← `LOCKED:task:analyze`
 - `work/.active_context.yml` ← current.type: task, current.phase: task_prepared, current.command: analyze, current.started_at: {now}
 
-### 2. analyze.manifest 초기화
+### 2. Convention Cache Refresh (필수)
+analyze는 시작 시 **반드시 1회** convention cache refresh를 수행한다. 조건 판정 없이 무조건 실행한다.
+
+**refresh 수행 방식**:
+1. `system/cache/convention/sql/code_select.sql` → DB 실행 → `system/cache/convention/code.txt`에 결과 저장
+2. `system/cache/convention/sql/table_select.sql` → DB 실행 → `system/cache/convention/table.txt`
+3. `system/cache/convention/sql/view_select.sql` → DB 실행 → `system/cache/convention/view.txt`
+4. `system/cache/convention/sql/function_select.sql` → DB 실행 → `system/cache/convention/function.txt`
+5. `system/cache/convention/sql/trigger_select.sql` → DB 실행 → `system/cache/convention/trigger.txt`
+
+**refresh 실패 시**:
+- DB 접속 불가: warning 기록 후 cache 없이 진행 (DB fallback 허용)
+
+**결과 기록**: analyze.manifest에 cache.refresh_attempted: true, cache.refresh_status, cache.refreshed_files 기록
+
+이후 단계에서 코드/테이블/뷰/함수 정보가 필요하면 refresh된 cache를 먼저 참조한다.
+
+> 별도로 cache만 갱신하려면 `/cache-refresh` command를 사용한다.
+
+### 3. analyze.manifest 초기화
 `work/task/2.Working/manifests/analyze.manifest.yml` 생성 (status: in_progress, inputs.prep_files: [발견된 파일들])
 
-### 3. PPT 분석 및 화면 추출
+### 4. PPT 분석 및 화면 추출
 1. PPT 파일을 읽어 슬라이드별 내용 추출 → `work/task/2.Working/extracted/`
 2. 화면 후보 식별
 3. screen_type 분류 (list/list-detail/form/popup) — `system/templates/screen-types/*.yml` 기준
 4. 분류 결과 → `work/task/2.Working/classified/`
 
-### 4. people_spec(original) 생성
+### 5. people_spec(original) 생성
 - `system/templates/spec/people_spec.md` 템플릿 기반
 - PPT에서 추출한 화면 개요, 조회 조건, 그리드 컬럼, 버튼, 비즈니스 규칙 채움
 - 미확인 항목은 "미확정 항목" 섹션 기록
 - 저장: `work/task/2.Working/original/people_spec.md`
 
-### 5. machine_spec(original) 생성
+### 6. machine_spec(original) 생성
 - `system/templates/spec/machine_spec.yml` 템플릿 기반
 - naming.yml 규칙에 따라 screen_id, module_id, mapper_namespace 결정
 - template_selection.yml에 따라 skeleton_choice 결정
@@ -54,18 +75,18 @@ work/task/1.Prep에 배치된 PPT 파일을 분석하여 people_spec(original), 
 - `system/schemas/machine_spec.schema.json`으로 검증
 - 저장: `work/task/2.Working/original/machine_spec.yml`
 
-### 6. people_spec(final) 초기 복사
+### 7. people_spec(final) 초기 복사
 `original/people_spec.md` → `final/people_spec.md` 복사. **이 파일이 사용자 검토/수정 대상**.
 
-### 7. analyze.manifest 완료
+### 8. analyze.manifest 완료
 status: completed, outputs 경로, screens 목록, unresolved, completed_at 기록
 
-### 8. Active Context 갱신
+### 9. Active Context 갱신
 - current.phase: task_analyzed, task.status: analyzed, task.last_analyze_at: {now}
 - spec 경로들 기록
 - `work/.lock` ← `UNLOCKED`
 
-### 9. 결과 보고
+### 10. 결과 보고
 - 추출 화면 수, screen_type 분류 결과, unresolved 목록
 - **사용자 검토 대상: `work/task/2.Working/final/people_spec.md`**
 - 검토/수정 완료 후 `/build` 실행 (build가 review skill을 자동 호출하여 final/machine_spec.yml 생성)

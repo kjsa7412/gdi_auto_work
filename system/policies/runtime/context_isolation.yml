@@ -8,11 +8,11 @@ principles:
 
 isolation:
   task:
-    readable: ["work/task/**", "system/**"]
+    readable: ["work/task/**", "system/**", "system/cache/convention/**"]
     writable: ["work/task/**", "work/.active_context.yml", "work/.lock"]
 
   fix:
-    readable: ["work/fix/**", "work/task/2.Working/**", "work/task/3.Result/**", "system/**"]
+    readable: ["work/fix/**", "work/task/2.Working/**", "work/task/3.Result/**", "system/**", "system/cache/convention/**"]
     writable: ["work/fix/**", "work/.active_context.yml", "work/.lock"]
     task_reference:
       mode: "read_only"

@@ -16,5 +16,10 @@ actions_taken:
     target: "DTA030.html"
     description: "그리드 컬럼 순서 변경"
 verify_result_path: "work/fix/2.Working/manifests/verify_result.yml"
+cache:
+  used: true
+  categories_used: ["table", "code"]
+  mismatch_detected: false
+  db_fallback_used: false
 started_at: "2026-04-05T14:00:00+09:00"
 completed_at: "2026-04-05T14:05:00+09:00"

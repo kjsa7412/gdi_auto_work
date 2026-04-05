@@ -106,6 +106,15 @@
         },
         "additionalProperties": false
       }
+    },
+    "cache": {
+      "type": "object",
+      "properties": {
+        "used": {"type": "boolean"},
+        "categories_used": {"type": "array", "items": {"type": "string"}},
+        "insufficient": {"type": "boolean"},
+        "db_fallback_used": {"type": "boolean"}
+      }
     }
   }
 }

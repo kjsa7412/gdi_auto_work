@@ -18,6 +18,16 @@ checks:
     description: "INSERT에 audit 컬럼 8개 포함 여부"
     result: "pass"
     message: ""
+cache_checks:
+  - category: "table"
+    target: "sm_dstbt_tp_info"
+    result: "found"
+    message: ""
+  - category: "code"
+    target: "PS.080"
+    result: "found"
+    message: ""
+cache_warnings: []
 warnings: []
 errors: []
 generated_at: "2026-04-05T11:10:00+09:00"

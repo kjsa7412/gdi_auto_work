@@ -49,6 +49,22 @@
       "type": "string",
       "format": "date-time"
     },
+    "cache_checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "category": {"type": "string"},
+          "target": {"type": "string"},
+          "result": {"type": "string", "enum": ["found", "not_found", "cache_empty"]},
+          "message": {"type": "string"}
+        }
+      }
+    },
+    "cache_warnings": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
     "warnings": {
       "type": "array",
       "items": { "type": "string" }

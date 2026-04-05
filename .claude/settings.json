@@ -24,7 +24,8 @@
         "analyze": ".claude/commands/analyze.md",
         "build": ".claude/commands/build.md",
         "fix": ".claude/commands/fix.md",
-        "clean": ".claude/commands/clean.md"
+        "clean": ".claude/commands/clean.md",
+        "cache-refresh": ".claude/commands/cache-refresh.md"
       },
       "skills": {
         "review": ".claude/skills/review.md",

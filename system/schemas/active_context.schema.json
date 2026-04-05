@@ -2,49 +2,66 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "active_context.schema.json",
   "title": "Active Context",
-  "description": "Schema for work/.active_context.yml",
+  "description": "Schema for work/.active_context.yml — runtime.yml state_machine과 정합",
   "type": "object",
-  "required": ["workspace_mode", "current", "task", "fix", "history"],
+  "required": ["version", "workspace_mode", "current", "task", "fix", "history"],
   "additionalProperties": false,
   "properties": {
+    "version": {
+      "type": "integer",
+      "const": 1
+    },
     "workspace_mode": {
       "type": "string",
-      "description": "Current workspace operating mode",
-      "enum": ["task", "fix", "idle"]
+      "enum": ["single-active"],
+      "description": "single-active workspace 모델 고정"
     },
     "current": {
       "type": "object",
-      "description": "Current operation context",
+      "description": "현재 실행 상태",
       "required": ["type", "phase", "command", "started_at", "updated_at"],
       "additionalProperties": false,
       "properties": {
         "type": {
-          "type": "string",
-          "enum": ["task", "fix", "none"]
+          "type": ["string", "null"],
+          "enum": ["task", "fix", null],
+          "description": "현재 작업 유형 (idle일 때 null)"
         },
         "phase": {
           "type": "string",
-          "enum": ["idle", "analyze", "build", "fix", "verify"]
+          "enum": [
+            "idle",
+            "task_prepared",
+            "task_analyzed",
+            "task_built",
+            "fix_prepared",
+            "fix_analyzed",
+            "fix_applied",
+            "cleaned",
+            "failed"
+          ],
+          "description": "runtime.yml state_machine.states와 일치"
         },
         "command": {
-          "type": "string",
-          "description": "The command currently being executed"
+          "type": ["string", "null"],
+          "enum": ["analyze", "build", "fix", "clean", null],
+          "description": "현재 실행 중인 command (없으면 null)"
         },
         "started_at": {
-          "type": "string",
+          "type": ["string", "null"],
           "format": "date-time"
         },
         "updated_at": {
-          "type": "string",
+          "type": ["string", "null"],
           "format": "date-time"
         },
         "manifest_path": {
-          "type": "string",
-          "description": "Path to the current manifest file"
+          "type": ["string", "null"],
+          "description": "현재 활성 manifest 경로"
         },
         "lock_owner": {
-          "type": "string",
-          "description": "Identifier of the process holding the lock"
+          "type": ["string", "null"],
+          "description": "lock 소유자 (LOCKED:{type}:{command} 형식)"
         },
         "retry_count": {
           "type": "integer",
@@ -55,13 +72,14 @@
     },
     "task": {
       "type": "object",
-      "description": "Task-mode state tracking",
+      "description": "task 작업 상태",
       "required": ["status", "input_files", "last_analyze_at", "last_build_at"],
       "additionalProperties": false,
       "properties": {
         "status": {
           "type": "string",
-          "enum": ["pending", "analyzing", "analyzed", "building", "built", "verifying", "completed", "failed"]
+          "enum": ["empty", "analyzed", "built", "failed"],
+          "description": "empty: 초기, analyzed: analyze 완료, built: build 완료"
         },
         "input_files": {
           "type": "array",
@@ -76,28 +94,29 @@
           "format": "date-time"
         },
         "people_spec_original_path": {
-          "type": "string"
+          "type": ["string", "null"]
         },
         "people_spec_final_path": {
-          "type": "string"
+          "type": ["string", "null"]
         },
         "machine_spec_original_path": {
-          "type": "string"
+          "type": ["string", "null"]
         },
         "machine_spec_final_path": {
-          "type": "string"
+          "type": ["string", "null"]
         }
       }
     },
     "fix": {
       "type": "object",
-      "description": "Fix-mode state tracking",
+      "description": "fix 작업 상태",
       "required": ["status", "input_files", "last_fix_at"],
       "additionalProperties": false,
       "properties": {
         "status": {
           "type": "string",
-          "enum": ["idle", "fixing", "fixed", "verifying", "completed", "failed"]
+          "enum": ["empty", "applied", "failed"],
+          "description": "empty: 초기, applied: fix 완료"
         },
         "input_files": {
           "type": "array",
@@ -115,7 +134,7 @@
     },
     "history": {
       "type": "object",
-      "description": "Recent execution history",
+      "description": "최근 실행 이력",
       "required": ["last_success_command", "last_success_at", "last_error_command", "last_error_at"],
       "additionalProperties": false,
       "properties": {

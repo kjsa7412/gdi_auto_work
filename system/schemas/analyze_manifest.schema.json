@@ -95,6 +95,18 @@
     "notes": {
       "type": "array",
       "items": { "type": "string" }
+    },
+    "cache": {
+      "type": "object",
+      "properties": {
+        "refresh_attempted": {"type": "boolean"},
+        "refresh_required": {"type": "boolean"},
+        "refresh_status": {"type": "string", "enum": ["success", "partial", "failed", "skipped"]},
+        "refreshed_files": {"type": "array", "items": {"type": "string"}},
+        "refresh_started_at": {"type": ["string", "null"]},
+        "refresh_completed_at": {"type": ["string", "null"]},
+        "db_fallback_used": {"type": "boolean"}
+      }
     }
   }
 }

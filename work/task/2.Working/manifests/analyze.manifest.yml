@@ -15,5 +15,18 @@ screens:
 unresolved: []
 notes:
   - "PPT에서 3개 화면 추출"
+cache:
+  refresh_attempted: true
+  refresh_required: true
+  refresh_status: "success"
+  refreshed_files:
+    - "system/cache/convention/code.txt"
+    - "system/cache/convention/table.txt"
+    - "system/cache/convention/view.txt"
+    - "system/cache/convention/function.txt"
+    - "system/cache/convention/trigger.txt"
+  refresh_started_at: "2026-04-05T10:00:30+09:00"
+  refresh_completed_at: "2026-04-05T10:01:00+09:00"
+  db_fallback_used: false
 started_at: "2026-04-05T10:00:00+09:00"
 completed_at: "2026-04-05T10:05:00+09:00"

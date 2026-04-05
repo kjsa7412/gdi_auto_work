@@ -26,8 +26,12 @@ self_check:
     result: "pass"
 cache:
   used: true
-  categories_used: ["code", "table", "function"]
+  hit_categories: ["code", "table", "function"]
+  miss_categories: []
   insufficient: false
+  mismatch_detected: false
   db_fallback_used: false
+  db_fallback_reason: []
+  db_fallback_status: null
 started_at: "2026-04-05T11:00:00+09:00"
 completed_at: "2026-04-05T11:10:00+09:00"

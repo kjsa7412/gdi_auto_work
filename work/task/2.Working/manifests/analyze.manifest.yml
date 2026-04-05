@@ -27,6 +27,13 @@ cache:
     - "system/cache/convention/trigger.txt"
   refresh_started_at: "2026-04-05T10:00:30+09:00"
   refresh_completed_at: "2026-04-05T10:01:00+09:00"
-  db_fallback_used: false
+  hit_categories: ["code", "table", "function", "view"]
+  miss_categories: ["trigger"]
+  db_fallback_used: true
+  db_fallback_reason:
+    - "trigger cache refresh 결과가 비어 있어 직접 조회"
+  db_fallback_queries:
+    - "SELECT tgname, relname FROM pg_trigger WHERE ... (trigger 정보 보완)"
+  db_fallback_status: "success"
 started_at: "2026-04-05T10:00:00+09:00"
 completed_at: "2026-04-05T10:05:00+09:00"

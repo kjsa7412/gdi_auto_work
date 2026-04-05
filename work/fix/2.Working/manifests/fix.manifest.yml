@@ -18,8 +18,13 @@ actions_taken:
 verify_result_path: "work/fix/2.Working/manifests/verify_result.yml"
 cache:
   used: true
-  categories_used: ["table", "code"]
-  mismatch_detected: false
-  db_fallback_used: false
+  hit_categories: ["table"]
+  miss_categories: ["code"]
+  insufficient: false
+  mismatch_detected: true
+  db_fallback_used: true
+  db_fallback_reason:
+    - "code cache에 PS.090 코드 정의 없음 → DB 조회로 확인"
+  db_fallback_status: "success"
 started_at: "2026-04-05T14:00:00+09:00"
 completed_at: "2026-04-05T14:05:00+09:00"

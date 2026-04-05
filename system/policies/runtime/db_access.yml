@@ -40,11 +40,24 @@ cache_refresh:
     db_unreachable: "warning 후 cache 없이 진행"
 
 db_fallback:
+  description: "cache miss/insufficient/mismatch 시 DB SELECT 조회로 보완"
   allowed_commands: ["analyze", "build", "fix"]
   condition: "cache-first 조회 후 부족한 경우에만"
   allowed_actions: ["select"]
   forbidden_actions: ["insert", "update", "delete", "ddl"]
   must_record_in_manifest: true
+  record_fields:
+    - "db_fallback_used: true/false"
+    - "db_fallback_reason[]: 사유 목록"
+    - "db_fallback_queries[]: 실행한 조회 요약"
+    - "db_fallback_status: success/partial/failed"
+  cache_update_after_fallback:
+    analyze: "fallback 결과를 cache *.txt에 보강 반영 가능"
+    build: "필요 시 cache *.txt에 결과 보강 (warning 기록)"
+    fix: "필요 시 cache *.txt에 결과 보강 (warning 기록)"
+  failure_handling:
+    cache_exists_partial: "warning 후 진행"
+    cache_empty_db_unreachable: "analyze는 실패, build/fix는 warning 후 해당 검증 skip"
 
 access_levels:
   sync:

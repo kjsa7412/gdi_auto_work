@@ -111,9 +111,13 @@
       "type": "object",
       "properties": {
         "used": {"type": "boolean"},
-        "categories_used": {"type": "array", "items": {"type": "string"}},
+        "hit_categories": {"type": "array", "items": {"type": "string"}},
+        "miss_categories": {"type": "array", "items": {"type": "string"}},
         "insufficient": {"type": "boolean"},
-        "db_fallback_used": {"type": "boolean"}
+        "mismatch_detected": {"type": "boolean"},
+        "db_fallback_used": {"type": "boolean"},
+        "db_fallback_reason": {"type": "array", "items": {"type": "string"}},
+        "db_fallback_status": {"type": ["string", "null"], "enum": ["success", "partial", "failed", null]}
       }
     }
   }

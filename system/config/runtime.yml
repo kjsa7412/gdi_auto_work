@@ -19,8 +19,14 @@ cache:
   analyze_refresh: "analyze 시작 시 무조건 1회 수행"
   standalone_refresh: "/cache-refresh command로 독립 실행 가능"
   read_only_commands: ["build", "fix"]
-  db_fallback: "cache-first 후 부족 시에만"
+  db_fallback: "cache-first 후 부족 시에만 허용 (모든 command)"
   policy: "system/policies/runtime/db_access.yml"
+  terminology:
+    cache_hit: "필요한 정보가 cache에서 충분히 확인된 상태"
+    cache_miss: "필요한 항목이 cache에 전혀 존재하지 않는 상태"
+    cache_insufficient: "일부 존재하지만 판단에 필요한 수준으로 충분하지 않은 상태"
+    cache_mismatch: "cache 정보와 분석/생성 대상 구조가 충돌하는 상태"
+    db_fallback: "cache miss/insufficient/mismatch를 해소하기 위한 DB SELECT 조회"
 
 # =============================================================================
 # 실행 단계별 계약

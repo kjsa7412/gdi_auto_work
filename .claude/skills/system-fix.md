@@ -24,7 +24,7 @@ fix.manifest의 issue_type과 fix 요청 내용을 분석하여 원인을 분류
   - framework policy 누락
   - template_selection 규칙 부정확
   - naming 규칙 불완전
-  - **convention cache 불일치**: cache의 코드/테이블/함수 정보와 실제 산출물이 맞지 않음 → cache refresh 또는 SQL 보정 필요
+  - **convention cache 불일치**: cache의 코드/테이블/함수 정보와 실제 산출물이 맞지 않음 → cache refresh 또는 SQL 보정 필요. DB fallback 결과와 cache의 차이를 구조적 오류 근거로 활용
 
 ### 2. 보완 대상 식별
 오류 원인에 따라 수정이 필요한 시스템 파일을 식별:

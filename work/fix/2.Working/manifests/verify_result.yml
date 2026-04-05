@@ -15,7 +15,13 @@ cache_checks:
     target: "dt_dstbt_req_list"
     result: "found"
     message: ""
-cache_warnings: []
+  - category: "code"
+    target: "PS.090"
+    result: "not_found"
+    message: "DB fallback으로 확인 완료"
+cache_warnings:
+  - "code cache에 PS.090 누락 — DB fallback으로 보완됨"
+cache_errors: []
 warnings: []
 errors: []
 generated_at: "2026-04-05T14:05:00+09:00"

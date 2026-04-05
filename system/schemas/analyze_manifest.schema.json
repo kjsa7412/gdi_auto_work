@@ -105,7 +105,12 @@
         "refreshed_files": {"type": "array", "items": {"type": "string"}},
         "refresh_started_at": {"type": ["string", "null"]},
         "refresh_completed_at": {"type": ["string", "null"]},
-        "db_fallback_used": {"type": "boolean"}
+        "hit_categories": {"type": "array", "items": {"type": "string"}},
+        "miss_categories": {"type": "array", "items": {"type": "string"}},
+        "db_fallback_used": {"type": "boolean"},
+        "db_fallback_reason": {"type": "array", "items": {"type": "string"}},
+        "db_fallback_queries": {"type": "array", "items": {"type": "string"}},
+        "db_fallback_status": {"type": ["string", "null"], "enum": ["success", "partial", "failed", null]}
       }
     }
   }

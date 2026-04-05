@@ -63,7 +63,7 @@ review skill 반환:
 
 **review 실패 시 즉시 build 중단.** unresolved 존재 시 사용자에게 안내 후 중단.
 
-### 4. Convention Cache 참조 검증
+### 4. Convention Cache 참조 검증 및 DB Fallback
 final/machine_spec.yml의 테이블명, 컬럼명, 코드 정의, SQL ID가 convention cache와 일치하는지 검증한다.
 
 **검증 항목**:
@@ -71,12 +71,21 @@ final/machine_spec.yml의 테이블명, 컬럼명, 코드 정의, SQL ID가 conv
 - `detail_table`이 존재하는지 (list-detail인 경우)
 - 코드 타입이 `system/cache/convention/code.txt`에 정의되어 있는지
 - 함수 참조(fn_*)가 `system/cache/convention/function.txt`에 존재하는지
+- mapper namespace / sql id 규칙이 naming.yml과 일치하는지
 
-**cache 부재/불일치 시**:
-- cache가 비어 있으면: warning 기록 후 검증 skip (cache_insufficient: true)
-- cache에 해당 항목이 없으면: warning 기록 (DB fallback은 하지 않음. build는 cache refresh 안 함)
+**cache hit**: 필요한 정보가 cache에서 모두 확인됨 → 검증 통과
+**cache miss/insufficient**: 필요한 정보가 cache에 없거나 부족함 → DB fallback 판정
 
-**결과 기록**: build.manifest에 cache.used, cache.categories_used, cache.insufficient, cache.db_fallback_used 기록
+**DB fallback 절차** (build는 cache refresh를 하지 않지만, 검증에 필요한 만큼 DB 조회는 허용):
+1. 부족한 카테고리 식별 (code/table/view/function)
+2. `db_access.yml` connection 정보로 필요한 항목만 SELECT 조회
+3. 조회 결과로 검증 수행
+4. 필요 시 cache *.txt에 결과 보강 반영 (warning 기록)
+5. fallback reason을 build.manifest에 기록
+
+**DB fallback도 실패 시**: warning 기록 후 해당 검증 skip (cache_insufficient: true)
+
+**결과 기록**: build.manifest에 cache.used, cache.hit_categories, cache.miss_categories, cache.insufficient, cache.mismatch_detected, cache.db_fallback_used, cache.db_fallback_reason[], cache.db_fallback_status 기록
 
 ### 5. Generate Skill 호출 → 코드 생성
 review가 성공하면, **이후 모든 단계는 final/machine_spec.yml만을 기준으로 진행한다.**

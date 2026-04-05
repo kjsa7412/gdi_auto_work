@@ -27,7 +27,12 @@ cache_checks:
     target: "PS.080"
     result: "found"
     message: ""
+  - category: "function"
+    target: "fn_ps_get_brndz_nm"
+    result: "found"
+    message: ""
 cache_warnings: []
+cache_errors: []
 warnings: []
 errors: []
 generated_at: "2026-04-05T11:10:00+09:00"

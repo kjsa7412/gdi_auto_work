@@ -51,13 +51,17 @@
 | 항목 | 값 |
 |------|-----|
 | 파일 | `.claude/commands/build.md` |
-| 진입 | task_reviewed |
-| 핵심 | people_spec diff → machine_spec(final) → **generate skill** → 코드 생성 |
-| 출력 | final/machine_spec.yml, generated/*, verify_result.yml, build.manifest.yml, deliverables/* |
+| 진입 | task_analyzed |
+| 핵심 | review skill → machine_spec(final) → cache 검증/DB fallback → **generate skill** → 코드 생성 → **선택적 deploy prepare** |
+| 출력 | final/machine_spec.yml, generated/*, verify_result.yml, build.manifest.yml, deliverables/*, deploy_summary.yml(선택) |
 | 종료 | task_built |
-| 참조 | template_selection, skeleton_contract, skeletons/**, framework policies |
+| 참조 | template_selection, skeleton_contract, skeletons/**, framework policies, framework_manifest |
 
-**build → generate skill 연결**: build가 final/machine_spec를 확정한 후 generate skill 호출. generate가 skeleton 치환 + self-check 수행 후 결과 반환.
+**build → review skill 연결**: build가 review skill을 호출하여 original vs final people_spec diff 분석 후 final/machine_spec.yml 생성.
+
+**build → generate skill 연결**: review 성공 후 generate skill 호출. generate가 skeleton 치환 + self-check 수행 후 결과 반환.
+
+**build → deploy skill 연결 (선택적)**: verify_result가 pass/warn이고 deliverables가 존재하면, build 마지막에 deploy skill을 prepare-only 모드로 호출. deploy 준비 실패는 build 실패가 아니며, build.manifest에 deploy 결과를 별도 기록. 실제 파일 복사는 사용자 확인 후 별도 apply 단계에서만 수행.
 
 ---
 
@@ -105,8 +109,12 @@
 | 항목 | 값 |
 |------|-----|
 | 파일 | `.claude/skills/deploy.md` |
-| 핵심 | deliverables → 반영 대상 정리 → overwrite 경고 → (사용자 확인 후) 복사 |
-| 원칙 | 환경 미확정 시 "준비/패키징" 수준. 무조건 배포하지 않음 |
+| 호출자 | build command (선택적 후속), fix command (선택적), 또는 독립 실행 |
+| 모드 | prepare-only (기본), apply (사용자 확인 필수) |
+| 핵심 | deliverables 검증 → target path 계산 → conflict 탐지 → summary 생성 → (apply 시) 복사 |
+| 원칙 | build에서 호출 시 기본 prepare-only. 환경 미확정 시 "준비/패키징" 수준. 무조건 배포하지 않음 |
+| 정책 | `system/policies/runtime/deploy_policy.yml` |
+| schema | `system/schemas/deploy_summary.schema.json` |
 
 ---
 
@@ -128,8 +136,8 @@
 - permissions: Read, Glob, Grep, Edit, Write, Bash(*)
 - project.principles: single-active, skeleton 기반, archive history only
 - project.workflow.commands: analyze/build/fix/clean 경로
-- project.workflow.skills: generate/deploy/system-fix 경로
-- project.workflow.flow: analyze → review → build → fix → clean
+- project.workflow.skills: review/generate/deploy/system-fix 경로
+- project.workflow.flow: analyze → (사용자 검토) → build [review → generate → optional deploy-prepare] → (fix if needed) → clean
 
 ---
 
@@ -143,7 +151,7 @@
 | active_context/lock 규칙 | OK: 모든 command에서 lock 확인→획득→해제 패턴 일치 |
 | 경로 참조 일치 (paths.yml) | OK: 모든 경로가 paths.yml과 일치 |
 | archive 입력 금지 | OK: 모든 command에서 archive 금지 명시 |
-| build → deploy 연결 | OK: build 후 선택적으로 deploy 호출 가능 구조 |
+| build → deploy 연결 | OK: build 마지막에 prepare-only 모드로 deploy skill 호출. deploy 실패 ≠ build 실패 |
 | manifest/schema 참조 | OK: 각 command가 해당 schema 검증 명시 |
 
 ---
@@ -156,8 +164,9 @@
 | 배열형 placeholder 치환 엔진 | 미구현: generate에서 search_fields → webix 코드 변환 |
 | user_review 시그널 | 미확정: 사용자가 review 완료를 어떻게 시스템에 알릴지 |
 | DB convention cache 적재 | 미구현: SQL은 준비됨, 적재 로직 필요 |
-| deploy 대상 환경 | 미확정: 실제 프로젝트 경로 확정 필요 |
-| system/policies/runtime/db_access.yml | 미작성: DB 접근 정책 |
+| deploy 대상 환경 | 부분 해결: framework_manifest source_roots 기반 target path 계산 가능. 실제 프로젝트 절대 경로 미확정 |
+| system/policies/runtime/db_access.yml | 작성 완료 |
+| deploy apply 실행 | 미확정: 사용자 확인 UI/시그널 방식 결정 필요 |
 
 ---
 

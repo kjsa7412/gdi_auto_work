@@ -1,0 +1,62 @@
+version: 1
+
+# =============================================================================
+# deploy_policy.yml
+# deploy skill 실행 정책
+# =============================================================================
+
+deploy:
+  description: "build 또는 fix 결과물을 실제 프로젝트 경로로 반영하기 위한 정책"
+
+  modes:
+    prepare-only:
+      description: "배포 준비만 수행. 실제 파일 복사 없음"
+      default: true
+      requires_user_confirmation: false
+      actions: ["deliverables 검증", "target path 계산", "conflict 탐지", "summary 생성"]
+    apply:
+      description: "실제 파일 복사 수행"
+      default: false
+      requires_user_confirmation: true
+      actions: ["prepare-only 전체", "사용자 확인", "파일 복사", "복사 결과 기록"]
+
+  entry_conditions:
+    from_build:
+      description: "build 마지막 후속 단계로 호출"
+      required:
+        - "verify_result.status in [pass, warn]"
+        - "deliverables 경로에 파일 1개 이상 존재"
+        - "deploy 금지 상태가 아님"
+      default_mode: "prepare-only"
+    from_fix:
+      description: "fix 완료 후 호출 가능"
+      required:
+        - "verify_result.status in [pass, warn]"
+        - "fix deliverables 존재"
+      default_mode: "prepare-only"
+    standalone:
+      description: "사용자가 직접 deploy 요청"
+      required:
+        - "deliverables 경로 존재"
+      default_mode: "prepare-only"
+
+  target_path_resolution:
+    source: "system/config/framework_manifest.yml → source_roots + supported_artifacts"
+    rules:
+      html: "{templates_root}/project/{module_group}/{sub_group}/{MODULE_ID}.html"
+      xml: "{mappers_root}/sjerp/{module_group}/{sub_group}/{module_id}.xml"
+      controller: "{java_root}/proj/{module_group}/{sub_group}/{module_id}/{ModuleId}Controller.java"
+      service: "{java_root}/proj/{module_group}/{sub_group}/{module_id}/{ModuleId}Service.java"
+
+  conflict_handling:
+    prepare-only: "conflict 기록만, 실제 동작 없음"
+    apply: "사용자 확인 후 덮어쓰기 또는 건너뛰기"
+
+  failure_impact:
+    on_build: "deploy 실패는 build 실패가 아님. build.manifest.deploy.status만 변경"
+    on_fix: "deploy 실패는 fix 실패가 아님. fix.manifest.deploy.status만 변경"
+
+  forbidden:
+    - "archive를 deploy 입력으로 사용"
+    - "사용자 확인 없이 apply 모드 실행"
+    - "target path 미확정 상태에서 파일 복사"

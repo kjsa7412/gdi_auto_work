@@ -33,6 +33,20 @@ cache_checks:
     message: ""
 cache_warnings: []
 cache_errors: []
+deploy_checks:
+  - id: "deliverables_exist"
+    description: "deliverables 경로에 파일 존재 여부"
+    result: "pass"
+    message: "2개 파일 확인"
+  - id: "target_path_resolved"
+    description: "모든 deliverable의 target path 계산 가능 여부"
+    result: "pass"
+    message: "2개 파일 모두 target path 확정"
+  - id: "overwrite_conflict"
+    description: "target 경로에 기존 파일 충돌 여부"
+    result: "pass"
+    message: "충돌 없음"
+deploy_warnings: []
 warnings: []
 errors: []
 generated_at: "2026-04-05T11:10:00+09:00"

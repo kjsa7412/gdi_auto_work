@@ -1,0 +1,58 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "deploy_summary.schema.json",
+  "title": "Deploy Summary",
+  "description": "Schema for deploy_summary.yml",
+  "type": "object",
+  "required": ["deploy_summary"],
+  "additionalProperties": false,
+  "properties": {
+    "deploy_summary": {
+      "type": "object",
+      "required": ["mode", "status", "total_files", "target_paths"],
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": ["prepare-only", "apply"]
+        },
+        "status": {
+          "type": "string",
+          "enum": ["prepared", "warn", "failed", "applied", "partial"]
+        },
+        "total_files": {
+          "type": "integer"
+        },
+        "target_paths": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["source", "target", "status"],
+            "additionalProperties": false,
+            "properties": {
+              "source": {"type": "string"},
+              "target": {"type": "string"},
+              "status": {
+                "type": "string",
+                "enum": ["ready", "conflict", "path_unknown", "copied", "skipped", "failed"]
+              }
+            }
+          }
+        },
+        "warnings": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "conflicts": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "copied_paths": {
+          "type": "array",
+          "description": "apply 모드에서만 채워짐",
+          "items": {"type": "string"}
+        }
+      }
+    }
+  }
+}

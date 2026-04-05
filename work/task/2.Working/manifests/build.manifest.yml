@@ -33,5 +33,20 @@ cache:
   db_fallback_used: false
   db_fallback_reason: []
   db_fallback_status: null
+deploy:
+  attempted: true
+  mode: "prepare-only"
+  status: "prepared"
+  summary_path: "work/task/3.Result/report/deploy_summary.yml"
+  total_files: 2
+  target_paths:
+    - source: "deliverables/DTA030.html"
+      target: "src/main/resources/templates/project/dt/dta/DTA030.html"
+      status: "ready"
+    - source: "deliverables/dta030.xml"
+      target: "src/main/resources/mapper/sjerp/dt/dta/dta030.xml"
+      status: "ready"
+  warnings: []
+  conflicts: []
 started_at: "2026-04-05T11:00:00+09:00"
 completed_at: "2026-04-05T11:10:00+09:00"

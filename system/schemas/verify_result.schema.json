@@ -76,6 +76,25 @@
     "errors": {
       "type": "array",
       "items": { "type": "string" }
+    },
+    "deploy_checks": {
+      "type": "array",
+      "description": "deploy 준비 단계 검증 결과",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string"},
+          "description": {"type": "string"},
+          "result": {"type": "string", "enum": ["pass", "warn", "fail", "skipped"]},
+          "message": {"type": "string"}
+        },
+        "additionalProperties": false
+      }
+    },
+    "deploy_warnings": {
+      "type": "array",
+      "description": "deploy 관련 경고",
+      "items": {"type": "string"}
     }
   }
 }

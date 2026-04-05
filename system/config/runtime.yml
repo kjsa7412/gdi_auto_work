@@ -71,7 +71,7 @@ commands:
     next_command: "build (사용자가 final/people_spec.md 검토/수정 후 실행)"
 
   build:
-    purpose: "review skill로 final/machine_spec.yml을 확정한 뒤, generate skill로 코드 산출물을 생성"
+    purpose: "review skill로 final/machine_spec.yml을 확정한 뒤, generate skill로 코드 산출물을 생성하고, 선택적으로 deploy 준비를 수행"
     start_condition:
       required_state: ["task_analyzed"]
       required_files:
@@ -86,6 +86,12 @@ commands:
       - name: "generate"
         purpose: "final/machine_spec.yml → skeleton 기반 코드 생성"
         order: 2
+      - name: "deploy"
+        purpose: "deliverables → target path 계산 및 배포 준비 (prepare-only 기본)"
+        order: 3
+        optional: true
+        condition: "verify_result.status가 pass 또는 warn이고 deliverables 존재 시"
+        default_mode: "prepare-only"
     inputs:
       required:
         - "work/task/2.Working/original/people_spec.md"
@@ -118,8 +124,15 @@ commands:
         - "work/task/2.Working/manifests/verify_result.yml"
         - "work/task/3.Result/deliverables/**"
         - "work/task/3.Result/report/**"
+      optional:
+        - "work/task/3.Result/report/deploy_summary.yml"
     success_state: "task_built"
     failure_state: "failed"
+    deploy_policy:
+      description: "build 마지막에 선택적으로 deploy prepare-only 수행. deploy 실패는 build 실패가 아님"
+      default_mode: "prepare-only"
+      entry_condition: "verify_result.status in [pass, warn] AND deliverables 존재"
+      apply_requires: "사용자 명시적 확인"
     next_command: "fix (문제 발견 시) 또는 clean (완료 시)"
 
   fix:

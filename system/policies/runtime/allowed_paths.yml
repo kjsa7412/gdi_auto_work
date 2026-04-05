@@ -33,9 +33,11 @@ commands:
       - "work/task/2.Working/original/**"
       - "work/task/2.Working/final/**"
       - "work/task/2.Working/manifests/analyze.manifest.yml"
+      - "work/task/3.Result/deliverables/**"
       - "system/templates/**"
       - "system/policies/framework/**"
       - "system/policies/verify/**"
+      - "system/policies/runtime/deploy_policy.yml"
       - "system/config/**"
       - "system/cache/**"
       - "system/cache/convention/**"
@@ -47,6 +49,7 @@ commands:
       - "work/task/2.Working/manifests/build.manifest.yml"
       - "work/task/2.Working/manifests/verify_result.yml"
       - "work/task/3.Result/**"
+      - "work/task/3.Result/report/deploy_summary.yml"
       - "work/.active_context.yml"
       - "work/.lock"
     mandatory_outputs:
@@ -54,6 +57,22 @@ commands:
       - "work/task/2.Working/manifests/build.manifest.yml"
       - "work/task/2.Working/manifests/verify_result.yml"
       - "work/task/3.Result/deliverables/**"
+    optional_outputs:
+      - "work/task/3.Result/report/deploy_summary.yml"
+    deploy_paths:
+      readable:
+        - "work/task/3.Result/deliverables/**"
+        - "work/fix/3.Result/deliverables/**"
+        - "system/config/framework_manifest.yml"
+        - "system/config/**"
+      writable:
+        - "work/task/3.Result/report/deploy_summary.yml"
+        - "work/fix/3.Result/report/deploy_summary.yml"
+      apply_writable:
+        description: "deploy apply 모드에서만 허용. 사용자 확인 필수"
+        - "실제 target path (framework_manifest source_roots 기준)"
+      forbidden:
+        - "archive/**"
 
   fix:
     allowed_inputs:

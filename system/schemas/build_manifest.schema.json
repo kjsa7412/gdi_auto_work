@@ -119,6 +119,54 @@
         "db_fallback_reason": {"type": "array", "items": {"type": "string"}},
         "db_fallback_status": {"type": ["string", "null"], "enum": ["success", "partial", "failed", null]}
       }
+    },
+    "deploy": {
+      "type": "object",
+      "description": "선택적 deploy 준비 결과. deploy는 build 필수 성공 조건이 아님",
+      "properties": {
+        "attempted": {
+          "type": "boolean",
+          "description": "deploy 준비 시도 여부"
+        },
+        "mode": {
+          "type": "string",
+          "enum": ["prepare-only", "apply"],
+          "description": "deploy 동작 모드"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["prepared", "warn", "failed", "skipped", "applied", "partial"],
+          "description": "deploy 결과 상태"
+        },
+        "summary_path": {
+          "type": ["string", "null"],
+          "description": "deploy_summary.yml 경로"
+        },
+        "total_files": {
+          "type": "integer",
+          "description": "deploy 대상 파일 수"
+        },
+        "target_paths": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "source": {"type": "string"},
+              "target": {"type": "string"},
+              "status": {"type": "string", "enum": ["ready", "conflict", "path_unknown", "copied", "skipped", "failed"]}
+            },
+            "additionalProperties": false
+          }
+        },
+        "warnings": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "conflicts": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      }
     }
   }
 }

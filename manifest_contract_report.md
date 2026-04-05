@@ -40,12 +40,14 @@
 ### build
 | 항목 | 값 |
 |------|-----|
-| 목적 | people_spec + machine_spec → machine_spec(final) + 코드 산출물 |
-| 시작 조건 | task_reviewed + analyze.manifest 존재 |
+| 목적 | people_spec + machine_spec → machine_spec(final) + 코드 산출물 + 선택적 deploy 준비 |
+| 시작 조건 | task_analyzed + analyze.manifest 존재 |
 | 필수 입력 | `original/people_spec.md`, `original/machine_spec.yml`, `final/people_spec.md` |
 | 필수 출력 | `final/machine_spec.yml`, `build.manifest.yml`, `verify_result.yml`, `3.Result/deliverables/**` |
+| 선택 출력 | `3.Result/report/deploy_summary.yml` |
 | 성공 상태 | task_built |
 | unresolved 시 | build 차단 |
+| deploy 정책 | verify_result pass/warn 시 prepare-only 모드로 deploy skill 호출. deploy 실패 ≠ build 실패 |
 
 ### fix
 | 항목 | 값 |
@@ -156,7 +158,7 @@ Schema: `system/schemas/people_spec.schema.json`, `system/schemas/machine_spec.s
 | DB convention cache 적재 | 미구현 | SQL은 준비됨, 실제 DB 접속 및 적재 로직 필요 |
 | user_review 자동 감지 | 미확정 | 사용자가 review 완료를 어떻게 시스템에 알리는지 |
 | verify_result 검증 항목 상세 | 미확정 | self-check 항목의 상세 검증 로직 |
-| deploy 로직 | 이번 단계 범위 외 | |
+| deploy 로직 | 구현 완료 | build 후속 prepare-only, deploy_policy.yml, deploy_summary.schema.json 추가 |
 | test 실행 로직 | 이번 단계 범위 외 | |
 | system/policies/runtime/db_access.yml | 미작성 | DB 접근 정책 (convention cache 관련) |
 

@@ -112,7 +112,68 @@ errors → 보정 시도, 불가 시 failed. warnings → 경고 후 계속.
 generated → `work/task/3.Result/deliverables/`
 보고서 → `work/task/3.Result/report/build_report.md`
 
-### 9. build.manifest 완료
+### 9. Deploy 진입 판정 및 선택적 Deploy 준비
+
+**build의 핵심 성공 조건은 여기까지(생성/검증/deliverables 정리)로 이미 충족된다.**
+deploy는 build의 필수 성공 조건이 아니며, 선택적 후속 단계이다.
+
+#### 9-1. Deploy 진입 조건 확인
+아래 조건이 **모두** 충족될 때만 deploy 준비 단계로 진입한다:
+- `verify_result.status` == `pass` 또는 `warn`
+- `work/task/3.Result/deliverables/` 경로에 파일이 1개 이상 존재
+- deploy 금지 상태가 아님 (active_context에 deploy_skip 플래그 없음)
+
+**진입 조건 미충족 시**: deploy.attempted = false로 기록하고 다음 단계(build.manifest 완료)로 진행.
+
+#### 9-2. Deploy Skill 호출 (prepare-only)
+`deploy` skill을 **prepare-only** 모드로 호출한다.
+
+deploy skill에 전달:
+- `work/task/3.Result/deliverables/**`
+- `system/config/framework_manifest.yml` (source_roots)
+- `mode: "prepare-only"`
+
+deploy skill이 수행하는 것:
+1. deliverables 존재 검증
+2. framework_manifest의 source_roots 기반으로 파일별 target path 계산
+3. overwrite/conflict 탐지
+4. deploy_summary 생성
+5. **실제 복사는 수행하지 않음**
+
+deploy skill 반환:
+- `deploy_summary.status` — prepared, warn, failed
+- `deploy_summary.total_files` — 대상 파일 수
+- `deploy_summary.target_paths[]` — source/target/status 매핑
+- `deploy_summary.warnings[]` — 경고 목록
+- `deploy_summary.conflicts[]` — 충돌 목록
+- `deploy_summary.mode` — "prepare-only"
+
+#### 9-3. Deploy 결과 기록
+deploy 수행 결과를 build.manifest의 `deploy` 섹션에 기록한다:
+```yaml
+deploy:
+  attempted: true
+  mode: "prepare-only"
+  status: "prepared"  # prepared | warn | failed | skipped
+  summary_path: "work/task/3.Result/report/deploy_summary.yml"
+  total_files: 2
+  target_paths:
+    - source: "deliverables/DTA030.html"
+      target: "src/main/resources/templates/project/dt/dta/DTA030.html"
+      status: "ready"
+    - source: "deliverables/dta030.xml"
+      target: "src/main/resources/mapper/sjerp/dt/dta/dta030.xml"
+      status: "ready"
+  warnings: []
+  conflicts: []
+```
+
+#### 9-4. Deploy 실패 처리
+- deploy prepare-only 단계 실패는 **build 결과물 자체를 무효화하지 않는다.**
+- deploy.status를 `failed` 또는 `warn`으로 기록하고 build 진행을 계속한다.
+- build.manifest의 status는 여전히 `completed`로 유지 (생성/검증이 성공했으므로).
+
+### 10. build.manifest 완료
 ```yaml
 status: "completed"
 inputs:
@@ -129,22 +190,37 @@ selected_templates: [...]
 artifact_plan: [...]
 violations: []
 self_check: [...]
+deploy:
+  attempted: true
+  mode: "prepare-only"
+  status: "prepared"
+  summary_path: "work/task/3.Result/report/deploy_summary.yml"
+  total_files: N
+  target_paths: [...]
+  warnings: []
+  conflicts: []
 ```
 
-### 10. Active Context 갱신
+### 11. Active Context 갱신
 ```
 current.phase: "task_built"
 task.status: "built"
 task.last_build_at: {now}
 task.machine_spec_final_path: "work/task/2.Working/final/machine_spec.yml"
+task.deploy_prepared: true | false
 work/.lock ← "UNLOCKED"
 ```
 
-### 11. 결과 보고
+### 12. 결과 보고
 - review diff 요약 (변경 사항)
 - 생성 파일 목록
 - verify 결과 요약
 - deliverables 경로
+- **deploy 준비 결과**:
+  - deploy 준비 완료 시: 대상 파일 수, target path 목록 안내
+  - target path 미확정 시: "배포 준비까지만 완료" 안내
+  - 실제 복사 미수행 시: "실제 파일 복사는 아직 수행되지 않았습니다. 필요 시 deploy apply를 별도 요청하세요." 표시
+  - deploy 미진입 시: "verify 결과에 따라 deploy 준비를 건너뛰었습니다." 안내
 - 문제 발견 시 `/fix`, 완료 시 `/clean` 안내
 
 ## 실패 조건
@@ -153,6 +229,7 @@ work/.lock ← "UNLOCKED"
 - skeleton 파일 없음 → 즉시 중단
 - verify_result에 error + 보정 불가 → failed
 - 실패 시: phase → "failed", lock 해제
+- **deploy prepare-only 실패는 build 실패가 아님** (deploy.status만 failed/warn으로 기록)
 
 ## 성공 조건
 - `final/machine_spec.yml` 존재 + schema 통과
@@ -160,3 +237,4 @@ work/.lock ← "UNLOCKED"
 - verify_result 존재 (status: pass 또는 warn)
 - deliverables 배치 완료
 - build.manifest status: completed
+- **deploy는 선택적이므로 deploy 실패와 무관하게 build 성공 가능**

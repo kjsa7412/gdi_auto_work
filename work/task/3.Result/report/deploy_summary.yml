@@ -1,0 +1,14 @@
+deploy_summary:
+  mode: "prepare-only"
+  status: "prepared"
+  total_files: 2
+  target_paths:
+    - source: "deliverables/DTA030.html"
+      target: "src/main/resources/templates/project/dt/dta/DTA030.html"
+      status: "ready"
+    - source: "deliverables/dta030.xml"
+      target: "src/main/resources/mapper/sjerp/dt/dta/dta030.xml"
+      status: "ready"
+  warnings: []
+  conflicts: []
+  copied_paths: []

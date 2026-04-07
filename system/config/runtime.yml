@@ -87,11 +87,12 @@ commands:
         purpose: "final/machine_spec.yml → skeleton 기반 코드 생성"
         order: 2
       - name: "deploy"
-        purpose: "deliverables → target path 계산 및 배포 준비 (prepare-only 기본)"
+        purpose: "deliverables → target path 계산 및 자동 배포 (apply 기본)"
         order: 3
-        optional: true
+        optional: false
         condition: "verify_result.status가 pass 또는 warn이고 deliverables 존재 시"
-        default_mode: "prepare-only"
+        default_mode: "apply"
+        auto_trigger: true
     inputs:
       required:
         - "work/task/2.Working/original/people_spec.md"
@@ -129,10 +130,10 @@ commands:
     success_state: "task_built"
     failure_state: "failed"
     deploy_policy:
-      description: "build 마지막에 선택적으로 deploy prepare-only 수행. deploy 실패는 build 실패가 아님"
-      default_mode: "prepare-only"
+      description: "build 마지막에 자동으로 deploy apply 수행. deploy 실패는 build 실패가 아님"
+      default_mode: "apply"
       entry_condition: "verify_result.status in [pass, warn] AND deliverables 존재"
-      apply_requires: "사용자 명시적 확인"
+      auto_trigger: true
     next_command: "fix (문제 발견 시) 또는 clean (완료 시)"
 
   fix:
@@ -168,6 +169,11 @@ commands:
         - "work/fix/2.Working/manifests/verify_result.yml"
         - "work/fix/3.Result/deliverables/**"
         - "work/fix/3.Result/report/**"
+    deploy_policy:
+      description: "fix 완료 후 자동으로 deploy apply 수행. deploy 실패는 fix 실패가 아님"
+      default_mode: "apply"
+      entry_condition: "verify_result.status in [pass, warn] AND fix deliverables 존재"
+      auto_trigger: true
     success_state: "fix_applied"
     failure_state: "failed"
     next_command: "clean (완료 시) 또는 fix (추가 수정 시)"

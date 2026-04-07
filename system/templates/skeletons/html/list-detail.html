@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" th:fragment="content(PGM, PARENT)">
+<html xmlns:th="http://www.thymeleaf.org">
 <th:block th:replace="~{frame/top_title_button :: topTitleButtonFragment}"></th:block>
 
 <div class="data-page">
@@ -21,18 +21,6 @@
     const listener = platform.listener[PGM];
 
     listener.initPgm = function () {
-
-        // === 상단 툴바 ===
-        listener.toolbar.toolbar = webix.ui({
-            container: `${PGM}btnToolbar`,
-            view: "dataToolbar",
-            elements: [
-                {view: "button", value: "조회[F2]", click: () => { listener.button.search.click(); }},
-                {view: "button", value: "저장[F9]", click: () => { listener.button.save.click(); }},
-                /* OPTIONAL: delete button */
-                {view: "button", value: "초기화[F12]", click: () => { listener.button.init.click(); }}
-            ]
-        });
 
         // === 검색 폼 ===
         listener.form.searchForm = webix.ui({
@@ -68,9 +56,8 @@
         listener.toolbar.toolbar2 = webix.ui({
             container: `${PGM}btnToolbar2`,
             view: "dataToolbar",
-            elements: [
-                {view: "button", value: "저장", click: () => { listener.saveEvent(listener.grid.detailGrid); }}
-            ]
+            pgm: PGM,
+            title: "{{detail_title}}"
         });
 
         // === 상세 그리드 (우측) ===

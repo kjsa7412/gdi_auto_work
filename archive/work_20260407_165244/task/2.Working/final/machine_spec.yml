@@ -1,0 +1,149 @@
+version: "1.0"
+screen_id: "SEB010"
+screen_name: "사전검토관리"
+screen_type: "list-detail"
+module_id: "seb010"
+module_group: "se"
+sub_group: "seb"
+mapper_namespace: "seb010"
+
+skeleton_choice:
+  html: "system/templates/skeletons/html/list-detail.html"
+  xml: "system/templates/skeletons/xml/list-detail.xml"
+
+placeholders:
+  search_fields:
+    - field_id: "P_prj_targ_yy"
+      label: "대상년도"
+      type: "CODE_HELP"
+      code_type: "RP350"
+      required: false
+      row: 1
+      gravity: 1
+    - field_id: "P_rsch_ctg_cd"
+      label: "연구분류"
+      type: "CODE_HELP"
+      code_type: "RP010"
+      required: false
+      row: 1
+      gravity: 1
+    - field_id: "P_rsch_cls_cd"
+      label: "연구유형"
+      type: "CODE_HELP"
+      code_type: "RP020"
+      required: false
+      row: 1
+      gravity: 1
+    - field_id: "P_prj_nm"
+      label: "연구과제명"
+      type: "TEXT"
+      required: false
+      row: 1
+      gravity: 2
+    - field_id: "P_prgrs_stat_cd"
+      label: "진행상태"
+      type: "CODE_HELP"
+      code_type: "RP070"
+      required: false
+      row: 2
+      gravity: 1
+    - field_id: "P_rcpt_from_dt"
+      label: "접수일자(시작)"
+      type: "DATE_RANGE"
+      date_range_role: "from"
+      date_range_pair: "P_rcpt_to_dt"
+      default_offset_days: -7
+      required: false
+      row: 2
+      gravity: 1
+    - field_id: "P_rcpt_to_dt"
+      label: "접수일자(종료)"
+      type: "DATE_RANGE"
+      date_range_role: "to"
+      date_range_pair: "P_rcpt_from_dt"
+      default_offset_days: 7
+      required: false
+      row: 2
+      gravity: 1
+  grid_columns:
+    - column_id: "rsch_cls_nm"
+      header: "연구유형"
+      data_type: "string"
+      width: 100
+      sortable: true
+      align: "center"
+      code_type: "RP020"
+    - column_id: "prj_nm"
+      header: "연구과제명"
+      data_type: "string"
+      width: 300
+      sortable: true
+      align: "left"
+    - column_id: "rcpt_dt"
+      header: "접수일자"
+      data_type: "string"
+      width: 100
+      sortable: true
+      align: "center"
+    - column_id: "prgrs_stat_nm"
+      header: "검토상태"
+      data_type: "string"
+      width: 100
+      sortable: true
+      align: "center"
+      code_type: "RP070"
+    - column_id: "opl_wrt_dt"
+      header: "의견서작성일"
+      data_type: "string"
+      width: 100
+      sortable: true
+      align: "center"
+
+detail_fields:
+  - field_id: "rview_targr_nm"
+    label: "검토자"
+    type: "TEXT"
+    required: false
+    editable: false
+    grid_position: "right"
+    detail_grid_name: "검토 대상자"
+    refresh_trigger: "left_grid_click"
+  - field_id: "adpt_rslt_nm"
+    label: "검토결과"
+    type: "TEXT"
+    required: false
+    editable: false
+    code_type: "RP080"
+    grid_position: "right"
+    detail_grid_name: "검토 대상자"
+
+sql:
+  select_sql_id: "selectMainGrid"
+  main_table: "rp_pre_rview_mst"
+  order_columns:
+    - "a.firs_reg_dts DESC"
+
+insert_sql_id: "insertPreRviewMst"
+delete_sql_id: "deletePreRviewMst"
+
+artifacts:
+  html_path: "work/task/2.Working/generated/SEB010.html"
+  xml_path: "work/task/2.Working/generated/seb010.xml"
+
+popup_targets:
+  - popup_id: "SEB011"
+    trigger_field: "grid_dblclick"
+    return_fields:
+      - "wrk_mast_id"
+    description: "사전검토등록 — 그리드 더블클릭 시 수정 모드로 이동. RP070030(완료) 시 readonly"
+  - popup_id: "SEB011"
+    trigger_field: "btn_new"
+    return_fields: []
+    description: "사전검토등록 — 신규 버튼 클릭 시 신규 모드로 이동"
+  - popup_id: "SEB012"
+    trigger_field: "seb010_direct_call"
+    return_fields:
+      - "wrk_mast_id"
+      - "rview_targr_id"
+      - "rsch_prj_id"
+    description: "사전검토의견서등록내용 — SEB010에서 직접 호출 (SEB011 경유 아님)"

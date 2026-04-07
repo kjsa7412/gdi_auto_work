@@ -1,0 +1,133 @@
+version: "1.0"
+screen_id: "SEB010"
+screen_name: "사전검토관리"
+screen_type: "list-detail"
+module_id: "seb010"
+module_group: "se"
+sub_group: "seb"
+mapper_namespace: "seb010"
+
+skeleton_choice:
+  html: "system/templates/skeletons/html/list-detail.html"
+  xml: "system/templates/skeletons/xml/list-detail.xml"
+
+placeholders:
+  search_fields:
+    - field_id: "P_prj_targ_yy"
+      label: "대상년도"
+      type: "CODE_HELP"
+      code_type: "RP350"
+      required: false
+      row: 1
+      gravity: 1
+    - field_id: "P_rsch_ctg_cd"
+      label: "연구분류"
+      type: "CODE_HELP"
+      code_type: "RP010"
+      required: false
+      row: 1
+      gravity: 1
+    - field_id: "P_rsch_cls_cd"
+      label: "연구유형"
+      type: "CODE_HELP"
+      code_type: "RP020"
+      required: false
+      row: 1
+      gravity: 1
+    - field_id: "P_prj_nm"
+      label: "연구과제명"
+      type: "TEXT"
+      required: false
+      row: 1
+      gravity: 2
+    - field_id: "P_prgrs_stat_cd"
+      label: "진행상태"
+      type: "CODE_HELP"
+      code_type: "RP070"
+      required: false
+      row: 2
+      gravity: 1
+    - field_id: "P_rcpt_dt"
+      label: "접수일자"
+      type: "DATE"
+      required: false
+      row: 2
+      gravity: 1
+  grid_columns:
+    - column_id: "rsch_cls_nm"
+      header: "연구유형"
+      data_type: "string"
+      width: 100
+      sortable: true
+      align: "center"
+      code_type: "RP020"
+    - column_id: "prj_nm"
+      header: "연구과제명"
+      data_type: "string"
+      width: 300
+      sortable: true
+      align: "left"
+    - column_id: "rcpt_dt"
+      header: "접수일자"
+      data_type: "string"
+      width: 100
+      sortable: true
+      align: "center"
+    - column_id: "prgrs_stat_nm"
+      header: "검토상태"
+      data_type: "string"
+      width: 100
+      sortable: true
+      align: "center"
+      code_type: "RP070"
+    - column_id: "opl_wrt_dt"
+      header: "의견서작성일"
+      data_type: "string"
+      width: 100
+      sortable: true
+      align: "center"
+
+detail_fields:
+  - field_id: "rview_targr_nm"
+    label: "검토자"
+    type: "TEXT"
+    required: false
+    editable: false
+  - field_id: "adpt_rslt_nm"
+    label: "검토결과"
+    type: "TEXT"
+    required: false
+    editable: false
+    code_type: "RP080"
+
+sql:
+  select_sql_id: "selectMainGrid"
+  main_table: "rp_pre_rview_mst"
+  order_columns:
+    - "a.firs_reg_dts DESC"
+
+insert_sql_id: "insertPreRviewMst"
+delete_sql_id: "deletePreRviewMst"
+
+artifacts:
+  html_path: "work/task/2.Working/generated/SEB010.html"
+  xml_path: "work/task/2.Working/generated/seb010.xml"
+
+controller: "com.sjinc.proj.se.seb.seb010.Seb010Controller"
+service: "com.sjinc.proj.se.seb.seb010.Seb010Service"
+
+popup_targets:
+  - popup_id: "SEB011"
+    trigger_field: "grid_dblclick"
+    return_fields:
+      - "wrk_mast_id"
+  - popup_id: "SEB011"
+    trigger_field: "btn_new"
+    return_fields: []
+
+unresolved:
+  - "접수일자 검색: 단일날짜 vs 날짜범위 확인 필요"
+  - "SEB011 machine_spec 별도 생성 필요"
+  - "SEB012 machine_spec 별도 생성 필요"
+  - "검토 대상자 그리드 SQL(detail_sql_id) 미확정 — rp_pre_rview_opl_list JOIN sy_user_info"
+  - "조회 SQL: rp_pre_rview_mst JOIN rp_rsch_prj_mst (prgrs_stat_cd=RP040020 조건) 정확한 JOIN 조건 확인 필요"

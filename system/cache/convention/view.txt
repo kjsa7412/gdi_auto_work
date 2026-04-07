@@ -1,0 +1,54 @@
+public|vw_sy_user_dept_info| SELECT a.user_id,
+    b.user_nm,
+    a.main_comp_yn,
+    a.dept_cd,
+    c.dept_nm,
+    a.emp_no,
+    a.jbcls_cd,
+    c4.comm_cd_nm AS jbcls_nm,
+    a.pstn_cd,
+    c1.comm_cd_nm AS pstn_nm,
+    a.dty_cd,
+    c2.comm_cd_nm AS dty_nm,
+    b.join_dt,
+    b.retr_dt,
+    b.hlof_tp_cd,
+    c3.comm_cd_nm AS hlof_tp_nm,
+    b.tel_no,
+    b.hp_no,
+    b.zip_no,
+    b.base_addr,
+    b.dtl_addr,
+    b.email,
+    b.use_yn
+   FROM ((((((sy_user_dept_info a
+     JOIN sy_user_info b ON (((b.user_id)::text = (a.user_id)::text)))
+     LEFT JOIN sy_dept_info c ON (((c.dept_cd)::text = (a.dept_cd)::text)))
+     LEFT JOIN sy_code_dtl c4 ON ((((c4.comm_cd)::text = (a.jbcls_cd)::text) AND ((c4.wrk_tp_cd)::text = 'PS'::text) AND ((c4.cd_tp_cd)::text = '010'::text))))
+     LEFT JOIN sy_code_dtl c1 ON ((((c1.comm_cd)::text = (a.pstn_cd)::text) AND ((c1.wrk_tp_cd)::text = 'PS'::text) AND ((c1.cd_tp_cd)::text = '020'::text))))
+     LEFT JOIN sy_code_dtl c2 ON ((((c2.comm_cd)::text = (a.dty_cd)::text) AND ((c2.wrk_tp_cd)::text = 'PS'::text) AND ((c2.cd_tp_cd)::text = '040'::text))))
+     LEFT JOIN sy_code_dtl c3 ON ((((c3.comm_cd)::text = (b.hlof_tp_cd)::text) AND ((c3.wrk_tp_cd)::text = 'PS'::text) AND ((c3.cd_tp_cd)::text = '018'::text))))
+  WHERE ((a.main_dept_yn)::text = 'Y'::text);|
+public|vw_sy_user_dept_info|user_id|1|character varying|20|YES
+public|vw_sy_user_dept_info|user_nm|2|character varying|30|YES
+public|vw_sy_user_dept_info|main_comp_yn|3|character varying|1|YES
+public|vw_sy_user_dept_info|dept_cd|4|character varying|10|YES
+public|vw_sy_user_dept_info|dept_nm|5|character varying|30|YES
+public|vw_sy_user_dept_info|emp_no|6|character varying|20|YES
+public|vw_sy_user_dept_info|jbcls_cd|7|character varying|10|YES
+public|vw_sy_user_dept_info|jbcls_nm|8|character varying|100|YES
+public|vw_sy_user_dept_info|pstn_cd|9|character varying|10|YES
+public|vw_sy_user_dept_info|pstn_nm|10|character varying|100|YES
+public|vw_sy_user_dept_info|dty_cd|11|character varying|10|YES
+public|vw_sy_user_dept_info|dty_nm|12|character varying|100|YES
+public|vw_sy_user_dept_info|join_dt|13|character varying|8|YES
+public|vw_sy_user_dept_info|retr_dt|14|character varying|8|YES
+public|vw_sy_user_dept_info|hlof_tp_cd|15|character varying|10|YES
+public|vw_sy_user_dept_info|hlof_tp_nm|16|character varying|100|YES
+public|vw_sy_user_dept_info|tel_no|17|character varying|20|YES
+public|vw_sy_user_dept_info|hp_no|18|character varying|20|YES
+public|vw_sy_user_dept_info|zip_no|19|character varying|10|YES
+public|vw_sy_user_dept_info|base_addr|20|character varying|100|YES
+public|vw_sy_user_dept_info|dtl_addr|21|character varying|100|YES
+public|vw_sy_user_dept_info|email|22|character varying|50|YES
+public|vw_sy_user_dept_info|use_yn|23|character varying|1|YES

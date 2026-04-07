@@ -1,0 +1,88 @@
+public|trg_pre_rview_opl_adpt_rslt|UPDATE|public|rp_pre_rview_opl_list|EXECUTE FUNCTION fn_pre_rview_opl_adpt_rslt()|AFTER|ROW
+public|trg_pre_rview_opl_complete|UPDATE|public|rp_pre_rview_opl_list|EXECUTE FUNCTION fn_pre_rview_opl_complete()|AFTER|ROW
+trg_pre_rview_opl_adpt_rslt|rp_pre_rview_opl_list|fn_pre_rview_opl_adpt_rslt|CREATE OR REPLACE FUNCTION public.fn_pre_rview_opl_adpt_rslt()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+DECLARE
+    v_total_cnt INT;
+    v_rslt_cnt  INT;
+    v_current_stat VARCHAR(10);
+BEGIN
+    -- adpt_rslt_cd가 변경된 경우에만 실행
+    IF NEW.adpt_rslt_cd IS NOT NULL
+       AND (OLD.adpt_rslt_cd IS NULL OR OLD.adpt_rslt_cd <> NEW.adpt_rslt_cd)
+    THEN
+        -- 사전검토완료가 아닌 경우에만 처리
+        SELECT prgrs_stat_cd
+          INTO v_current_stat
+          FROM rp_pre_rview_mst
+         WHERE wrk_mast_id = NEW.wrk_mast_id;
+
+        IF v_current_stat <> 'RP070030' THEN
+            -- 해당 사전검토의 전체 의견서 수
+            SELECT COUNT(*)
+              INTO v_total_cnt
+              FROM rp_pre_rview_opl_list
+             WHERE wrk_mast_id = NEW.wrk_mast_id;
+
+            -- 채택결과가 등록된 의견서 수
+            SELECT COUNT(*)
+              INTO v_rslt_cnt
+              FROM rp_pre_rview_opl_list
+             WHERE wrk_mast_id = NEW.wrk_mast_id
+               AND adpt_rslt_cd IS NOT NULL
+               AND adpt_rslt_cd <> '';
+
+            -- 모든 의견서에 결과가 등록되었으면 마스터 갱신
+            IF v_total_cnt > 0 AND v_total_cnt = v_rslt_cnt THEN
+                UPDATE rp_pre_rview_mst
+                   SET opl_wrt_dt      = TO_CHAR(current_timestamp, 'YYYYMMDD')
+                     , prgrs_stat_cd   = 'RP070030'
+                     , fina_reg_pgm_id = 'SEB010'
+                     , fina_reg_dts    = current_timestamp
+                     , fina_reg_user_id = 'SYSTEM'
+                     , fina_reg_ip     = '127.0.0.1'
+                 WHERE wrk_mast_id     = NEW.wrk_mast_id;
+            END IF;
+        END IF;
+    END IF;
+
+    RETURN NEW;
+END;
+$function$
+|AFTER|UPDATE
+trg_pre_rview_opl_complete|rp_pre_rview_opl_list|fn_pre_rview_opl_complete|CREATE OR REPLACE FUNCTION public.fn_pre_rview_opl_complete()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+DECLARE
+    v_incomplete_cnt INTEGER;
+BEGIN
+    -- adpt_rslt_cd가 변경된 경우에만 처리
+    IF NEW.adpt_rslt_cd IS NOT NULL AND (OLD.adpt_rslt_cd IS NULL OR OLD.adpt_rslt_cd != NEW.adpt_rslt_cd) THEN
+
+        -- 동일 wrk_mast_id에서 adpt_rslt_cd가 미입력된 건수 조회
+        SELECT COUNT(*)
+        INTO v_incomplete_cnt
+        FROM rp_pre_rview_opl_list
+        WHERE wrk_mast_id = NEW.wrk_mast_id
+          AND (adpt_rslt_cd IS NULL OR adpt_rslt_cd = '');
+
+        -- 모든 의견서가 채택결과 입력 완료 시 마스터 상태 갱신
+        IF v_incomplete_cnt = 0 THEN
+            UPDATE rp_pre_rview_mst
+            SET prgrs_stat_cd = 'RP070030',
+                fina_reg_pgm_id = 'SEB012',
+                fina_reg_dts = current_timestamp,
+                fina_reg_user_id = NEW.fina_reg_user_id,
+                fina_reg_ip = NEW.fina_reg_ip
+            WHERE wrk_mast_id = NEW.wrk_mast_id;
+        END IF;
+
+    END IF;
+
+    RETURN NEW;
+END;
+$function$
+|AFTER|UPDATE

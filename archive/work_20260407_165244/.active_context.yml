@@ -1,0 +1,35 @@
+version: 1
+workspace_mode: "single-active"
+current:
+  type: fix
+  phase: "fix_applied"
+  command: null
+  started_at: null
+  updated_at: "2026-04-07T00:00:00"
+  manifest_path: "work/fix/2.Working/manifests/fix.manifest.yml"
+  lock_owner: null
+  retry_count: 0
+task:
+  status: "built"
+  input_files:
+    - "work/task/1.Prep/GDI_DE_331_화면설계서_통합본.pptx"
+  last_analyze_at: "2026-04-07T00:00:00"
+  last_build_at: "2026-04-07T00:00:00"
+  people_spec_original_path: "work/task/2.Working/original/people_spec.md"
+  people_spec_final_path: "work/task/2.Working/final/people_spec.md"
+  machine_spec_original_path: "work/task/2.Working/original/machine_spec.yml"
+  machine_spec_final_path: "work/task/2.Working/final/machine_spec.yml"
+fix:
+  status: "applied"
+  input_files:
+    - "work/fix/1.Prep/fix.md"
+  last_fix_at: "2026-04-07T00:00:00"
+  related_task_paths:
+    - "work/task/2.Working/generated/SEB010.html"
+    - "work/task/2.Working/generated/SEB011.html"
+    - "work/task/2.Working/generated/SEB012.html"
+history:
+  last_success_command: "fix"
+  last_success_at: "2026-04-07T00:00:00"
+  last_error_command: null
+  last_error_at: null

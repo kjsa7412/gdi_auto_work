@@ -56,16 +56,17 @@ generate skill 반환 기반으로 `verify_result.yml` 생성.
 ### 7. Deliverables + Report 정리
 generated → deliverables, build_report.md 생성.
 
-### 8. Deploy 판정 및 준비
-`deploy_policy.yml` → `entry_conditions.from_build` 충족 시:
-- `runtime.yml` → `commands.build.skills_used[2]`: deploy (prepare-only)
-- `deploy_policy.yml` → `failure_impact.on_build`: deploy 실패는 build 실패가 아님
+### 8. Deploy Skill 자동 호출
+`deploy_policy.yml` → `entry_conditions.from_build` 충족 시 **deploy skill 자동 호출**.
+- 대상: `work/task/3.Result/deliverables/**`
+- 세부 절차는 `skills/deploy.md` 참조
+- deploy 실패는 build 실패가 아님
 
 ### 9. Manifest 완료 + Active Context 갱신 + Lock 해제
 `runtime.yml` → `commands.build.success_state`: task_built
 
 ### 10. 결과 보고
-review diff, 생성 파일, verify 요약, 자기진단 요약, deploy 준비 결과.
+review diff, 생성 파일, verify 요약, 자기진단 요약, deploy 배포 결과.
 
 ## 실패/성공 조건
 `runtime.yml` → `commands.build` 및 `lifecycle.yml` → `mandatory_output_check.build` 참조.

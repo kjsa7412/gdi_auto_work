@@ -23,12 +23,19 @@ code_combo:
 
 code_help:
   id: CC-002
-  description: "코드헬프 검색 기본 패턴"
+  description: "코드헬프/코드콤보 기본 패턴"
+  default_rule: >
+    view는 항상 DATA_VIEW.codeNone을 사용한다. DATA_VIEW.code는 사용하지 않는다.
+    type은 뒤에 오는 DATA_CODE_TYPE과 관계없이 view는 항상 codeNone이다.
+  default_view: "DATA_VIEW.codeNone"
+  default_type: "DATA_CODE_TYPE.codeValue"
+  forbidden_view: "DATA_VIEW.code — 사용 금지. 항상 DATA_VIEW.codeNone으로 대체"
   rules:
-    - "사용자는 코드 ID/PK를 알 필요 없음"
-    - "화면은 코드명(명칭) 기반 검색을 기본 지원"
-    - "명시적 요청이 있을 때만: view: DATA_VIEW.code, type: DATA_CODE_TYPE.code"
-  search_principle: "코드명(comm_cd_nm) 기반 검색이 기본, 코드값(comm_cd) 검색은 명시 요청 시만"
+    - "view는 항상 DATA_VIEW.codeNone (type이 codeValue든 custom이든 무관)"
+    - "기본 코드콤보: view: DATA_VIEW.codeNone, type: DATA_CODE_TYPE.codeValue"
+    - "커스텀 코드헬프: view: DATA_VIEW.codeNone, type: DATA_CODE_TYPE.custom + statement + idField + valueField 필수"
+    - "DATA_VIEW.code 사용 금지"
+    - "DATA_CODE_TYPE.custom 사용 시 idField, valueField 반드시 지정 (프레임워크 webix.custom3.js 검증 통과 필수)"
 
 data_view_constants:
   id: CC-003

@@ -1,0 +1,197 @@
+Total slides: 3
+
+=== Slide 1 ===
+    row[0]: ['', '연구유형', '연구과제명', '접수일자', '검토상태', '의견서작성일']
+    row[1]: ['', '도정책과제', '(정책)농촌공간 재구조화를 위한 농촌특화지구 활성화 방안 연구', '2025-09-16', '과제접수', '']
+    row[2]: ['', '도정책과제', '(정책)역노화 산업단지 조성을 위한 지역농업 조직화 방안', '2025-09-14', '사전검토요청', '']
+    row[3]: ['', '도수시과제', '(수시)근로감독업무 지방이양에 따른 경상북도 추진 뱡향', '2025-08-25', '의견서작성완료', '2025-08-25']
+    row[4]: ['', '도수시과제', '(수시)2026년도 생활임금(안) 산출', '2025-08-25', '의견서작성완료', '2025-08-25']
+    row[5]: ['', '도정책과제', '(정책)경상북도 지역활성화지역 재선정 모델 연구', '2025-08-14', '의견서작성완료', '2025-08-19']
+    row[6]: ['', '도정책과제', '(정책)무탄소 전원개발사업 추진에 따른 지역경제 영향분석 및 주민 수용성 제고 방안', '2025-08-06', '의견서작성완료', '2025-08-06']
+    row[7]: ['', '', '', '', '', '']
+    row[8]: ['', '', '', '', '', '']
+    row[9]: ['', '', '', '', '', '']
+    row[10]: ['', '', '', '', '', '']
+    row[11]: ['', '', '', '', '', '']
+    row[12]: ['', '', '', '', '', '']
+    row[13]: ['', '', '', '', '', '']
+    row[14]: ['', '', '', '', '', '']
+    row[15]: ['', '', '', '', '', '']
+    row[16]: ['', '', '', '', '', '']
+    row[17]: ['', '', '', '', '', '']
+  [0] type=TABLE (19), name=표 57, pos=(0.56,2.72), size=(8.66x3.8), table=18rows x 6cols
+  [1] type=TEXT_BOX (17), name=Text Box 3, pos=(0.56,0.77), size=(1.96x0.28), text=[■ 화면개요 및 레이아웃]
+    row[0]: ['개요', '사전검토관리']
+  [2] type=TABLE (19), name=Group 403, pos=(2.77,0.78), size=(10.0x0.24), table=1rows x 2cols
+  [3] type=LINE (9), name=직선 연결선 10, pos=(0.57,1.36), size=(12.2x0.01)
+  [4] type=AUTO_SHAPE (1), name=Rectangle 35, pos=(0.58,1.11), size=(1.58x0.27), text=[사전검토관리]
+    row[0]: ['업무구분', 'SE 연구과제선정', '분류', 'SEB 사전검토', '프로그램ID', 'SEB010']
+    row[1]: ['프로그램명', '사전검토관리', '화면(TAB)명', '', 'AS-IS 프로그램', '사전검토의견서(RP010103)']
+  [5] type=TABLE (19), name=Group 403, pos=(0.56,0.18), size=(12.2x0.49), table=2rows x 6cols
+  [6] type=AUTO_SHAPE (1), name=직사각형 14, pos=(0.56,1.45), size=(12.2x0.91)
+  [7] type=AUTO_SHAPE (1), name=Rectangle 35, pos=(0.55,2.45), size=(0.8x0.27), text=[▶사전검토목록]
+  [8] type=AUTO_SHAPE (1), name=Rectangle 244, pos=(12.16,1.11), size=(0.55x0.2), text=[초기화]
+  [9] type=AUTO_SHAPE (1), name=Rectangle 244, pos=(11.56,1.11), size=(0.55x0.2), text=[삭제]
+  [10] type=AUTO_SHAPE (1), name=직사각형 90, pos=(0.61,2.97), size=(0.12x0.12)
+  [11] type=AUTO_SHAPE (1), name=직사각형 91, pos=(0.61,3.19), size=(0.12x0.12)
+  [12] type=AUTO_SHAPE (1), name=직사각형 95, pos=(0.61,3.41), size=(0.12x0.12)
+  [13] type=AUTO_SHAPE (1), name=직사각형 96, pos=(0.61,3.61), size=(0.12x0.12)
+  [14] type=AUTO_SHAPE (1), name=직사각형 97, pos=(0.61,3.81), size=(0.12x0.12)
+  [15] type=AUTO_SHAPE (1), name=Rectangle 244, pos=(10.97,1.11), size=(0.55x0.2), text=[신규]
+  [16] type=AUTO_SHAPE (1), name=Rectangle 244, pos=(10.38,1.11), size=(0.55x0.2), text=[조회]
+  [17] type=LINE (9), name=직선 연결선 10, pos=(0.57,1.36), size=(12.2x0.01)
+    [18.0] type=GROUP (6), name=그룹 42, pos=(1.63,2.94), size=(1.48x0.18)
+    [18.1] type=AUTO_SHAPE (1), name=Rectangle 8, pos=(1.13,2.96), size=(0.45x0.13), text=[접수일자]
+  [18] type=GROUP (6), name=그룹 41, pos=(3.2,2.05), size=(1.98x0.18), group_count=2
+    [19.0] type=AUTO_SHAPE (1), name=Rectangle 8, pos=(0.62,1.56), size=(0.53x0.21), text=[연구분류]
+    [19.1] type=AUTO_SHAPE (1), name=Rectangle 9, pos=(1.16,1.57), size=(1.07x0.18), text=[RP010]
+    [19.2] type=AUTO_SHAPE (1), name=Rectangle 17, pos=(2.23,1.57), size=(0.2x0.18), text=[?]
+  [19] type=GROUP (6), name=그룹 46, pos=(3.17,1.6), size=(1.8x0.21), group_count=3
+    [20.0] type=AUTO_SHAPE (1), name=Rectangle 8, pos=(0.62,1.56), size=(0.53x0.21), text=[대상년도]
+    [20.1] type=AUTO_SHAPE (1), name=Rectangle 9, pos=(1.16,1.57), size=(1.07x0.18), text=[RP350]
+    [20.2] type=AUTO_SHAPE (1), name=Rectangle 17, pos=(2.23,1.57), size=(0.2x0.18), text=[?]
+  [20] type=GROUP (6), name=그룹 51, pos=(0.69,1.6), size=(1.8x0.21), group_count=3
+    [21.0] type=AUTO_SHAPE (1), name=Rectangle 8, pos=(0.62,1.56), size=(0.53x0.21), text=[연구유형]
+    [21.1] type=AUTO_SHAPE (1), name=Rectangle 9, pos=(1.16,1.57), size=(1.07x0.18), text=[RP020]
+    [21.2] type=AUTO_SHAPE (1), name=Rectangle 17, pos=(2.23,1.57), size=(0.2x0.18), text=[?]
+  [21] type=GROUP (6), name=그룹 55, pos=(5.67,1.6), size=(1.8x0.21), group_count=3
+    [22.0] type=AUTO_SHAPE (1), name=Rectangle 167, pos=(1.19,1.54), size=(3.98x0.18)
+    [22.1] type=AUTO_SHAPE (1), name=Rectangle 8, pos=(0.58,1.57), size=(0.56x0.13), text=[연구과제명]
+  [22] type=GROUP (6), name=그룹 62, pos=(7.89,1.61), size=(4.59x0.18), group_count=2
+    [23.0] type=AUTO_SHAPE (1), name=Rectangle 8, pos=(0.62,1.56), size=(0.53x0.21), text=[진행상태]
+    [23.1] type=AUTO_SHAPE (1), name=Rectangle 9, pos=(1.16,1.57), size=(1.07x0.18), text=[RP070]
+    [23.2] type=AUTO_SHAPE (1), name=Rectangle 17, pos=(2.23,1.57), size=(0.2x0.18), text=[?]
+  [23] type=GROUP (6), name=그룹 66, pos=(0.69,2.03), size=(1.8x0.21), group_count=3
+    row[0]: ['검토자', '검토결과']
+    row[1]: ['홍길동', '채택']
+    row[2]: ['김철수', '불채택']
+    row[3]: ['', '']
+    row[4]: ['', '']
+    row[5]: ['', '']
+    row[6]: ['', '']
+    row[7]: ['', '']
+    row[8]: ['', '']
+    row[9]: ['', '']
+    row[10]: ['', '']
+    row[11]: ['', '']
+    row[12]: ['', '']
+    row[13]: ['', '']
+    row[14]: ['', '']
+    row[15]: ['', '']
+    row[16]: ['', '']
+    row[17]: ['', '']
+  [24] type=TABLE (19), name=표 73, pos=(9.43,2.72), size=(3.36x3.8), table=18rows x 2cols
+  [25] type=AUTO_SHAPE (1), name=Rectangle 35, pos=(9.42,2.45), size=(0.8x0.27), text=[▶검토 대상자]
+  [26] type=AUTO_SHAPE (1), name=직사각형 75, pos=(13.44,-0.01), size=(6.35x1.22), text=[[버튼]|1. 조회 : 사전검토마스터 + 연구과제마스터(연구과제마스터의 진행상태가 RP040020 인경우)|2. 신규 : SEB011로 이동|3. 삭제 : 그리드에서 체크된 레코드 삭제. 사전검토마스터 진행상태가 RP070030이면 삭제 불가(알림)]
+  [27] type=AUTO_SHAPE (1), name=직사각형 76, pos=(13.44,1.31), size=(6.35x1.22), text=[[그리드 : 사전검토목록]|1. 더블클릭 : SEB011로 이동 후 인풋폼에 선택한 ROW의 데이터 입력. RP070030인 경우 모든 인풋폼 readonly|2. 검토자 : 사전검토에 연결된 사전검토의견서들의 검토대상자ID를 종합 (중복제외)|3. 채택결과 : 사전검]
+  [28] type=AUTO_SHAPE (1), name=직사각형 77, pos=(13.44,2.63), size=(6.35x1.22), text=[[데이터]|1. 사전검토의견서마스터에 아래 내용의 트리거 생성 (SQL 생성)|사전검토의견서마스터의 채택결과 등록 시. 해당 사전검토가 사전검토완료 상태가 아닌 경우 사전검토에 물린 의견서를 확인하고 채택결과가 모두 등록되었다면 해당 일자를 사전검토마스터의 의견서작성일]
+
+=== Slide 2 ===
+  [0] type=TEXT_BOX (17), name=Text Box 3, pos=(0.56,0.77), size=(1.96x0.28), text=[■ 화면개요 및 레이아웃]
+    row[0]: ['개요', '사전검토관리 > 사전검토등록']
+  [1] type=TABLE (19), name=Group 403, pos=(2.77,0.78), size=(10.0x0.24), table=1rows x 2cols
+    row[0]: ['업무구분', 'SE 연구과제선정', '분류', 'SEB 사전검토', '프로그램ID', 'SEB011']
+    row[1]: ['프로그램명', '사전검토관리', '화면(TAB)명', '사전검토등록', 'AS-IS 프로그램', '']
+  [2] type=TABLE (19), name=Group 403, pos=(0.56,0.18), size=(12.2x0.49), table=2rows x 6cols
+  [3] type=LINE (9), name=직선 연결선 10, pos=(0.57,1.36), size=(12.2x0.01)
+  [4] type=AUTO_SHAPE (1), name=Rectangle 35, pos=(0.58,1.11), size=(1.58x0.27), text=[사전검토등록]
+  [5] type=AUTO_SHAPE (1), name=Rectangle 244, pos=(11.61,1.11), size=(0.55x0.2), text=[삭제]
+    [6.0] type=AUTO_SHAPE (1), name=Rectangle 145, pos=(8.48,4.14), size=(4.07x0.16), text=[체육시설 현황분석 및 확충방안]
+    [6.1] type=AUTO_SHAPE (1), name=Rectangle 8, pos=(7.82,4.16), size=(0.61x0.13), text=[*연구과제명]
+  [6] type=GROUP (6), name=그룹 52, pos=(0.77,1.86), size=(4.73x0.16), group_count=2
+    row[0]: ['', '성명', '부서', '직급', '직책']
+    row[1]: ['', '홍길동1', '연구부', '선임연구위원', '연구부장']
+    row[2]: ['', '홍길동2', '미래전략연구실', '부연구위원', '']
+    row[3]: ['', '홍길동3', '도청센터', '연구위원', '']
+    row[4]: ['', '홍길동4', '미래전략연구실', '부연구위원', '']
+    row[5]: ['', '', '', '', '']
+    row[6]: ['', '', '', '', '']
+    row[7]: ['', '', '', '', '']
+    row[8]: ['', '', '', '', '']
+    row[9]: ['', '', '', '', '']
+    row[10]: ['', '', '', '', '']
+    row[11]: ['', '', '', '', '']
+    row[12]: ['', '', '', '', '']
+    row[13]: ['', '', '', '', '']
+    row[14]: ['', '', '', '', '']
+    row[15]: ['', '', '', '', '']
+    row[16]: ['', '', '', '', '']
+    row[17]: ['', '', '', '', '']
+    row[18]: ['', '', '', '', '']
+  [7] type=TABLE (19), name=표 55, pos=(0.56,2.68), size=(12.18x4.05), table=19rows x 5cols
+  [8] type=AUTO_SHAPE (1), name=Rectangle 35, pos=(0.59,1.41), size=(0.8x0.27), text=[▶ 개요]
+  [9] type=AUTO_SHAPE (1), name=Rectangle 35, pos=(0.56,2.36), size=(0.8x0.27), text=[▶검토 대상자]
+  [10] type=AUTO_SHAPE (1), name=직사각형 59, pos=(0.67,2.94), size=(0.12x0.12)
+  [11] type=AUTO_SHAPE (1), name=직사각형 60, pos=(0.67,3.16), size=(0.12x0.12)
+  [12] type=AUTO_SHAPE (1), name=직사각형 61, pos=(0.67,3.37), size=(0.12x0.12), text=[√]
+  [13] type=AUTO_SHAPE (1), name=Rectangle 244, pos=(11.0,1.11), size=(0.55x0.2), text=[저장]
+  [14] type=PICTURE (13), name=Picture 42, pos=(3.64,2.91), size=(0.18x0.18)
+  [15] type=PICTURE (13), name=Picture 42, pos=(3.64,3.12), size=(0.18x0.18)
+  [16] type=PICTURE (13), name=Picture 42, pos=(3.64,3.33), size=(0.18x0.18)
+  [17] type=AUTO_SHAPE (1), name=직사각형 67, pos=(0.67,2.72), size=(0.12x0.12), text=[√]
+  [18] type=AUTO_SHAPE (1), name=Rectangle 244, pos=(10.39,1.11), size=(0.55x0.2), text=[닫기]
+  [19] type=PICTURE (13), name=Picture 42, pos=(3.64,3.54), size=(0.18x0.18)
+  [20] type=AUTO_SHAPE (1), name=직사각형 74, pos=(0.67,3.56), size=(0.12x0.12), text=[√]
+  [21] type=AUTO_SHAPE (1), name=직사각형 14, pos=(0.59,1.68), size=(12.16x0.56)
+  [22] type=AUTO_SHAPE (1), name=Rectangle 17, pos=(5.49,1.86), size=(0.19x0.17), text=[?]
+  [23] type=AUTO_SHAPE (1), name=Rectangle 244, pos=(12.22,1.11), size=(0.55x0.2), text=[알림]
+    [24.0] type=GROUP (6), name=그룹 71, pos=(1.63,2.94), size=(1.48x0.18)
+    [24.1] type=AUTO_SHAPE (1), name=Rectangle 8, pos=(1.08,2.96), size=(0.5x0.13), text=[*검토기간]
+  [24] type=GROUP (6), name=그룹 63, pos=(6.0,1.86), size=(2.02x0.18), group_count=2
+  [25] type=AUTO_SHAPE (1), name=직사각형 39, pos=(13.44,-0.0), size=(6.35x1.22), text=[[인풋폼]|1. 연구과제명 : 커스텀 코드헬프 구현 필요|- 입력 시 연구과제명으로 입력해서 조회한다.|- 모달 창에서 조회 영역 : 대상년도, 연구분류, 연구유형, 연구과제명|- 결국엔 내부적으론 연구과제ID(+기타데이터포함)와 외부적으론 연구과제명(코드 컴포넌트에 ]
+  [26] type=AUTO_SHAPE (1), name=직사각형 40, pos=(13.44,1.31), size=(6.35x1.22), text=[[버튼]|1. 저장 : 사전검토마스터 데이터 생성, 사전검토마스터 진행상태가 RP070030이면 저장 불가(알림) |2. 삭제 : 해당 정보 삭제, 사전검토마스터 진행상태가 RP070030이면 삭제 불가(알림)|3. 알림 : API 연동 필요해서 구현 보류]
+  [27] type=AUTO_SHAPE (1), name=직사각형 41, pos=(13.44,2.63), size=(6.35x1.22), text=[[그리드]|1. 성명으로 유저 정보를 선택하면 부서, 직급, 직책이 자동으로 입력되어야 한다.]
+
+=== Slide 3 ===
+  [0] type=TEXT_BOX (17), name=Text Box 3, pos=(0.56,0.77), size=(1.96x0.28), text=[■ 화면개요 및 레이아웃]
+    row[0]: ['개요', '사전검토관리 > 사전검토의견서등록내용']
+  [1] type=TABLE (19), name=Group 403, pos=(2.77,0.78), size=(10.0x0.24), table=1rows x 2cols
+  [2] type=LINE (9), name=직선 연결선 10, pos=(0.57,1.36), size=(12.2x0.01)
+  [3] type=AUTO_SHAPE (1), name=Rectangle 35, pos=(0.58,1.11), size=(1.58x0.27), text=[사전검토의견서등록내용]
+    row[0]: ['업무구분', 'SE 연구과제선정', '분류', 'SEB 사전검토', '프로그램ID', 'SEB012']
+    row[1]: ['프로그램명', '사전검토관리', '화면(TAB)명', '사전검토의견서등록내용', 'AS-IS 프로그램', '사전검토의견서(RP010103)']
+  [4] type=TABLE (19), name=Group 403, pos=(0.56,0.18), size=(12.2x0.49), table=2rows x 6cols
+  [5] type=AUTO_SHAPE (1), name=Rectangle 244, pos=(12.21,1.11), size=(0.55x0.2), text=[저장]
+  [6] type=AUTO_SHAPE (1), name=Rectangle 244, pos=(11.57,1.11), size=(0.55x0.2), text=[닫기]
+  [7] type=AUTO_SHAPE (1), name=직사각형 14, pos=(0.59,3.13), size=(12.16x4.04)
+  [8] type=AUTO_SHAPE (1), name=Rectangle 35, pos=(0.47,1.44), size=(0.8x0.27), text=[▶연구과제 내용]
+  [9] type=AUTO_SHAPE (1), name=Rectangle 9, pos=(2.44,3.49), size=(8.74x0.79)
+  [10] type=AUTO_SHAPE (1), name=Rectangle 9, pos=(2.44,4.48), size=(8.73x0.88)
+  [11] type=AUTO_SHAPE (1), name=Rectangle 9, pos=(2.43,5.51), size=(8.74x0.79)
+  [12] type=AUTO_SHAPE (1), name=Rectangle 8, pos=(1.88,5.59), size=(0.45x0.2), text=[종합의견]
+    [13.0] type=AUTO_SHAPE (1), name=Rectangle 8, pos=(0.58,1.54), size=(0.57x0.21), text=[단독/공동]
+    [13.1] type=AUTO_SHAPE (1), name=Rectangle 9, pos=(1.16,1.57), size=(1.26x0.15), text=[단독          ▼]
+  [13] type=GROUP (6), name=그룹 33, pos=(4.05,6.41), size=(1.84x0.21), group_count=2
+    [14.0] type=AUTO_SHAPE (1), name=Rectangle 8, pos=(0.58,1.54), size=(0.57x0.21), text=[내부/외부]
+    [14.1] type=AUTO_SHAPE (1), name=Rectangle 9, pos=(1.16,1.57), size=(1.26x0.15), text=[내부          ▼]
+  [14] type=GROUP (6), name=그룹 37, pos=(6.35,6.41), size=(1.84x0.21), group_count=2
+    [15.0] type=AUTO_SHAPE (1), name=Rectangle 8, pos=(2.13,2.32), size=(0.22x0.13), text=[기간]
+    [15.1] type=AUTO_SHAPE (1), name=Rectangle 9, pos=(2.42,2.3), size=(1.9x0.16)
+  [15] type=GROUP (6), name=그룹 40, pos=(8.78,6.43), size=(2.19x0.16), group_count=2
+  [16] type=AUTO_SHAPE (1), name=Rectangle 8, pos=(1.16,3.36), size=(1.19x0.62), text=[|- 이 과제가 필요한가?|- 내용은 적절한가?|  등에 관한 의견]
+    [17.0] type=AUTO_SHAPE (1), name=Rectangle 8, pos=(0.62,1.54), size=(0.53x0.21), text=[채택여부]
+    [17.1] type=AUTO_SHAPE (1), name=Rectangle 9, pos=(1.16,1.57), size=(1.26x0.15), text=[조건부채택      ▼]
+  [17] type=GROUP (6), name=그룹 49, pos=(2.04,6.41), size=(1.79x0.21), group_count=2
+    [18.0] type=AUTO_SHAPE (1), name=Rectangle 8, pos=(1.8,2.32), size=(0.56x0.13), text=[붙채택사유]
+    [18.1] type=AUTO_SHAPE (1), name=Rectangle 9, pos=(2.42,2.3), size=(3.32x0.16)
+  [18] type=GROUP (6), name=그룹 52, pos=(1.94,6.76), size=(3.94x0.16), group_count=2
+  [19] type=AUTO_SHAPE (1), name=Rectangle 35, pos=(0.47,2.81), size=(0.8x0.27), text=[▶의견서 등록]
+  [20] type=AUTO_SHAPE (1), name=직사각형 14, pos=(0.59,1.68), size=(12.16x1.03)
+    [21.0] type=AUTO_SHAPE (1), name=Rectangle 145, pos=(2.34,2.8), size=(1.48x0.18), text=[~]
+    [21.1] type=PICTURE (13), name=Picture 188, pos=(3.64,2.81), size=(0.16x0.15)
+  [21] type=GROUP (6), name=그룹 67, pos=(1.21,2.3), size=(1.48x0.18), group_count=2
+  [22] type=AUTO_SHAPE (1), name=Rectangle 8, pos=(0.71,2.32), size=(0.45x0.13), text=[검토기간]
+  [23] type=AUTO_SHAPE (1), name=Rectangle 8, pos=(3.17,1.85), size=(0.53x0.21), text=[연구분류]
+  [24] type=AUTO_SHAPE (1), name=Rectangle 9, pos=(3.7,1.86), size=(1.07x0.18), text=[RP010]
+  [25] type=AUTO_SHAPE (1), name=Rectangle 17, pos=(4.77,1.86), size=(0.2x0.18), text=[?]
+  [26] type=AUTO_SHAPE (1), name=Rectangle 8, pos=(0.69,1.85), size=(0.53x0.21), text=[대상년도]
+  [27] type=AUTO_SHAPE (1), name=Rectangle 9, pos=(1.22,1.86), size=(1.07x0.18), text=[RP350]
+  [28] type=AUTO_SHAPE (1), name=Rectangle 17, pos=(2.29,1.86), size=(0.2x0.18), text=[?]
+  [29] type=AUTO_SHAPE (1), name=Rectangle 8, pos=(5.67,1.85), size=(0.53x0.21), text=[연구유형]
+  [30] type=AUTO_SHAPE (1), name=Rectangle 9, pos=(6.2,1.86), size=(1.07x0.18), text=[RP020]
+  [31] type=AUTO_SHAPE (1), name=Rectangle 17, pos=(7.27,1.86), size=(0.2x0.18), text=[?]
+  [32] type=AUTO_SHAPE (1), name=Rectangle 167, pos=(8.5,1.87), size=(3.98x0.18)
+  [33] type=AUTO_SHAPE (1), name=Rectangle 8, pos=(7.89,1.89), size=(0.56x0.13), text=[연구과제명]
+  [34] type=AUTO_SHAPE (1), name=Rectangle 8, pos=(1.14,4.44), size=(1.27x0.62), text=[- 정책과제로 적절한가?|- 수정해야 할 내용은?|- 소요예산 및 기간은?|  등에 관한 의견]
+  [35] type=AUTO_SHAPE (1), name=직사각형 111, pos=(13.51,-0.02), size=(6.35x1.22), text=[[인풋폼 : 연구과제내용]|1. 수정불가||[인풋폼 : 의견서등록]|채택여부 : 채택, 불채택, 조건부채택|단독/공동 : 단독, 공동|내부/외부 : 내부, 외부|기간 : 텍스트로 자유롭게 입력|불채택사유 : 채택여부가 불채택인 경우 입력가능 그외에는 readonly]
+  [36] type=AUTO_SHAPE (1), name=직사각형 112, pos=(13.51,1.34), size=(6.35x1.22), text=[[기타]|1. 검토기한이 지나더라도, 입력 가능, 의견서등록이 완료되었더라도 추후에 등록가능해야함|]

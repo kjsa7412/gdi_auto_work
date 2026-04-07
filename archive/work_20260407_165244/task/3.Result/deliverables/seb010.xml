@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="seb010">
+
+    <!-- 마스터 목록 조회 (사전검토목록) -->
+    <!-- JOIN: rp_pre_rview_mst(a) + rp_rsch_prj_mst(b) + rp_prj_rcpt_mst(c) -->
+    <select id="selectMainGrid" resultType="java.util.Map">
+        SELECT
+            a.wrk_mast_id
+          , b.rsch_cls_cd
+          , (SELECT comm_cd_nm FROM sy_code_dtl
+             WHERE wrk_tp_cd = 'RP' AND cd_tp_cd = '020'
+               AND comm_cd = b.rsch_cls_cd) AS rsch_cls_nm
+          , b.prj_nm
+          , c.rcpt_dt
+          , a.prgrs_stat_cd
+          , (SELECT comm_cd_nm FROM sy_code_dtl
+             WHERE wrk_tp_cd = 'RP' AND cd_tp_cd = '070'
+               AND comm_cd = a.prgrs_stat_cd) AS prgrs_stat_nm
+          , a.opl_wrt_dt
+          , b.rsch_prj_id
+        FROM rp_pre_rview_mst a
+        INNER JOIN rp_rsch_prj_mst b
+          ON a.rsch_prj_id = b.rsch_prj_id
+         AND a.wrk_mast_id = b.wrk_mast_id
+        INNER JOIN rp_prj_rcpt_mst c
+          ON b.wrk_mast_id = c.wrk_mast_id
+         AND b.rsch_prj_id = c.rsch_prj_id
+        WHERE c.prgrs_stat_cd = '020'
+          AND a.use_yn = 'Y'
+          AND a.del_yn = 'N'
+        <if test="P_prj_targ_yy != null and P_prj_targ_yy != ''">
+            AND b.prj_targ_yy = #{P_prj_targ_yy}
+        </if>
+        <if test="P_rsch_ctg_cd != null and P_rsch_ctg_cd != ''">
+            AND b.rsch_ctg_cd = #{P_rsch_ctg_cd}
+        </if>
+        <if test="P_rsch_cls_cd != null and P_rsch_cls_cd != ''">
+            AND b.rsch_cls_cd = #{P_rsch_cls_cd}
+        </if>
+        <if test="P_prj_nm != null and P_prj_nm != ''">
+            AND b.prj_nm LIKE '%' || #{P_prj_nm} || '%'
+        </if>
+        <if test="P_prgrs_stat_cd != null and P_prgrs_stat_cd != ''">
+            AND a.prgrs_stat_cd = #{P_prgrs_stat_cd}
+        </if>
+        <if test="P_rcpt_dt_from != null and P_rcpt_dt_from != ''">
+            AND c.rcpt_dt <![CDATA[>=]]> #{P_rcpt_dt_from}
+        </if>
+        <if test="P_rcpt_dt_to != null and P_rcpt_dt_to != ''">
+            AND c.rcpt_dt <![CDATA[<=]]> #{P_rcpt_dt_to}
+        </if>
+        ORDER BY c.rcpt_dt DESC, b.prj_nm
+    </select>
+
+    <!-- 상세 목록 조회 (검토 대상자) -->
+    <select id="selectDetailGrid" resultType="java.util.Map">
+        SELECT
+            a.rview_targr_id
+          , b.user_nm AS rview_targr_nm
+          , a.adpt_rslt_cd
+          , (SELECT comm_cd_nm FROM sy_code_dtl
+             WHERE wrk_tp_cd = 'RP' AND cd_tp_cd = '080'
+               AND comm_cd = a.adpt_rslt_cd) AS adpt_rslt_nm
+        FROM rp_pre_rview_opl_list a
+        LEFT JOIN sy_user_info b
+          ON a.rview_targr_id = b.user_id
+        WHERE a.wrk_mast_id = #{wrk_mast_id}
+        ORDER BY b.user_nm
+    </select>
+
+    <!-- 사전검토 마스터 삭제 -->
+    <delete id="deletePreRviewMst">
+        DELETE FROM rp_pre_rview_mst
+        WHERE wrk_mast_id = #{wrk_mast_id}
+    </delete>
+
+</mapper>

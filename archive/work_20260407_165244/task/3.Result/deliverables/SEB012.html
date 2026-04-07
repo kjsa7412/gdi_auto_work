@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<th:block th:replace="~{frame/top_title_button :: topTitleButtonFragment}"></th:block>
+
+<div class="data-page">
+    <div class="data-content-wrapper">
+        <div class="data-content-fill">
+            <div th:id="|${PGM}toolbar1|"></div>
+            <div th:id="|${PGM}infoForm|"></div>
+            <div th:id="|${PGM}toolbar2|"></div>
+            <div th:id="|${PGM}mainForm|"></div>
+        </div>
+    </div>
+</div>
+
+<script th:inline="javascript">
+(function () {
+    const PGM = /*[[${PGM}]]*/ null;
+
+    const listener = platform.listener[PGM];
+
+    let _param = {};
+    let _isNew = true;
+
+    // === 상태 초기화 ===
+    function resetState() {
+        _param = {};
+        _isNew = true;
+        listener.form.infoForm.init();
+        listener.form.mainForm.init();
+    }
+
+    // === 불채택사유 활성/비활성 제어 ===
+    function toggleRjctResn(adptRsltCd) {
+        const mainForm = listener.form.mainForm;
+        if (adptRsltCd === 'RP080010') {
+            mainForm.setReadonly("rjct_resn_desc", false);
+        } else {
+            mainForm.setReadonly("rjct_resn_desc", true);
+            mainForm.setValue("rjct_resn_desc", "");
+        }
+    }
+
+    listener.initPgm = function () {
+
+        // === 연구과제 내용 툴바 ===
+        listener.toolbar.toolbar1 = webix.ui({
+            container: `${PGM}toolbar1`,
+            view: 'dataToolbar',
+            pgm: PGM,
+            title: '연구과제 내용'
+        });
+
+        // === 의견서 등록 툴바 ===
+        listener.toolbar.toolbar2 = webix.ui({
+            container: `${PGM}toolbar2`,
+            view: 'dataToolbar',
+            pgm: PGM,
+            title: '의견서 등록'
+        });
+
+        // === 연구과제 내용 (READONLY) ===
+        listener.form.infoForm = webix.ui({
+            container: `${PGM}infoForm`,
+            view: 'dataForm',
+            pgm: PGM,
+            elements: [
+                {
+                    cols: [
+                        {view: DATA_VIEW.codeNone, label: "대상년도", name: "prj_targ_yy", param: {wrk_tp_cd: 'RP', cd_tp_cd: '350'}, readonly: true, gravity: 1},
+                        {view: DATA_VIEW.codeNone, type: DATA_CODE_TYPE.codeValue, label: "연구분류", name: "rsch_ctg_cd", param: {wrk_tp_cd: 'RP', cd_tp_cd: '010'}, readonly: true, gravity: 1},
+                        {view: DATA_VIEW.codeNone, type: DATA_CODE_TYPE.codeValue, label: "연구유형", name: "rsch_cls_cd", param: {wrk_tp_cd: 'RP', cd_tp_cd: '020'}, readonly: true, gravity: 1},
+                        {view: DATA_VIEW.text, label: "연구과제명", name: "prj_nm", readonly: true, gravity: 2}
+                    ]
+                },
+                {
+                    cols: [
+                        {view: DATA_VIEW.dateRange2, label: "검토기간", name: "rview_tmlt_start_dt", readonly: true, gravity: 1},
+                        {},
+                        {},
+                        {},
+                        {}
+                    ]
+                }
+            ]
+        });
+
+        // === 의견서 등록 (EDITABLE) ===
+        listener.form.mainForm = webix.ui({
+            container: `${PGM}mainForm`,
+            view: 'dataForm',
+            pgm: PGM,
+            elements: [
+                {
+                    cols: [
+                        {view: DATA_VIEW.codeNone, type: DATA_CODE_TYPE.codeValue, label: "채택여부", name: "adpt_rslt_cd", param: {wrk_tp_cd: 'RP', cd_tp_cd: '080'}, gravity: 1,
+                            on: {
+                                onChange: function (newVal) {
+                                    toggleRjctResn(newVal);
+                                }
+                            }
+                        },
+                        {view: DATA_VIEW.codeNone, type: DATA_CODE_TYPE.codeValue, label: "단독/공동", name: "joint_sngl_tp_cd", param: {wrk_tp_cd: 'RP', cd_tp_cd: '370'}, gravity: 1},
+                        {view: DATA_VIEW.codeNone, type: DATA_CODE_TYPE.codeValue, label: "내부/외부", name: "insd_outsd_tp_cd", param: {wrk_tp_cd: 'RP', cd_tp_cd: '380'}, gravity: 1},
+                        {view: DATA_VIEW.text, label: "기간", name: "prd_desc", gravity: 1},
+                        {gravity: 1}
+                    ]
+                },
+                {
+                    cols: [
+                        {view: DATA_VIEW.text, label: "불채택사유", name: "rjct_resn_desc", readonly: true, gravity: 5}
+                    ]
+                },
+                {
+                    cols: [
+                        {view: DATA_VIEW.text, label: "의견1", name: "rmk_1_desc", gravity: 5, type: "textarea", placeholder: "이 과제가 필요한가? 내용은 적절한가?"}
+                    ]
+                },
+                {
+                    cols: [
+                        {view: DATA_VIEW.text, label: "의견2", name: "rmk_2_desc", gravity: 5, type: "textarea", placeholder: "정책과제로 적절한가? 수정해야 할 내용은? 소요예산 및 기간은?"}
+                    ]
+                },
+                {
+                    cols: [
+                        {view: DATA_VIEW.text, label: "종합의견", name: "rmk_3_desc", gravity: 5, type: "textarea"}
+                    ]
+                }
+            ]
+        });
+    };
+
+    // === 부모 설정 ===
+
+
+    // === 화면 활성화 (SEB010에서 호출) ===
+    listener.activePgm = function (param) {
+        resetState();
+        _param = param || {};
+
+        if (_param.wrk_mast_id && _param.rview_targr_id && _param.rsch_prj_id) {
+            const selectParam = {};
+            selectParam.wrk_mast_id = _param.wrk_mast_id;
+            selectParam.rview_targr_id = _param.rview_targr_id;
+            selectParam.rsch_prj_id = _param.rsch_prj_id;
+            selectParam.statement = "seb012.selectInfo";
+
+            const callback = new Callback(function (result) {
+                if (result.resultCode === RESULT_CODE.OK && result.resultData) {
+                    const data = result.resultData;
+                    // 연구과제 내용 세팅
+                    listener.form.infoForm.setData(data);
+                    // 의견서 등록 세팅
+                    listener.form.mainForm.setData(data);
+                    // 불채택사유 필드 상태 제어
+                    toggleRjctResn(data.adpt_rslt_cd);
+                }
+            });
+            platform.post(platform.url.selectOne, selectParam, callback);
+        }
+    };
+
+    // === 저장 ===
+    listener.button.save.click = function () {
+        popup.confirm.show("저장 하시겠습니까?", function (confirmYn) {
+            if (confirmYn) {
+                const formData = listener.form.mainForm.getData();
+                formData.wrk_mast_id = _param.wrk_mast_id;
+                formData.rview_targr_id = _param.rview_targr_id;
+                formData.rsch_prj_id = _param.rsch_prj_id;
+                formData.statement = "seb012.insertPreRviewOplList";
+
+                const callback = new Callback(function (result) {
+                    if (result.resultCode === RESULT_CODE.OK) {
+                        popup.alert.show("저장되었습니다.");
+                    }
+                });
+                platform.post(platform.url.save, formData, callback);
+            }
+        });
+    };
+
+})();
+</script>
+</html>

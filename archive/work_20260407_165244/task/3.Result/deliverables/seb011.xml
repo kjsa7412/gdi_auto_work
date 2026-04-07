@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="seb011">
+
+    <!-- 마스터 단건 조회 (사전검토 + 연구과제 JOIN) -->
+    <select id="selectInfo" resultType="java.util.Map">
+        SELECT a.wrk_mast_id
+             , a.rsch_prj_id
+             , b.prj_nm
+             , a.rview_tmlt_start_dt
+             , a.rview_tmlt_end_dt
+             , a.prgrs_stat_cd
+        FROM rp_pre_rview_mst a
+        JOIN rp_rsch_prj_mst b ON a.rsch_prj_id = b.rsch_prj_id
+                               AND a.wrk_mast_id = b.wrk_mast_id
+        WHERE a.wrk_mast_id = #{wrk_mast_id}
+    </select>
+
+    <!-- 검토 대상자 목록 조회 -->
+    <select id="selectDetailGrid" resultType="java.util.Map">
+        SELECT a.rview_targr_id
+             , COALESCE(b.user_nm, '') AS rview_targr_nm
+             , COALESCE(b.dept_nm, '') AS dept_nm
+             , COALESCE(b.jbps_nm, '') AS jbps_nm
+             , COALESCE(b.jbtt_nm, '') AS jbtt_nm
+        FROM rp_pre_rview_opl_list a
+        LEFT OUTER JOIN sy_user_info b ON a.rview_targr_id = b.user_id
+        WHERE a.wrk_mast_id = #{wrk_mast_id}
+        ORDER BY a.firs_reg_dts
+    </select>
+
+    <!-- 연구과제 코드헬프 → codeCustomMapper.xml로 이동 (statement: codeCustom.selectRschPrjList) -->
+
+    <!-- 사전검토 마스터 저장 (UPSERT) -->
+    <insert id="insertPreRviewMst">
+        INSERT INTO rp_pre_rview_mst (
+            wrk_mast_id,
+            rsch_prj_id,
+            rview_tmlt_start_dt,
+            rview_tmlt_end_dt,
+            prgrs_stat_cd,
+            firs_reg_pgm_id, firs_reg_dts, firs_reg_user_id, firs_reg_ip,
+            fina_reg_pgm_id, fina_reg_dts, fina_reg_user_id, fina_reg_ip
+        ) VALUES (
+            #{wrk_mast_id},
+            #{rsch_prj_id},
+            replace(#{rview_tmlt_start_dt}, '-', ''),
+            replace(#{rview_tmlt_end_dt}, '-', ''),
+            COALESCE(#{prgrs_stat_cd}, 'RP070010'),
+            #{reg_pgm_id}, now(), #{login_emp_no}, #{login_user_ip},
+            #{reg_pgm_id}, now(), #{login_emp_no}, #{login_user_ip}
+        )
+        <if test='allow_update == "Y"'>
+        ON CONFLICT (wrk_mast_id)
+        DO UPDATE SET
+            rsch_prj_id = excluded.rsch_prj_id,
+            rview_tmlt_start_dt = excluded.rview_tmlt_start_dt,
+            rview_tmlt_end_dt = excluded.rview_tmlt_end_dt,
+            prgrs_stat_cd = excluded.prgrs_stat_cd,
+            fina_reg_pgm_id = excluded.firs_reg_pgm_id,
+            fina_reg_dts = now(),
+            fina_reg_user_id = excluded.firs_reg_user_id,
+            fina_reg_ip = excluded.firs_reg_ip
+        </if>
+    </insert>
+
+    <!-- 검토 대상자 저장 (UPSERT) -->
+    <insert id="insertPreRviewOplList">
+        INSERT INTO rp_pre_rview_opl_list (
+            wrk_mast_id,
+            rview_targr_id,
+            rsch_prj_id,
+            firs_reg_pgm_id, firs_reg_dts, firs_reg_user_id, firs_reg_ip,
+            fina_reg_pgm_id, fina_reg_dts, fina_reg_user_id, fina_reg_ip
+        ) VALUES (
+            #{wrk_mast_id},
+            #{rview_targr_id},
+            #{rsch_prj_id},
+            #{reg_pgm_id}, now(), #{login_emp_no}, #{login_user_ip},
+            #{reg_pgm_id}, now(), #{login_emp_no}, #{login_user_ip}
+        )
+        <if test='allow_update == "Y"'>
+        ON CONFLICT (wrk_mast_id, rview_targr_id, rsch_prj_id)
+        DO UPDATE SET
+            fina_reg_pgm_id = excluded.firs_reg_pgm_id,
+            fina_reg_dts = now(),
+            fina_reg_user_id = excluded.firs_reg_user_id,
+            fina_reg_ip = excluded.firs_reg_ip
+        </if>
+    </insert>
+
+    <!-- 사전검토 삭제 (마스터 — 상세는 CASCADE 또는 별도 처리) -->
+    <delete id="deletePreRviewMst">
+        DELETE FROM rp_pre_rview_opl_list
+        WHERE wrk_mast_id = #{wrk_mast_id};
+
+        DELETE FROM rp_pre_rview_mst
+        WHERE wrk_mast_id = #{wrk_mast_id}
+    </delete>
+
+</mapper>

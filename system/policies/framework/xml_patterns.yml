@@ -217,12 +217,14 @@ code_reference:
     description: "코드 유형 마스터"
   code_detail:
     table: "sy_code_dtl"
-    description: "코드 상세"
-    join_pattern: "LEFT OUTER JOIN sy_code_dtl ON comp_cd = comp_cd AND wrk_tp_cd = ? AND cd_tp_cd = ? AND cd = ?"
+    description: "코드 상세. 반드시 sy_code_dtl 테이블명 사용 (sy_comm_cd 등 변형 금지)"
+    subquery_pattern: "(SELECT comm_cd_nm FROM sy_code_dtl WHERE wrk_tp_cd = '{wrk}' AND cd_tp_cd = '{cd}' AND comm_cd = {column}) AS {alias}"
+    join_pattern: "LEFT OUTER JOIN sy_code_dtl ON wrk_tp_cd = ? AND cd_tp_cd = ? AND comm_cd = ?"
+    note: "comp_cd 없는 테이블에서는 comp_cd 조건 생략"
   code_function:
     pattern: "fn_sy_get_code_nm(comp_cd, wrk_tp_cd, cd_tp_cd, cd)"
-    description: "스칼라 함수로 코드명 조회"
-  근거: "dta010.xml, dta020.xml, dtb010.xml"
+    description: "스칼라 함수로 코드명 조회 (comp_cd 있는 테이블용)"
+  근거: "sea010.xml, sea011.xml, dta010.xml, dta020.xml, dtb010.xml"
 
 # -----------------------------------------------------------------------------
 # PostgreSQL 특화 패턴

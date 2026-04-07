@@ -1,0 +1,114 @@
+version: 1
+command: build
+status: completed
+started_at: "2026-04-07T00:00:00"
+completed_at: "2026-04-07T00:00:00"
+
+inputs:
+  people_spec_original: "work/task/2.Working/original/people_spec.md"
+  people_spec_final: "work/task/2.Working/final/people_spec.md"
+  machine_spec_original: "work/task/2.Working/original/machine_spec.yml"
+
+review:
+  diff_count: 6
+  all_resolved: true
+  unresolved_count: 0
+
+outputs:
+  machine_spec_final: "work/task/2.Working/final/machine_spec.yml"
+  generated_paths:
+    - "work/task/2.Working/generated/SEB010.html"
+    - "work/task/2.Working/generated/seb010.xml"
+    - "work/task/2.Working/generated/SEB011.html"
+    - "work/task/2.Working/generated/seb011.xml"
+    - "work/task/2.Working/generated/SEB012.html"
+    - "work/task/2.Working/generated/seb012.xml"
+    - "work/task/2.Working/generated/SEB010_메뉴등록.sql"
+    - "work/task/2.Working/generated/execution_order.md"
+  deliverables_path: "work/task/3.Result/deliverables"
+  report_path: "work/task/3.Result/report"
+
+selected_templates:
+  - screen_id: "SEB010"
+    html: "system/templates/skeletons/html/list-detail.html"
+    xml: "system/templates/skeletons/xml/list-detail.xml"
+  - screen_id: "SEB011"
+    html: "system/templates/skeletons/html/form.html"
+    xml: "system/templates/skeletons/xml/form.xml"
+  - screen_id: "SEB012"
+    html: "system/templates/skeletons/html/form.html"
+    xml: "system/templates/skeletons/xml/form.xml"
+
+artifact_plan:
+  - screen_id: "SEB010"
+    artifacts: ["html", "xml"]
+    controller_required: false
+    service_required: false
+  - screen_id: "SEB011"
+    artifacts: ["html", "xml"]
+    controller_required: false
+    service_required: false
+  - screen_id: "SEB012"
+    artifacts: ["html", "xml"]
+    controller_required: false
+    service_required: false
+
+violations: []
+
+self_check:
+  - id: "placeholder_complete"
+    result: "pass"
+  - id: "forbidden_pattern"
+    result: "pass"
+  - id: "naming_convention"
+    result: "pass"
+  - id: "audit_columns"
+    result: "pass"
+  - id: "skeleton_based"
+    result: "pass"
+  - id: "layout_rules"
+    result: "pass"
+
+verify:
+  status: "pass"
+  critical_pass: true
+  warnings_count: 3
+  errors_count: 0
+
+cache:
+  used: true
+  hit_categories: ["table"]
+  miss_categories: ["code"]
+  insufficient: false
+  db_fallback_used: true
+  db_fallback_reason:
+    - "RP 코드타입 cache miss"
+    - "RP370/RP380 코드 확인"
+  db_fallback_status: "success"
+
+deploy:
+  attempted: true
+  mode: "prepare-only"
+  status: "prepared"
+  total_files: 8
+  target_paths:
+    - source: "SEB010.html"
+      target: "templates/project/se/seb/SEB010.html"
+      status: "ready"
+    - source: "seb010.xml"
+      target: "mapper/sjerp/se/seb/seb010.xml"
+      status: "ready"
+    - source: "SEB011.html"
+      target: "templates/project/se/seb/SEB011.html"
+      status: "ready"
+    - source: "seb011.xml"
+      target: "mapper/sjerp/se/seb/seb011.xml"
+      status: "ready"
+    - source: "SEB012.html"
+      target: "templates/project/se/seb/SEB012.html"
+      status: "ready"
+    - source: "seb012.xml"
+      target: "mapper/sjerp/se/seb/seb012.xml"
+      status: "ready"
+  warnings: []
+  conflicts: []

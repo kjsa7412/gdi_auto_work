@@ -1,0 +1,20 @@
+version: 1
+stage: "fix"
+status: "pass"
+checks:
+  - id: "resetState_guard"
+    description: "resetState에서 폼/그리드 존재 확인 방어 코드"
+    result: "pass"
+    message: "if (listener.form.mainForm) / if (listener.grid.subGrid) 추가"
+  - id: "codehelp_namespace"
+    description: "코드헬프 statement가 허용된 namespace 사용"
+    result: "pass"
+    message: "codeCustom.selectRschPrjList — codeCustom namespace 사용"
+  - id: "codeCustomMapper_query"
+    description: "codeCustomMapper.xml에 쿼리 등록"
+    result: "pass"
+    message: "selectRschPrjList 추가, sy_code_dtl 서브쿼리 패턴 사용"
+critical_pass: true
+warnings: []
+errors: []
+generated_at: "2026-04-07T00:00:00"

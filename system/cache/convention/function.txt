@@ -1,0 +1,466 @@
+public|fn_pre_rview_opl_adpt_rslt||trigger|function||CREATE OR REPLACE FUNCTION public.fn_pre_rview_opl_adpt_rslt()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+DECLARE
+    v_total_cnt INT;
+    v_rslt_cnt  INT;
+    v_current_stat VARCHAR(10);
+BEGIN
+    -- adpt_rslt_cd가 변경된 경우에만 실행
+    IF NEW.adpt_rslt_cd IS NOT NULL
+       AND (OLD.adpt_rslt_cd IS NULL OR OLD.adpt_rslt_cd <> NEW.adpt_rslt_cd)
+    THEN
+        -- 사전검토완료가 아닌 경우에만 처리
+        SELECT prgrs_stat_cd
+          INTO v_current_stat
+          FROM rp_pre_rview_mst
+         WHERE wrk_mast_id = NEW.wrk_mast_id;
+
+        IF v_current_stat <> 'RP070030' THEN
+            -- 해당 사전검토의 전체 의견서 수
+            SELECT COUNT(*)
+              INTO v_total_cnt
+              FROM rp_pre_rview_opl_list
+             WHERE wrk_mast_id = NEW.wrk_mast_id;
+
+            -- 채택결과가 등록된 의견서 수
+            SELECT COUNT(*)
+              INTO v_rslt_cnt
+              FROM rp_pre_rview_opl_list
+             WHERE wrk_mast_id = NEW.wrk_mast_id
+               AND adpt_rslt_cd IS NOT NULL
+               AND adpt_rslt_cd <> '';
+
+            -- 모든 의견서에 결과가 등록되었으면 마스터 갱신
+            IF v_total_cnt > 0 AND v_total_cnt = v_rslt_cnt THEN
+                UPDATE rp_pre_rview_mst
+                   SET opl_wrt_dt      = TO_CHAR(current_timestamp, 'YYYYMMDD')
+                     , prgrs_stat_cd   = 'RP070030'
+                     , fina_reg_pgm_id = 'SEB010'
+                     , fina_reg_dts    = current_timestamp
+                     , fina_reg_user_id = 'SYSTEM'
+                     , fina_reg_ip     = '127.0.0.1'
+                 WHERE wrk_mast_id     = NEW.wrk_mast_id;
+            END IF;
+        END IF;
+    END IF;
+
+    RETURN NEW;
+END;
+$function$
+
+public|fn_pre_rview_opl_complete||trigger|function||CREATE OR REPLACE FUNCTION public.fn_pre_rview_opl_complete()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+DECLARE
+    v_incomplete_cnt INTEGER;
+BEGIN
+    -- adpt_rslt_cd가 변경된 경우에만 처리
+    IF NEW.adpt_rslt_cd IS NOT NULL AND (OLD.adpt_rslt_cd IS NULL OR OLD.adpt_rslt_cd != NEW.adpt_rslt_cd) THEN
+
+        -- 동일 wrk_mast_id에서 adpt_rslt_cd가 미입력된 건수 조회
+        SELECT COUNT(*)
+        INTO v_incomplete_cnt
+        FROM rp_pre_rview_opl_list
+        WHERE wrk_mast_id = NEW.wrk_mast_id
+          AND (adpt_rslt_cd IS NULL OR adpt_rslt_cd = '');
+
+        -- 모든 의견서가 채택결과 입력 완료 시 마스터 상태 갱신
+        IF v_incomplete_cnt = 0 THEN
+            UPDATE rp_pre_rview_mst
+            SET prgrs_stat_cd = 'RP070030',
+                fina_reg_pgm_id = 'SEB012',
+                fina_reg_dts = current_timestamp,
+                fina_reg_user_id = NEW.fina_reg_user_id,
+                fina_reg_ip = NEW.fina_reg_ip
+            WHERE wrk_mast_id = NEW.wrk_mast_id;
+        END IF;
+
+    END IF;
+
+    RETURN NEW;
+END;
+$function$
+
+public|fn_sy_get_biz_slip_seq|p_biz_slip_seq_tp character varying, p_wh_cd character varying, p_ym character varying, p_pgm_id character varying, p_user_id character varying, p_user_ip character varying|integer|function||CREATE OR REPLACE FUNCTION public.fn_sy_get_biz_slip_seq(p_biz_slip_seq_tp character varying, p_wh_cd character varying, p_ym character varying, p_pgm_id character varying, p_user_id character varying, p_user_ip character varying)
+ RETURNS integer
+ LANGUAGE plpgsql
+AS $function$ declare 
+	 v_biz_slip_seq int;
+	v_start_seq int;
+	v_end_seq int;
+BEGIN
+	
+	/*
+	순번구분
+	1 : 물류센터 거래명세서 수기 등록
+	2 : 거래명세서 수기 등록
+	3 : 매장교환(POS, RT)
+	4 : 판매분 확정
+	5 : 고객클레임
+	6 : 시즌반품
+	7 : 철수
+	8 : 기타,조정(INC)
+	
+	교환일 경우 창고코드: 99 
+	*/
+	
+	if    p_biz_slip_seq_tp = '1' then
+        v_start_seq  :=  200001;
+        v_end_seq  :=  299999;
+	  elsif p_biz_slip_seq_tp = '2'then
+	        v_start_seq  :=  300001;
+	        v_end_seq  :=  399999;
+	  elsif p_biz_slip_seq_tp = '3'then
+	        v_start_seq  :=  400001;
+	        v_end_seq  :=  599999;
+	  elsif p_biz_slip_seq_tp = '4'then
+	        v_start_seq  :=  500001;
+	        v_end_seq  :=  599999;
+	  elsif p_biz_slip_seq_tp = '5'then
+	        v_start_seq  :=  600001;
+	        v_end_seq  :=  699999;
+	  elsif p_biz_slip_seq_tp = '6'then
+	        v_start_seq  :=  700001;
+	        v_end_seq  :=  799999;
+	  elsif p_biz_slip_seq_tp = '7'then
+	        v_start_seq  :=  800001;
+	        v_end_seq  :=  899999;
+	  else
+	        v_start_seq  :=  900001;
+	        v_end_seq  :=  999999;
+	  end if;
+	
+	
+    SELECT biz_slip_seq
+    INTO v_biz_slip_seq
+    FROM sy_biz_slip_seq_info
+    WHERE biz_slip_seq_tp = p_biz_slip_seq_tp
+    and wh_cd = p_wh_cd
+    and ym = p_ym
+    and biz_slip_seq >= v_start_seq
+    and biz_slip_seq <= v_end_seq
+    FOR UPDATE;
+    
+    IF NOT FOUND then
+    
+        v_biz_slip_seq := v_start_seq;
+        INSERT INTO sy_biz_slip_seq_info (biz_slip_seq_tp
+        , wh_cd
+        , ym
+        , biz_slip_seq
+        , firs_reg_pgm_id
+        , firs_reg_dts
+        , firs_reg_user_id
+        , firs_reg_ip)
+        VALUES (p_biz_slip_seq_tp
+       , p_wh_cd
+       , p_ym
+       , v_biz_slip_seq
+       , p_pgm_id
+       , current_timestamp
+       , p_user_id
+       , p_user_ip
+       );
+      
+    ELSE
+        
+        v_biz_slip_seq := v_biz_slip_seq + 1;
+       
+        UPDATE sy_biz_slip_seq_info
+        SET biz_slip_seq = v_biz_slip_seq
+        , fina_reg_pgm_id = p_pgm_id
+        , fina_reg_dts  = current_timestamp
+        , fina_reg_user_id  = p_user_id
+        , fina_reg_ip = p_user_ip
+        WHERE biz_slip_seq_tp = p_biz_slip_seq_tp
+	    and wh_cd = p_wh_cd
+	    and ym = p_ym;
+    END IF;
+
+    RETURN v_biz_slip_seq;
+	END; $function$
+
+public|fn_sy_get_code_nm|p_wrk_tp_cd character varying, p_cd_tp_cd character varying, p_comm_cd character varying|character varying|function||CREATE OR REPLACE FUNCTION public.fn_sy_get_code_nm(p_wrk_tp_cd character varying, p_cd_tp_cd character varying, p_comm_cd character varying)
+ RETURNS character varying
+ LANGUAGE plpgsql
+AS $function$
+DECLARE
+    v_comm_cd_nm varchar(100);
+BEGIN
+    SELECT comm_cd_nm
+    INTO v_comm_cd_nm
+    FROM sy_code_dtl
+    WHERE wrk_tp_cd = p_wrk_tp_cd
+      AND cd_tp_cd = p_cd_tp_cd
+      AND comm_cd = p_comm_cd;
+
+    RETURN v_comm_cd_nm;
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        RETURN null;
+    WHEN TOO_MANY_ROWS THEN
+        RAISE EXCEPTION 'Query returned more than one row';
+END;
+$function$
+
+public|fn_sy_get_code_nm_bank|p_wrk_tp_cd character varying, p_cd_tp_cd character varying, p_comm_cd character varying|character varying|function||CREATE OR REPLACE FUNCTION public.fn_sy_get_code_nm_bank(p_wrk_tp_cd character varying, p_cd_tp_cd character varying, p_comm_cd character varying)
+ RETURNS character varying
+ LANGUAGE plpgsql
+AS $function$
+DECLARE
+    v_comm_cd_nm VARCHAR(100);
+BEGIN
+    SELECT comm_cd_nm
+    INTO v_comm_cd_nm
+    FROM sy_code_dtl
+    WHERE wrk_tp_cd = p_wrk_tp_cd
+      AND cd_tp_cd = p_cd_tp_cd
+      AND rel_comm_cd = p_comm_cd;
+
+    RETURN v_comm_cd_nm;
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        RETURN NULL;
+    WHEN TOO_MANY_ROWS THEN
+        RAISE EXCEPTION 'Query returned more than one row';
+END;
+$function$
+
+public|fn_sy_get_dept_nm|p_dept_cd character varying|character varying|function||CREATE OR REPLACE FUNCTION public.fn_sy_get_dept_nm(p_dept_cd character varying)
+ RETURNS character varying
+ LANGUAGE plpgsql
+AS $function$
+DECLARE
+    v_dept_nm varchar(30);
+BEGIN
+    SELECT dept_nm
+    INTO v_dept_nm
+    FROM sy_dept_info
+    WHERE dept_cd = p_dept_cd;
+
+    RETURN v_dept_nm;
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        RETURN null;
+    WHEN TOO_MANY_ROWS THEN
+        RAISE EXCEPTION 'Query returned more than one row';
+END;
+$function$
+
+public|fn_sy_get_emp_dept_cd|p_emp_no character varying|character varying|function||CREATE OR REPLACE FUNCTION public.fn_sy_get_emp_dept_cd(p_emp_no character varying)
+ RETURNS character varying
+ LANGUAGE plpgsql
+AS $function$
+DECLARE
+    v_dept_cd varchar := '';
+BEGIN
+    SELECT dept_cd
+    INTO v_dept_cd
+    FROM sy_user_dept_info
+    WHERE emp_no = p_emp_no;
+
+    EXCEPTION WHEN OTHERS THEN v_dept_cd := '@@@@';
+
+    RETURN v_dept_cd;
+END;
+$function$
+
+public|fn_sy_get_file_path|p_file_id character varying|character varying|function||CREATE OR REPLACE FUNCTION public.fn_sy_get_file_path(p_file_id character varying)
+ RETURNS character varying
+ LANGUAGE plpgsql
+AS $function$
+DECLARE
+    v_file_path varchar(100);
+    v_org_file_nm varchar(150);
+    v_save_file_nm varchar(100);
+BEGIN
+    SELECT file_path, org_file_nm, save_file_nm
+    INTO v_file_path, v_org_file_nm, v_save_file_nm
+    FROM sy_file_info
+    WHERE file_id = p_file_id;
+
+    RETURN '/common/downloadImage?file_path=' || v_file_path || '&org_file_nm=' || v_org_file_nm || '&save_file_nm=' || v_save_file_nm;
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        RETURN null;
+    WHEN TOO_MANY_ROWS THEN
+        RAISE EXCEPTION 'Query returned more than one row';
+END;
+$function$
+
+public|fn_sy_get_id|p_table_name character varying, p_column_name character varying, p_prefix character varying, p_total_length integer DEFAULT 20|character varying|function||CREATE OR REPLACE FUNCTION public.fn_sy_get_id(p_table_name character varying, p_column_name character varying, p_prefix character varying, p_total_length integer DEFAULT 20)
+ RETURNS character varying
+ LANGUAGE plpgsql
+AS $function$
+DECLARE
+    v_max_id VARCHAR;
+    v_next_seq BIGINT;
+    v_result_id VARCHAR;
+BEGIN
+    -- 1. 해당 접두어로 시작하는 가장 큰 ID 조회
+    EXECUTE format(
+        'SELECT MAX(%I) FROM %I WHERE %I LIKE %L',
+        p_column_name, p_table_name, p_column_name, p_prefix || '%'
+    ) INTO v_max_id;
+
+    -- 2. 다음 번호 계산
+    IF v_max_id IS NULL THEN
+        v_next_seq := 1;
+    ELSE
+        v_next_seq := CAST(SUBSTRING(v_max_id FROM length(p_prefix) + 1) AS BIGINT) + 1;
+    END IF;
+
+    -- 3. 접두어와 일련번호 결합 (빈 자리는 '0'으로 채움)
+    v_result_id := p_prefix || LPAD(v_next_seq::TEXT, p_total_length - length(p_prefix), '0');
+
+    RETURN v_result_id;
+END;
+$function$
+
+public|fn_sy_get_wrk_nm|p_wrk_tp_cd character varying|character varying|function||CREATE OR REPLACE FUNCTION public.fn_sy_get_wrk_nm(p_wrk_tp_cd character varying)
+ RETURNS character varying
+ LANGUAGE plpgsql
+AS $function$
+DECLARE 
+    v_wrk_tp_nm varchar(100);
+BEGIN
+    SELECT wrk_tp_nm
+    INTO v_wrk_tp_nm 
+    FROM sy_wrk_tp_info
+    WHERE wrk_tp_cd = p_wrk_tp_cd;
+
+    RETURN v_wrk_tp_nm;
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        RETURN null; 
+    WHEN TOO_MANY_ROWS THEN
+        RAISE EXCEPTION 'Query returned more than one row';
+END;
+$function$
+
+public|fn_sy_log_events||event_trigger|function||CREATE OR REPLACE FUNCTION public.fn_sy_log_events()
+ RETURNS event_trigger
+ LANGUAGE plpgsql
+AS $function$
+BEGIN
+  INSERT INTO sy_event_logs (
+    event_type,
+    command_tag,
+    object_id,
+    object_name,
+    schema_name,
+    user_name
+  )
+  SELECT
+    tg_event,
+    tg_tag,
+    objid,
+    object_identity,
+    schema_name,
+    current_user
+  FROM pg_event_trigger_ddl_commands();
+END;
+$function$
+
+public|fn_sy_procedure_batch_exec|p_exec_no character varying|text|function||CREATE OR REPLACE FUNCTION public.fn_sy_procedure_batch_exec(p_exec_no character varying)
+ RETURNS text
+ LANGUAGE plpgsql
+AS $function$
+DECLARE
+    v_exec_proc_id varchar;
+    v_proc_nm varchar;
+    v_exec_vrbl_desc varchar;
+    v_wrk_rmk varchar;
+    v_req_pgm_id varchar;
+    v_req_user_id varchar;
+    v_req_ip varchar;
+    v_cnt int;
+
+    w_exec_cmd TEXT := '';
+    w_err_msg VARCHAR := '';
+BEGIN
+    SELECT sbpe.exec_proc_id,
+           sbpl.proc_nm,
+           sbpe.exec_vrbl_desc,
+           coalesce(sbpe.wrk_rmk, ''),
+           coalesce(sbpe.req_pgm_id, ''),
+           coalesce(sbpe.req_user_id, ''),
+           coalesce(sbpe.req_ip, '')
+    INTO v_exec_proc_id,
+         v_proc_nm,
+         v_exec_vrbl_desc,
+         v_wrk_rmk,
+         v_req_pgm_id,
+         v_req_user_id,
+         v_req_ip
+    FROM sy_batch_pgm_exec sbpe
+    JOIN sy_batch_pgm_list sbpl ON (sbpe.exec_proc_id = sbpl.proc_id)
+    WHERE sbpe.exec_no = p_exec_no;
+
+    BEGIN
+        v_exec_vrbl_desc := v_exec_vrbl_desc || '#@#' || v_req_pgm_id || '#@#' || v_req_user_id || '#@#' || v_req_ip;
+
+        w_exec_cmd := fn_sy_procedure_cmd(v_exec_proc_id, string_to_array(v_exec_vrbl_desc, '#@#'));
+
+        RETURN w_exec_cmd;
+    END;
+END;
+$function$
+
+public|fn_sy_procedure_cmd|p_proc character varying, p_param character varying[]|character varying|function||CREATE OR REPLACE FUNCTION public.fn_sy_procedure_cmd(p_proc character varying, p_param character varying[])
+ RETURNS character varying
+ LANGUAGE plpgsql
+AS $function$
+	DECLARE w_type VARCHAR[];
+	DECLARE w_cmd TEXT;
+	DECLARE w_param VARCHAR := '';
+BEGIN
+	-- 프로시저 인자값 타입조회
+	BEGIN
+		SELECT ARRAY(
+			SELECT
+				format_type(unnest(proargtypes), NULL) INTO w_type
+			FROM pg_proc prc inner join pg_namespace spc on prc.pronamespace = spc.oid
+			WHERE spc.nspname = 'sjerp'
+			AND prc.proname = p_proc
+			AND prc.prokind = 'p'
+		);
+	END;
+	
+	FOR i IN 1..array_length(w_type, 1) LOOP
+		w_param := w_param || format(',%L::%s', p_param[i], w_type[i]);
+	END LOOP;
+	
+	w_cmd := format('CALL %I(%s);', p_proc, substr(w_param, 2));	
+	RETURN w_cmd;
+END;
+$function$
+
+public|tds_fdw_handler||fdw_handler|function||CREATE OR REPLACE FUNCTION public.tds_fdw_handler()
+ RETURNS fdw_handler
+ LANGUAGE c
+ STRICT
+AS '$libdir/tds_fdw', $function$tds_fdw_handler$function$
+
+public|tds_fdw_validator|text[], oid|void|function||CREATE OR REPLACE FUNCTION public.tds_fdw_validator(text[], oid)
+ RETURNS void
+ LANGUAGE c
+ STRICT
+AS '$libdir/tds_fdw', $function$tds_fdw_validator$function$
+
+fn_pre_rview_opl_adpt_rslt||trigger
+fn_pre_rview_opl_complete||trigger
+fn_sy_get_biz_slip_seq|p_biz_slip_seq_tp character varying, p_wh_cd character varying, p_ym character varying, p_pgm_id character varying, p_user_id character varying, p_user_ip character varying|integer
+fn_sy_get_code_nm|p_wrk_tp_cd character varying, p_cd_tp_cd character varying, p_comm_cd character varying|character varying
+fn_sy_get_code_nm_bank|p_wrk_tp_cd character varying, p_cd_tp_cd character varying, p_comm_cd character varying|character varying
+fn_sy_get_dept_nm|p_dept_cd character varying|character varying
+fn_sy_get_emp_dept_cd|p_emp_no character varying|character varying
+fn_sy_get_file_path|p_file_id character varying|character varying
+fn_sy_get_id|p_table_name character varying, p_column_name character varying, p_prefix character varying, p_total_length integer DEFAULT 20|character varying
+fn_sy_get_wrk_nm|p_wrk_tp_cd character varying|character varying
+fn_sy_log_events||event_trigger
+fn_sy_procedure_batch_exec|p_exec_no character varying|text
+fn_sy_procedure_cmd|p_proc character varying, p_param character varying[]|character varying

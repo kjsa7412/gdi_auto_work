@@ -12,11 +12,11 @@ isolation:
     writable: ["work/task/**", "work/.active_context.yml", "work/.lock"]
 
   task_deploy:
-    description: "build 후속 단계로 deploy skill이 호출될 때의 격리 규칙"
+    description: "build 후속 단계로 deploy skill이 자동 호출될 때의 격리 규칙"
     readable: ["work/task/3.Result/deliverables/**", "system/config/**", "system/config/framework_manifest.yml"]
     writable: ["work/task/3.Result/report/deploy_summary.yml"]
     apply_writable:
-      description: "deploy apply 모드에서만 허용 (사용자 확인 필수)"
+      description: "deploy apply 모드에서 자동 허용 (사용자 확인 불필요)"
       paths: ["실제 target path (framework_manifest source_roots 기준)"]
     forbidden: ["archive/**"]
 
@@ -33,7 +33,7 @@ isolation:
     readable: ["work/fix/3.Result/deliverables/**", "system/config/**", "system/config/framework_manifest.yml"]
     writable: ["work/fix/3.Result/report/deploy_summary.yml"]
     apply_writable:
-      description: "deploy apply 모드에서만 허용 (사용자 확인 필수)"
+      description: "deploy apply 모드에서 자동 허용 (사용자 확인 불필요)"
       paths: ["실제 target path (framework_manifest source_roots 기준)"]
     forbidden: ["archive/**"]
 

@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="seb012">
+
+    <!-- 의견서 단건 조회 (의견서 + 사전검토마스터 + 연구과제 JOIN) -->
+    <select id="selectInfo" resultType="java.util.Map">
+        SELECT a.wrk_mast_id
+             , a.rview_targr_id
+             , a.rsch_prj_id
+             , b.prj_nm
+             , b.prj_targ_yy
+             , b.rsch_ctg_cd
+             , b.rsch_cls_cd
+             , c.rview_tmlt_start_dt
+             , c.rview_tmlt_end_dt
+             , a.adpt_rslt_cd
+             , a.joint_sngl_tp_cd
+             , a.insd_outsd_tp_cd
+             , a.prd_desc
+             , a.rjct_resn_desc
+             , a.rmk_1_desc
+             , a.rmk_2_desc
+             , a.rmk_3_desc
+        FROM rp_pre_rview_opl_list a
+        JOIN rp_rsch_prj_mst b ON a.rsch_prj_id = b.rsch_prj_id
+                                AND a.wrk_mast_id = b.wrk_mast_id
+        JOIN rp_pre_rview_mst c ON a.wrk_mast_id = c.wrk_mast_id
+        WHERE a.wrk_mast_id = #{wrk_mast_id}
+          AND a.rview_targr_id = #{rview_targr_id}
+          AND a.rsch_prj_id = #{rsch_prj_id}
+    </select>
+
+    <!-- 의견서 저장 (UPSERT) -->
+    <insert id="insertPreRviewOplList">
+        INSERT INTO rp_pre_rview_opl_list (
+            wrk_mast_id,
+            rview_targr_id,
+            rsch_prj_id,
+            adpt_rslt_cd,
+            joint_sngl_tp_cd,
+            insd_outsd_tp_cd,
+            prd_desc,
+            rjct_resn_desc,
+            rmk_1_desc,
+            rmk_2_desc,
+            rmk_3_desc,
+            firs_reg_pgm_id, firs_reg_dts, firs_reg_user_id, firs_reg_ip,
+            fina_reg_pgm_id, fina_reg_dts, fina_reg_user_id, fina_reg_ip
+        ) VALUES (
+            #{wrk_mast_id},
+            #{rview_targr_id},
+            #{rsch_prj_id},
+            #{adpt_rslt_cd},
+            #{joint_sngl_tp_cd},
+            #{insd_outsd_tp_cd},
+            #{prd_desc},
+            #{rjct_resn_desc},
+            #{rmk_1_desc},
+            #{rmk_2_desc},
+            #{rmk_3_desc},
+            #{reg_pgm_id}, now(), #{login_emp_no}, #{login_user_ip},
+            #{reg_pgm_id}, now(), #{login_emp_no}, #{login_user_ip}
+        )
+        <if test='allow_update == "Y"'>
+        ON CONFLICT (wrk_mast_id, rview_targr_id, rsch_prj_id)
+        DO UPDATE SET
+            adpt_rslt_cd = excluded.adpt_rslt_cd,
+            joint_sngl_tp_cd = excluded.joint_sngl_tp_cd,
+            insd_outsd_tp_cd = excluded.insd_outsd_tp_cd,
+            prd_desc = excluded.prd_desc,
+            rjct_resn_desc = excluded.rjct_resn_desc,
+            rmk_1_desc = excluded.rmk_1_desc,
+            rmk_2_desc = excluded.rmk_2_desc,
+            rmk_3_desc = excluded.rmk_3_desc,
+            fina_reg_pgm_id = excluded.firs_reg_pgm_id,
+            fina_reg_dts = now(),
+            fina_reg_user_id = excluded.firs_reg_user_id,
+            fina_reg_ip = excluded.firs_reg_ip
+        </if>
+    </insert>
+
+</mapper>

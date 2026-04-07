@@ -31,11 +31,12 @@ layout:
 # -----------------------------------------------------------------------------
 fragment:
   main_page_declaration:
-    pattern: "th:fragment=\"content(PGM, PARENT)\""
-    description: "모든 화면은 content fragment로 선언"
+    pattern: "<html xmlns:th=\"http://www.thymeleaf.org\">"
+    description: "일반 화면은 th:fragment 없이 선언. PGM/PARENT는 UiController가 model로 주입"
+    note: "th:fragment=\"content(PGM, PARENT)\"는 탭 콘텐츠에서만 사용"
     parameters:
-      PGM: "프로그램ID (화면 내 모든 DOM ID prefix)"
-      PARENT: "부모 프로그램ID (탭/팝업에서 부모 참조)"
+      PGM: "프로그램ID (UiController에서 model.addAttribute로 주입)"
+      PARENT: "부모 프로그램ID (탭/팝업에서만 사용)"
 
   tab_inclusion:
     pattern: "th:insert=\"~{project/{path}/{MODULE_ID}_T{seq} :: content(PGM=|${PGM}TAB{nn}|, PARENT=${PGM})}\""
@@ -224,6 +225,44 @@ buttons:
     description: "버튼 레이블에 단축키 표기: '조회[F2]'"
 
 # -----------------------------------------------------------------------------
+# 화면 이동 패턴
+# -----------------------------------------------------------------------------
+navigation:
+  open_pgm:
+    pattern: "APP_PGM.openPgm(module_id, pgm_id, param)"
+    signature: "(module_id: string, pgm_id: string, param: object)"
+    example: "APP_PGM.openPgm('SE', 'SEA011', { isNew: true, wrk_mast_id: record.wrk_mast_id })"
+    rules:
+      - "반드시 3개 인자 전달 (module_id, pgm_id, param)"
+      - "module_id는 업무구분 대문자 2자리 (예: 'SE', 'DT', 'PS')"
+      - "pgm_id는 프로그램ID 대문자 (예: 'SEA011', 'SEB011')"
+      - "2개 인자만 전달하면 pgm_id에 param 객체가 들어가는 버그 발생"
+    근거: "SEA010.html"
+
+  active_pgm:
+    pattern: "listener.activePgm = function (param) { ... }"
+    signature: "(param: object)"
+    rules:
+      - "단일 인자 param만 수신 (isNew 등은 param 내부 속성)"
+      - "isNew 비교: String(param.isNew) !== 'true' (문자열 변환 비교 필수)"
+      - "수정 모드 판정: param && param.wrk_mast_id && String(param.isNew) !== 'true'"
+    근거: "SEA011.html"
+
+  close_pgm:
+    pattern: "APP_PGM.closePgm(PGM)"
+    description: "서브화면 닫기 (부모 화면 복귀)"
+    근거: "SEA011.html"
+
+  set_parent:
+    pattern: "사용하지 않음"
+    description: >
+      listener.setParent(PARENT)는 openPgm으로 여는 서브화면에서 사용하지 않는다.
+      openPgm은 hash 기반 라우팅이라 PARENT가 Thymeleaf에서 null로 전달된다.
+      top_title_button 프레임이 auth를 직접 제공하므로 setParent 불필요.
+      const PARENT 선언과 listener.setParent(PARENT) 호출 모두 제거한다.
+    forbidden: true
+    근거: "openPgm hash 라우팅 구조, SEB011 setParent null 에러"
+
 # 화면 초기화 패턴
 # -----------------------------------------------------------------------------
 initialization:
@@ -354,7 +393,8 @@ form:
     bliys: "DATA_VIEW.bliys - 브랜드/라인/아이템/연도/시즌 복합"
     zbliys: "DATA_VIEW.zbliys - 브랜드존 포함 복합"
     date: "DATA_VIEW.date - 날짜 선택"
-    dateRange2: "DATA_VIEW.dateRange2 - 날짜 범위"
+    dateRange: "DATA_VIEW.dateRange - 날짜 범위 (name + name2 방식)"
+    dateRange2: "DATA_VIEW.dateRange2 - 날짜 범위 (startName + endName 방식, startDefaultValue: getToday('','',offset) 사용)"
     select: "DATA_VIEW.select - 일반 셀렉트박스"
     radio: "DATA_VIEW.radio - 라디오 버튼"
     text: "DATA_VIEW.text - 텍스트 입력"

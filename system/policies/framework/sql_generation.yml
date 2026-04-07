@@ -21,7 +21,7 @@ sql_artifacts:
       - "pgm_path 형식: /project/{module}/{category}/{ScreenId}"
       - "서브화면(popup, tab)은 sy_menu_info에 등록 금지"
       - "감사컬럼 8개 포함 필수"
-    pgm_path_format: "/project/{module}/{category}/{ScreenId}"
+    pgm_path_format: "/{module_group}/{sub_group}/{module_id}"
     audit_columns:
       - firs_reg_pgm_id
       - firs_reg_dts

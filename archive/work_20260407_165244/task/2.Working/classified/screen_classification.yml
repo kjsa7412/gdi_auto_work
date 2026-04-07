@@ -1,0 +1,51 @@
+version: 1
+source_ppt: "work/task/1.Prep/GDI_DE_331_화면설계서_통합본.pptx"
+total_slides: 3
+screens:
+  - slide: 1
+    screen_id: SEB010
+    screen_name: "사전검토관리"
+    screen_type: list-detail
+    module_id: seb010
+    confidence: high
+    classification_basis:
+      has_search_area: true
+      has_grid: true
+      has_detail_form: true
+      layout: "좌우분할(7-left/3-right)"
+    main_table: rp_pre_rview_mst
+    related_tables:
+      - rp_rsch_prj_mst
+      - rp_pre_rview_opl_list
+
+  - slide: 2
+    screen_id: SEB011
+    screen_name: "사전검토등록"
+    screen_type: form
+    module_id: seb011
+    confidence: high
+    classification_basis:
+      is_sub_screen: true
+      has_detail_form: true
+      has_sub_grid: true
+      parent_screen: SEB010
+    main_table: rp_pre_rview_mst
+    related_tables:
+      - rp_pre_rview_opl_list
+      - sy_user_info
+
+  - slide: 3
+    screen_id: SEB012
+    screen_name: "사전검토의견서등록내용"
+    screen_type: form
+    module_id: seb012
+    confidence: high
+    classification_basis:
+      is_sub_screen: true
+      has_detail_form: true
+      has_readonly_section: true
+      parent_screen: SEB011
+    main_table: rp_pre_rview_opl_list
+    related_tables:
+      - rp_rsch_prj_mst
+      - rp_pre_rview_mst

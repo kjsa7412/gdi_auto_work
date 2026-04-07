@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" th:fragment="content(PGM, PARENT)">
+<html xmlns:th="http://www.thymeleaf.org">
 <th:block th:replace="~{frame/top_title_button :: topTitleButtonFragment}"></th:block>
 
 <div class="data-page">
@@ -23,19 +23,6 @@
     const modalParam = listener.modalParam;
 
     listener.initPgm = function () {
-
-        // === 팝업 툴바 ===
-        listener.toolbar.toolbar = webix.ui({
-            container: `${PGM}btnToolbar`,
-            view: "dataToolbar",
-            elements: [
-                /* VARIANT: input-type - 확인 버튼 */
-                {view: "button", value: "확인", click: () => { listener.button.save.click(); }},
-                /* VARIANT: search-type - 조회/선택 버튼 */
-                /* {view: "button", value: "조회", click: () => { listener.button.search.click(); }}, */
-                /* {view: "button", value: "선택", click: () => { listener.button.select.click(); }}, */
-            ]
-        });
 
         /* VARIANT: input-type popup form */
         // === 입력 폼 ===

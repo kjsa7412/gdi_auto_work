@@ -177,6 +177,13 @@ v5_rules:
       - 2칸 필드: { gravity: 2, ... } → gravity:2 + 1 + 1 + 1 = 5
       - PPT에서 한 줄에 3칸만 사용: cols: [{},{},{},{},{}] → 3개 채우고 나머지 2개는 빈 객체 {}
       - 빈 칸은 반드시 빈 객체 {} 로 채워서 5칸을 맞춘다
+
+      [핵심 규칙] PPT에서 같은 행(row)에 있는 필드는 반드시 하나의 cols 배열에 넣는다.
+      PPT 좌표 기준으로 top이 같거나 오차 0.3cm 이내인 필드는 같은 행이다.
+      절대로 같은 행의 필드를 별도 cols 배열로 분리하지 않는다.
+      예: PPT에서 [연구과제명(2칸) + 검토기간(1칸)]이 한 줄이면:
+        올바름: cols: [{연구과제명, gravity:2}, {검토기간}, {}, {}]  ← 한 줄, 합계 5
+        잘못됨: {cols:[{연구과제명}]}, {cols:[{검토기간}]}           ← 2줄로 분리 금지
     severity: critical
     examples:
       basic: "cols: [{ view: DATA_VIEW.text, label: 'A', name: 'a' }, { view: DATA_VIEW.text, label: 'B', name: 'b' }, { view: DATA_VIEW.codeNone, ... }, { view: DATA_VIEW.date, ... }, { view: DATA_VIEW.text, ... }]"
@@ -197,6 +204,22 @@ v5_rules:
       - data-modal: 모달 컨테이너
       주의: data-content-half는 존재하지 않음. 반드시 -left 또는 -right 접미사 사용.
     severity: critical
+
+  - id: LR-007
+    description: "그리드/폼 영역 위 dataToolbar 필수"
+    condition: "그리드 또는 폼 영역이 존재하는 경우"
+    action: >
+      조회 영역(searchForm)을 제외한 모든 그리드/폼 영역 위에는
+      반드시 dataToolbar를 배치하여 해당 섹션의 title을 표시한다.
+      - HTML: <div th:id="|${PGM}toolbar{N}|"></div> 를 그리드/폼 div 위에 배치
+      - JS: listener.toolbar.toolbar{N} = webix.ui({ container: `${PGM}toolbar{N}`, view: 'dataToolbar', pgm: PGM, title: '섹션명' });
+      - title은 PPT의 섹션 라벨(▶사전검토목록 등)에서 추출. PPT에 없으면 '작성필요'로 입력
+      - initPgm 최상단에서 toolbar를 먼저 생성한 후 폼/그리드 생성
+    severity: critical
+    examples:
+      grid: "listener.toolbar.toolbar1 = webix.ui({ container: `${PGM}toolbar1`, view: 'dataToolbar', pgm: PGM, title: '사전검토목록' });"
+      form: "listener.toolbar.toolbar1 = webix.ui({ container: `${PGM}toolbar1`, view: 'dataToolbar', pgm: PGM, title: '개요' });"
+    근거: "SEA010.html, SEA011.html"
 
   - id: LR-003
     description: "그리드 div에 data-grid 클래스 필수"

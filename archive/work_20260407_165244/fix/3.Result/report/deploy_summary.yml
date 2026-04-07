@@ -1,0 +1,40 @@
+version: 1
+mode: "apply"
+status: "deployed"
+generated_at: "2026-04-07T00:00:00"
+
+deployed_files:
+  - source: "work/task/3.Result/deliverables/SEB010.html"
+    target: "C:/gdi/src/main/resources/templates/project/se/seb/SEB010.html"
+    status: "deployed"
+    conflict: false
+  - source: "work/task/3.Result/deliverables/SEB011.html"
+    target: "C:/gdi/src/main/resources/templates/project/se/seb/SEB011.html"
+    status: "deployed"
+    conflict: false
+  - source: "work/task/3.Result/deliverables/SEB012.html"
+    target: "C:/gdi/src/main/resources/templates/project/se/seb/SEB012.html"
+    status: "deployed"
+    conflict: false
+  - source: "work/task/3.Result/deliverables/seb010.xml"
+    target: "C:/gdi/src/main/resources/mapper/sjerp/se/seb/seb010.xml"
+    status: "deployed"
+    conflict: false
+  - source: "work/task/3.Result/deliverables/seb011.xml"
+    target: "C:/gdi/src/main/resources/mapper/sjerp/se/seb/seb011.xml"
+    status: "deployed"
+    conflict: false
+  - source: "work/task/3.Result/deliverables/seb012.xml"
+    target: "C:/gdi/src/main/resources/mapper/sjerp/se/seb/seb012.xml"
+    status: "deployed"
+    conflict: false
+
+pending_manual:
+  - source: "work/fix/3.Result/deliverables/SEB010_메뉴등록.sql"
+    target: "DB 직접 실행 필요"
+    status: "pending"
+    note: "SQL은 파일 배포 대상이 아님. psql로 직접 실행 필요"
+
+total_deployed: 6
+total_pending: 1
+conflicts: 0

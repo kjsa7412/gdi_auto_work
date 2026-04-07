@@ -1,0 +1,33 @@
+version: 1
+command: fix
+status: completed
+started_at: "2026-04-07T00:00:00"
+completed_at: "2026-04-07T00:00:00"
+
+source:
+  fix_request: "work/fix/1.Prep/fix.md"
+
+issues:
+  - id: FIX-024
+    description: "PPT [데이터] 섹션 트리거 SQL 누락"
+    issue_type: "output_patch"
+    error_code: "SQL-005"
+    severity: "critical"
+    root_cause: >
+      PPT Slide 1의 [데이터] 섹션에서 사전검토의견서마스터에 트리거 생성을 지시했으나
+      build 단계에서 해당 SQL을 생성하지 않음. people_spec 특이사항에 기록되어 있었으나
+      실제 SQL 산출물로 전환되지 않았음.
+    fix_action:
+      - "SEB010_트리거생성.sql 신규 생성"
+      - "트리거 함수: fn_seb_check_opl_complete()"
+      - "트리거: trg_seb_check_opl_complete (AFTER INSERT OR UPDATE OF adpt_rslt_cd)"
+      - "로직: 전체 의견서 채택결과 등록 완료 시 → opl_wrt_dt 업데이트 + prgrs_stat_cd='030'"
+
+deploy:
+  status: "pending"
+  note: "SQL 파일은 DB 직접 실행 필요"
+
+deliverables:
+  path: "work/fix/3.Result/deliverables/"
+  files:
+    - "SEB010_트리거생성.sql"

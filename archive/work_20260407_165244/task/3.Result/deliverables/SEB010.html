@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<th:block th:replace="~{frame/top_title_button :: topTitleButtonFragment}"></th:block>
+
+<div class="data-page">
+    <div th:id="|${PGM}searchForm|"></div>
+    <div class="data-content-wrapper">
+        <div class="data-content-fill">
+            <div th:id="|${PGM}toolbar1|"></div>
+            <div class="data-grid" th:id="|${PGM}masterGrid|"></div>
+        </div>
+        <div class="data-content-3-right">
+            <div th:id="|${PGM}toolbar2|"></div>
+            <div class="data-grid" th:id="|${PGM}detailGrid|"></div>
+        </div>
+    </div>
+</div>
+
+<script th:inline="javascript">
+(function () {
+    const PGM = /*[[${PGM}]]*/ null;
+    const listener = platform.listener[PGM];
+
+    listener.initPgm = function () {
+
+        // === 마스터 그리드 툴바 ===
+        listener.toolbar.toolbar1 = webix.ui({
+            container: `${PGM}toolbar1`,
+            view: 'dataToolbar',
+            pgm: PGM,
+            title: '사전검토목록'
+        });
+
+        // === 디테일 그리드 툴바 ===
+        listener.toolbar.toolbar2 = webix.ui({
+            container: `${PGM}toolbar2`,
+            view: 'dataToolbar',
+            pgm: PGM,
+            title: '검토 대상자'
+        });
+
+        // === 검색 폼 ===
+        listener.form.searchForm = webix.ui({
+            container: `${PGM}searchForm`,
+            view: 'dataForm',
+            pgm: PGM,
+            search: true,
+            elements: [
+                {
+                    cols: [
+                        {view: DATA_VIEW.codeNone, type: DATA_CODE_TYPE.codeValue, label: "대상년도", name: "P_prj_targ_yy", param: {wrk_tp_cd: 'RP', cd_tp_cd: '350'}},
+                        {view: DATA_VIEW.codeNone, type: DATA_CODE_TYPE.codeValue, label: "연구분류", name: "P_rsch_ctg_cd", param: {wrk_tp_cd: 'RP', cd_tp_cd: '010'}},
+                        {view: DATA_VIEW.codeNone, type: DATA_CODE_TYPE.codeValue, label: "연구유형", name: "P_rsch_cls_cd", param: {wrk_tp_cd: 'RP', cd_tp_cd: '020'}},
+                        {view: DATA_VIEW.text, label: "연구과제명", name: "P_prj_nm", gravity: 2}
+                    ]
+                },
+                {
+                    cols: [
+                        {view: DATA_VIEW.codeNone, type: DATA_CODE_TYPE.codeValue, label: "진행상태", name: "P_prgrs_stat_cd", param: {wrk_tp_cd: 'RP', cd_tp_cd: '070'}},
+                        {view: DATA_VIEW.dateRange2, label: "접수일자", startName: "P_rcpt_dt_from", endName: "P_rcpt_dt_to", startDefaultValue: getToday('', '', -7), endDefaultValue: getToday('', '', 7)},
+                        {},
+                        {},
+                        {}
+                    ]
+                }
+            ]
+        });
+
+        // === 마스터 그리드 (좌측 - 사전검토목록) ===
+        listener.grid.masterGrid = webix.ui({
+            container: `${PGM}masterGrid`,
+            view: "datagrid",
+            listener: listener,
+            editable: false,
+            checkable: true,
+            rowNumber: true,
+            sort: true,
+            columns: [
+                {id: "rsch_cls_nm", header: "연구유형", css: "textCenter", width: 100},
+                {id: "prj_nm", header: "연구과제명", fillspace: true},
+                {id: "rcpt_dt", header: "접수일자", css: "textCenter", width: 100, format: dateFormat},
+                {id: "prgrs_stat_nm", header: "검토상태", css: "textCenter", width: 100},
+                {id: "opl_wrt_dt", header: "의견서작성일", css: "textCenter", width: 100, format: dateFormat}
+            ]
+        });
+
+        // === 상세 그리드 (우측 - 검토 대상자) ===
+        listener.grid.detailGrid = webix.ui({
+            container: `${PGM}detailGrid`,
+            view: "datagrid",
+            listener: listener,
+            editable: false,
+            checkable: false,
+            rowNumber: true,
+            sort: true,
+            columns: [
+                {id: "rview_targr_nm", header: "검토자", fillspace: true},
+                {id: "adpt_rslt_nm", header: "검토결과", css: "textCenter", width: 100}
+            ]
+        });
+    };
+
+    // === 마스터 행 클릭 → 상세 로드 ===
+    listener.gridRow.click = function (record, grid) {
+        if (listener.grid.masterGrid === grid) {
+            const param = {};
+            param.wrk_mast_id = record.wrk_mast_id;
+            param.statement = "seb010.selectDetailGrid";
+
+            const callback = new Callback(function (result) {
+                if (result.resultCode === RESULT_CODE.OK) {
+                    listener.grid.detailGrid.setData(result.resultData);
+                }
+            });
+            platform.post(platform.url.select, param, callback);
+        }
+    };
+
+    // === 마스터 행 더블클릭 → SEB011 이동 ===
+    listener.gridRow.dblclick = function (record, grid) {
+        if (listener.grid.masterGrid === grid) {
+            APP_PGM.openPgm('SE', 'SEB011', {wrk_mast_id: record.wrk_mast_id, isNew: false});
+        }
+    };
+
+    // === 조회 ===
+    listener.button.search.click = function () {
+        if (!listener.form.searchForm.formValidate()) return;
+
+        const param = listener.form.searchForm.getData();
+        param.statement = "seb010.selectMainGrid";
+
+        const callback = new Callback(function (result) {
+            if (result.resultCode === RESULT_CODE.OK) {
+                listener.grid.masterGrid.setData(result.resultData);
+                listener.grid.detailGrid.setData([]);
+            }
+        });
+        platform.post(platform.url.select, param, callback);
+    };
+
+    // === 신규 ===
+    listener.button.news.click = function () {
+        APP_PGM.openPgm('SE', 'SEB011', {isNew: true});
+    };
+
+    // === 삭제 ===
+    listener.button.del.click = function () {
+        const checkedData = listener.grid.masterGrid.getCheckedData();
+        if (checkedData.length === 0) {
+            popup.alert.show("선택된 데이터가 없습니다.");
+            return;
+        }
+
+        // 진행상태 체크 (RP070030 이후는 삭제 불가)
+        for (let i = 0; i < checkedData.length; i++) {
+            if (checkedData[i].prgrs_stat_cd > 'RP070030') {
+                popup.alert.show("진행 중인 건은 삭제할 수 없습니다.");
+                return;
+            }
+        }
+
+        popup.confirm.show("삭제 하시겠습니까?", function (confirmYn) {
+            if (confirmYn) {
+                const param = new Param();
+                param.add("seb010.deletePreRviewMst", checkedData);
+
+                const callback = new Callback(function (result) {
+                    if (result.resultCode === RESULT_CODE.OK) {
+                        popup.alert.show("삭제되었습니다.");
+                        listener.button.search.click();
+                    }
+                });
+                platform.post(platform.url.saveAll, param.data, callback);
+            }
+        });
+    };
+
+    // === 초기화 ===
+    listener.button.init.click = function () {
+        listener.form.searchForm.init();
+        listener.grid.masterGrid.setData([]);
+        listener.grid.detailGrid.setData([]);
+    };
+
+})();
+</script>
+</html>

@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<th:block th:replace="~{frame/top_title_button :: topTitleButtonFragment}"></th:block>
+
+<div class="data-page">
+    <div class="data-content-wrapper">
+        <div class="data-content-fill">
+            <div th:id="|${PGM}toolbar1|"></div>
+            <div th:id="|${PGM}mainForm|"></div>
+            <div th:id="|${PGM}toolbar2|"></div>
+            <div class="data-grid" th:id="|${PGM}subGrid|"></div>
+        </div>
+    </div>
+</div>
+
+<script th:inline="javascript">
+(function () {
+    const PGM = /*[[${PGM}]]*/ null;
+
+    const listener = platform.listener[PGM];
+
+    let _param = {};
+    let _isNew = true;
+
+    // === 상태 초기화 ===
+    function resetState() {
+        _param = {};
+        _isNew = true;
+        if (listener.form.mainForm) listener.form.mainForm.init();
+        if (listener.grid.subGrid) listener.grid.subGrid.setData([]);
+    }
+
+    listener.initPgm = function () {
+
+        // === 개요 툴바 ===
+        listener.toolbar.toolbar1 = webix.ui({
+            container: `${PGM}toolbar1`,
+            view: 'dataToolbar',
+            pgm: PGM,
+            title: '개요'
+        });
+
+        // === 검토 대상자 툴바 ===
+        listener.toolbar.toolbar2 = webix.ui({
+            container: `${PGM}toolbar2`,
+            view: 'dataToolbar',
+            pgm: PGM,
+            title: '검토 대상자'
+        });
+
+        // === 메인 입력 폼 (개요) ===
+        listener.form.mainForm = webix.ui({
+            container: `${PGM}mainForm`,
+            view: 'dataForm',
+            pgm: PGM,
+            elements: [
+                {
+                    cols: [
+                        {view: DATA_VIEW.codeNone, type: DATA_CODE_TYPE.custom, label: "연구과제명", name: "rsch_prj_id", required: true, gravity: 2,
+                            statement: "codeCustom.selectRschPrjList",
+                            idField: "rsch_prj_id",
+                            valueField: "prj_nm",
+                            displayName: "prj_nm",
+                            modalConfig: {
+                                title: "연구과제 검색",
+                                width: 700,
+                                height: 500,
+                                searchFields: [
+                                    {view: DATA_VIEW.codeNone, type: DATA_CODE_TYPE.codeValue, label: "대상년도", name: "P_prj_targ_yy", param: {wrk_tp_cd: 'RP', cd_tp_cd: '350'}},
+                                    {view: DATA_VIEW.codeNone, type: DATA_CODE_TYPE.codeValue, label: "연구분류", name: "P_rsch_ctg_cd", param: {wrk_tp_cd: 'RP', cd_tp_cd: '010'}},
+                                    {view: DATA_VIEW.codeNone, type: DATA_CODE_TYPE.codeValue, label: "연구유형", name: "P_rsch_cls_cd", param: {wrk_tp_cd: 'RP', cd_tp_cd: '020'}},
+                                    {view: DATA_VIEW.text, label: "연구과제명", name: "P_prj_nm"}
+                                ],
+                                gridColumns: [
+                                    {id: "rsch_prj_id", header: "과제ID", width: 100},
+                                    {id: "prj_nm", header: "연구과제명", fillspace: true},
+                                    {id: "rsch_cls_nm", header: "연구유형", width: 100},
+                                    {id: "prj_targ_yy", header: "대상년도", width: 80, css: "textCenter"}
+                                ],
+                                returnFields: {rsch_prj_id: "rsch_prj_id", prj_nm: "prj_nm"}
+                            }
+                        },
+                        {view: DATA_VIEW.dateRange2, label: "검토기간", startName: "rview_tmlt_start_dt", endName: "rview_tmlt_end_dt", required: true},
+                        {},
+                        {}
+                    ]
+                }
+            ]
+        });
+
+        // === 하위 목록 그리드 (검토 대상자) ===
+        listener.grid.subGrid = webix.ui({
+            container: `${PGM}subGrid`,
+            view: "datagrid",
+            listener: listener,
+            editable: true,
+            checkable: true,
+            rowNumber: true,
+            addRowable: true,
+            columns: [
+                {id: "rview_targr_id", header: "검토자ID", hidden: true},
+                {id: "rview_targr_nm", header: "성명", editor: GRID_VIEW.code, type: DATA_CODE_TYPE.user, targetCols: {dept_nm: 'dept_nm', jbps_nm: 'jbps_nm', jbtt_nm: 'jbtt_nm'}, fillspace: true},
+                {id: "dept_nm", header: "부서", width: 120},
+                {id: "jbps_nm", header: "직급", width: 100},
+                {id: "jbtt_nm", header: "직책", width: 100}
+            ]
+        });
+
+        // 편집 가능 그리드 초기 빈 행 추가
+        listener.gridRow.addRow();
+    };
+
+    // === 부모 설정 ===
+
+
+    // === 화면 활성화 (SEB010에서 호출) ===
+    listener.activePgm = function (param) {
+        resetState();
+        _param = param || {};
+        _isNew = !(param && param.wrk_mast_id && String(param.isNew) !== 'true');
+
+        if (!_isNew && _param.wrk_mast_id) {
+            // 마스터 정보 조회
+            const masterParam = {};
+            masterParam.wrk_mast_id = _param.wrk_mast_id;
+            masterParam.statement = "seb011.selectInfo";
+
+            const masterCallback = new Callback(function (result) {
+                if (result.resultCode === RESULT_CODE.OK && result.resultData) {
+                    listener.form.mainForm.setData(result.resultData);
+                }
+            });
+            platform.post(platform.url.selectOne, masterParam, masterCallback);
+
+            // 검토 대상자 조회
+            const detailParam = {};
+            detailParam.wrk_mast_id = _param.wrk_mast_id;
+            detailParam.statement = "seb011.selectDetailGrid";
+
+            const detailCallback = new Callback(function (result) {
+                if (result.resultCode === RESULT_CODE.OK) {
+                    listener.grid.subGrid.setData(result.resultData);
+                }
+            });
+            platform.post(platform.url.select, detailParam, detailCallback);
+        }
+    };
+
+    // === 저장 ===
+    listener.button.save.click = function () {
+        if (!listener.form.mainForm.formValidate()) return;
+        if (!listener.grid.subGrid.checkGridValidation()) return;
+
+        // 진행상태 체크 (RP070030 완료 시 저장 불가)
+        const formData = listener.form.mainForm.getData();
+        if (formData.prgrs_stat_cd === 'RP070030') {
+            popup.alert.show("완료된 건은 수정할 수 없습니다.");
+            return;
+        }
+
+        popup.confirm.show("저장 하시겠습니까?", function (confirmYn) {
+            if (confirmYn) {
+                const masterData = listener.form.mainForm.getData();
+                if (_param.wrk_mast_id) {
+                    masterData.wrk_mast_id = _param.wrk_mast_id;
+                }
+
+                const gridData = listener.grid.subGrid.getCheckedData();
+                for (let i = 0; i < gridData.length; i++) {
+                    gridData[i].rsch_prj_id = masterData.rsch_prj_id;
+                    if (_param.wrk_mast_id) {
+                        gridData[i].wrk_mast_id = _param.wrk_mast_id;
+                    }
+                }
+
+                const param = new Param();
+                param.add("seb011.insertPreRviewMst", [masterData]);
+                param.add("seb011.insertPreRviewOplList", gridData);
+
+                const callback = new Callback(function (result) {
+                    if (result.resultCode === RESULT_CODE.OK) {
+                        popup.alert.show("저장되었습니다.");
+                        APP_PGM.closePgm(PGM);
+                    }
+                });
+                platform.post(platform.url.saveAll, param.data, callback);
+            }
+        });
+    };
+
+    // === 삭제 ===
+    listener.button.del.click = function () {
+        if (_isNew || !_param.wrk_mast_id) {
+            popup.alert.show("삭제할 데이터가 없습니다.");
+            return;
+        }
+
+        // 진행상태 체크 (RP070030 완료 시 삭제 불가)
+        const formData = listener.form.mainForm.getData();
+        if (formData.prgrs_stat_cd === 'RP070030') {
+            popup.alert.show("완료된 건은 삭제할 수 없습니다.");
+            return;
+        }
+
+        popup.confirm.show("삭제 하시겠습니까?", function (confirmYn) {
+            if (confirmYn) {
+                const param = new Param();
+                param.add("seb011.deletePreRviewMst", [{wrk_mast_id: _param.wrk_mast_id}]);
+
+                const callback = new Callback(function (result) {
+                    if (result.resultCode === RESULT_CODE.OK) {
+                        popup.alert.show("삭제되었습니다.");
+                        APP_PGM.closePgm(PGM);
+                    }
+                });
+                platform.post(platform.url.saveAll, param.data, callback);
+            }
+        });
+    };
+
+})();
+</script>
+</html>

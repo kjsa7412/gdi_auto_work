@@ -5,56 +5,56 @@ PPT 화면설계서를 입력으로 받아, 프레임워크 규칙에 따라 HTM
 
 ---
 
-## 핵심 사상
+## 시스템 구조 요약
 
-### 1. Skeleton 기반 생성 (자유 생성 금지)
-코드를 처음부터 작성하지 않는다. 프레임워크 분석에서 추출한 **skeleton 템플릿**에 placeholder를 치환하여 산출물을 만든다. skeleton에 정의되지 않은 구조는 생성하지 않는다.
+```
+Policy (SSOT)          → system/policies/**/*.yml  — 무엇을 지켜야 하는가 (31개)
+Config (Contract)      → system/config/*.yml       — 경로, 네이밍, 상태 전이, 프레임워크 정보
+Schema (Validation)    → system/schemas/*.json     — manifest/spec 구조 검증 (9개)
+Template (Generation)  → system/templates/**       — skeleton, 화면유형, spec 템플릿
+Command (Orchestrator) → .claude/commands/*.md     — phase 전환, skill 호출 순서 (5개)
+Skill (Executor)       → .claude/skills/*.md       — 정책 로드 → 실행 → 결과 반환 (4개)
+Manifest (Evidence)    → work/**/manifests/*.yml   — 실행 결과, 판정 근거, 검증 증적
+```
 
-### 2. Dual-Spec 구조
-사람이 읽는 문서와 기계가 읽는 입력을 분리한다.
-- **people_spec.md** — 사람 검토용. 화면 개요, 필드, 버튼, 비즈니스 규칙을 자연어로 기술
-- **machine_spec.yml** — build 입력용. screen_type, skeleton_choice, placeholders, SQL 정보를 구조화
+---
 
-analyze가 둘 다 생성하고, 사용자가 people_spec을 검토/수정하면, build가 변경분을 machine_spec에 반영하여 최종 코드를 만든다.
+## 핵심 원칙
 
-### 3. Single-Active Workspace
-동시에 하나의 task 또는 fix만 실행한다. 완료되면 clean으로 archive에 보관하고, 새 작업을 시작한다.
-
-### 4. Cache-First 원칙
-DB 코드/테이블/뷰/함수 정보는 `system/cache/convention/`에 캐시한다. 모든 조회는 cache를 먼저 확인하고, 부족할 때만 DB에 SELECT 조회(fallback)한다.
-
-### 5. Manifest 기반 입출력
-모든 command는 실행 전후로 manifest(YAML)를 남긴다. 무엇을 입력으로 읽었고, 무엇을 산출했고, 어디서 실패했는지 기계적으로 추적 가능하다.
-
-### 6. Archive = History Only
-`archive/`는 과거 작업 이력 보관소이다. 어떤 command도 archive를 실행 입력으로 사용하지 못한다.
+| 원칙 | 설명 |
+|------|------|
+| Skeleton 기반 생성 | 자유 코드 생성 금지. skeleton + placeholder 치환만 허용 |
+| Dual-Spec | people_spec.md (사람 검토) + machine_spec.yml (기계 입력) 분리 |
+| Single-Active Workspace | 동시에 하나의 task 또는 fix만 실행 |
+| Cache-First | convention cache 우선 참조 → 부족 시 DB fallback (SELECT only) |
+| Manifest 기반 입출력 | 모든 command는 manifest로 입출력/판정 근거를 기록 |
+| Archive = History Only | archive/는 보관소. 실행 입력으로 사용 금지 |
+| Policy-First | 규칙은 정책 파일이 SSOT. command/skill은 정책 소비자 |
 
 ---
 
 ## 실행 흐름
 
 ```
-/analyze → (사용자 검토) → /build (+deploy prepare) → (/fix if needed) → /clean
+/analyze → (사용자 검토) → /build → (/fix if needed) → /clean
 ```
 
 | 단계 | Command | 입력 | 산출물 | 상태 전이 |
 |------|---------|------|--------|-----------|
-| 분석 | `/analyze` | PPT (1.Prep/) | people_spec, machine_spec (original+final) | idle → task_analyzed |
+| 분석 | `/analyze` | PPT (1.Prep/) | people_spec + machine_spec | idle → task_analyzed |
 | 검토 | 사용자 수동 | final/people_spec.md 수정 | — | — |
-| 빌드 | `/build` | people_spec + machine_spec | final/machine_spec + HTML/XML/Java 코드 + deploy_summary | task_analyzed → task_built |
+| 빌드 | `/build` | people_spec + machine_spec | HTML/XML/Java 코드 + verify_result + deploy_summary | task_analyzed → task_built |
 | 수정 | `/fix` | fix 요청 (fix/1.Prep/) | 패치된 산출물 | task_built → fix_applied |
 | 정리 | `/clean` | work/ 전체 | archive/work_{timestamp}/ | → idle |
 | 캐시 | `/cache-refresh` | DB | convention cache *.txt | (상태 변경 없음) |
 
-### /build 내부 구조
-build는 세 개의 skill을 순서대로 호출한다:
-1. **review skill** — original vs final people_spec diff 분석 → **final/machine_spec.yml 생성**
-2. **generate skill** — final/machine_spec.yml → skeleton 치환 → 코드 생성 + self-check
-3. **deploy skill** (선택적, prepare-only) — deliverables → target path 계산 → deploy_summary 생성
+### /build 내부 skill 호출
 
-deploy는 verify_result.status가 pass 또는 warn이고 deliverables가 존재할 때만 실행된다. deploy 실패는 build 실패가 아니다.
+1. **review** — original vs final people_spec diff → final/machine_spec.yml 생성
+2. **generate** — skeleton 치환 → 코드 생성 + verify 정책 기반 검증 + SQL 산출물 생성
+3. **deploy** (선택적, prepare-only) — deliverables → target path 계산
 
-build 이후 모든 단계는 **final/machine_spec.yml만을 기준**으로 진행한다.
+deploy는 `critical_pass=true`, `manual_required=false`, deliverables 존재 시에만 진입. deploy 실패는 build 실패가 아님.
 
 ---
 
@@ -70,11 +70,13 @@ failed → (clean only) → idle
 
 | 상태 | 설명 | 허용 command |
 |------|------|-------------|
-| `idle` | 초기 상태 | analyze |
-| `task_analyzed` | 분석 완료, 사용자 검토 대기 | build, clean |
-| `task_built` | 코드 생성 완료 | fix, clean |
-| `fix_applied` | 수정 적용 완료 | fix, clean |
-| `failed` | 실패 | clean (후 재시작) |
+| `idle` | 초기 상태 | analyze, cache-refresh |
+| `task_analyzed` | 분석 완료, 사용자 검토 대기 | build, clean, cache-refresh |
+| `task_built` | 코드 생성 완료 | fix, clean, cache-refresh |
+| `fix_applied` | 수정 적용 완료 | fix, clean, cache-refresh |
+| `failed` | 실패 | clean, cache-refresh |
+
+SSOT: `system/config/runtime.yml` → `state_machine`
 
 ---
 
@@ -83,186 +85,214 @@ failed → (clean only) → idle
 ```
 gdi_auto_work/
 ├── .claude/
-│   ├── commands/          # Claude Code 실행 command
-│   │   ├── analyze.md
-│   │   ├── build.md
-│   │   ├── fix.md
-│   │   ├── clean.md
-│   │   └── cache-refresh.md
-│   ├── skills/            # Command가 호출하는 하위 skill
-│   │   ├── review.md      # people_spec diff → machine_spec 생성
-│   │   ├── generate.md    # skeleton 치환 → 코드 생성
-│   │   ├── deploy.md      # 산출물 배포 (prepare-only/apply 이원화)
-│   │   └── system-fix.md  # 구조적 오류 → 정책/skeleton 보정 제안
+│   ├── commands/                   # Command (얇은 오케스트레이터)
+│   │   ├── analyze.md              #   PPT → people_spec + machine_spec
+│   │   ├── build.md                #   review → generate → deploy
+│   │   ├── fix.md                  #   오류 분류 → 패치/정책보완
+│   │   ├── clean.md                #   work → archive, 초기화
+│   │   └── cache-refresh.md        #   convention cache 갱신
+│   ├── skills/                     # Skill (정책 기반 실행자)
+│   │   ├── review.md               #   people_spec diff → machine_spec
+│   │   ├── generate.md             #   skeleton 치환 → 코드 + verify
+│   │   ├── deploy.md               #   deliverables → target path
+│   │   └── system-fix.md           #   구조적 오류 → 정책 보정
 │   └── settings.json
 │
 ├── system/
 │   ├── config/
-│   │   ├── paths.yml               # 경로 체계
-│   │   ├── runtime.yml             # 상태 전이, cache 정책, command 계약
-│   │   ├── framework_manifest.yml  # 프레임워크 분석 결과
-│   │   └── naming.yml              # 네이밍 규칙
+│   │   ├── paths.yml               # 전체 경로 체계 (SSOT)
+│   │   ├── runtime.yml             # 상태 전이 + command 계약 + cache 정책
+│   │   ├── framework_manifest.yml  # GDI FERP 프레임워크 정의
+│   │   └── naming.yml              # 네이밍 규칙 (module_id, SQL ID 등)
 │   │
-│   ├── cache/convention/           # Convention Cache
-│   │   ├── code.txt                # 공통코드 정의
-│   │   ├── table.txt               # 테이블/컬럼 정의
-│   │   ├── view.txt                # 뷰 정의
-│   │   ├── function.txt            # 함수/프로시저 정의
-│   │   ├── trigger.txt             # 트리거 정의
-│   │   └── sql/                    # cache refresh용 SELECT SQL
+│   ├── schemas/                    # JSON Schema (9개)
+│   │   ├── analyze_manifest.schema.json
+│   │   ├── build_manifest.schema.json
+│   │   ├── fix_manifest.schema.json
+│   │   ├── verify_result.schema.json
+│   │   ├── deploy_summary.schema.json
+│   │   ├── machine_spec.schema.json
+│   │   ├── people_spec.schema.json
+│   │   ├── active_context.schema.json
+│   │   └── framework_manifest.schema.json
+│   │
+│   ├── policies/
+│   │   ├── analyze/  (5)           # PPT 추출, 태그 분류, 화면유형, 보완 우선순위, spec 생성
+│   │   ├── framework/ (13)         # 레이아웃, 패턴, skeleton, 금지API, SQL, 코드, 버튼, PostgreSQL
+│   │   ├── verify/  (8)            # HTML/XML/SQL/Controller/Service 검증, 자기진단, escalation, 오류분류
+│   │   └── runtime/ (5)            # 경로접근, DB접근, 격리, 생명주기, deploy
 │   │
 │   ├── templates/
-│   │   ├── skeletons/              # 코드 생성 골격 (html/xml/controller/service × 4유형)
-│   │   ├── screen-types/           # 화면유형 정의 (list/list-detail/form/popup)
-│   │   └── spec/                   # people_spec/machine_spec 템플릿
+│   │   ├── skeletons/              # 코드 생성 골격 (4 artifact × 4 화면유형 = 16개)
+│   │   │   ├── html/               #   list, list-detail, form, popup
+│   │   │   ├── xml/                #   list, list-detail, form, popup
+│   │   │   ├── controller/         #   list, list-detail, form, popup
+│   │   │   └── service/            #   list, list-detail, form, popup
+│   │   ├── screen-types/           # 화면유형 정의 (4개)
+│   │   │   ├── list.yml
+│   │   │   ├── list-detail.yml
+│   │   │   ├── form.yml
+│   │   │   └── popup.yml
+│   │   └── spec/                   # spec 템플릿
+│   │       ├── people_spec.md
+│   │       ├── people_spec_guide.md
+│   │       └── machine_spec.yml
 │   │
-│   ├── schemas/                    # JSON Schema (manifest/spec/context/deploy 검증)
+│   ├── cache/convention/           # Convention Cache
+│   │   ├── code.txt                # 공통코드 (sy_code_mst/dtl)
+│   │   ├── table.txt               # 테이블/컬럼/PK
+│   │   ├── view.txt                # 뷰 정의
+│   │   ├── function.txt            # 함수/프로시저
+│   │   ├── trigger.txt             # 트리거
+│   │   └── sql/                    # cache refresh용 SELECT SQL (5개)
 │   │
-│   ├── runtime/                    # 런타임 상태 (실행 시 생성)
-│   │   ├── active/task/            # task 실행 중 임시 상태
-│   │   ├── active/fix/             # fix 실행 중 임시 상태
-│   │   └── logs/                   # 실행 로그
-│   │
-│   └── policies/
-│       ├── analyze/                # PPT 추출, 태그 분류, 화면유형 판정, 보완 우선순위
-│       ├── framework/              # 레이아웃, 패턴, skeleton 계약, 금지 API, SQL생성, 코드등록, 버튼, 코드컴포넌트, PostgreSQL
-│       ├── runtime/                # 경로 접근, DB 접근, 격리, 생명주기, deploy 정책
-│       │   └── deploy_policy.yml   # deploy 실행 정책 (모드, 진입조건, 충돌처리)
-│       └── verify/                 # HTML/XML/SQL/Controller/Service 검증, 자기진단, escalation
+│   └── runtime/                    # 런타임 상태 (실행 시 생성)
+│       ├── active/task/
+│       ├── active/fix/
+│       └── logs/
 │
-├── work/                           # 활성 작업 영역
+├── work/                           # 활성 작업 영역 (single-active)
 │   ├── .active_context.yml         # 현재 실행 상태
-│   ├── .lock                       # 동시 실행 방지 lock
+│   ├── .lock                       # 동시 실행 방지 (UNLOCKED | LOCKED:{type}:{command})
 │   ├── task/
 │   │   ├── 1.Prep/                 # 사용자 입력 (PPT)
-│   │   ├── 2.Working/              # 중간 산출물
+│   │   ├── 2.Working/
 │   │   │   ├── original/           # analyze 원본 (people_spec, machine_spec)
 │   │   │   ├── final/              # 확정본 (사용자 수정 people_spec, build machine_spec)
-│   │   │   ├── manifests/          # analyze/build manifest + verify_result
+│   │   │   ├── manifests/          # analyze.manifest, build.manifest, verify_result
 │   │   │   ├── extracted/          # PPT 추출 결과
 │   │   │   ├── classified/         # 화면유형 분류 결과
 │   │   │   ├── mapped/             # skeleton 매핑 결과
-│   │   │   └── generated/          # 생성된 코드
+│   │   │   └── generated/          # 생성된 코드 + SQL 산출물
 │   │   └── 3.Result/
 │   │       ├── deliverables/       # 최종 산출물
-│   │       └── report/             # 빌드 보고서 + deploy_summary.yml
+│   │       ├── report/             # build_report.md + deploy_summary.yml
+│   │       └── review/             # review 결과
 │   └── fix/
-│       ├── 1.Prep/                 # fix 요청 파일
-│       ├── 2.Working/              # fix 중간 산출물
-│       └── 3.Result/               # fix 결과
+│       ├── 1.Prep/                 # fix 요청 파일 (.md, .txt, .png)
+│       ├── 2.Working/
+│       │   ├── manifests/          # fix.manifest, verify_result
+│       │   ├── analyzed/           # fix 분석 결과
+│       │   ├── patched/            # 수정된 파일
+│       │   └── regenerated/        # 재생성된 파일
+│       └── 3.Result/
+│           ├── deliverables/       # fix 결과물
+│           └── report/             # fix 보고서
 │
 ├── proposals/                      # system-fix 정책 제안
 │   └── policy_changes/
 │       ├── new/                    # 미적용 제안 (low severity)
-│       ├── done/                   # 적용 완료 제안 (high severity)
+│       ├── done/                   # 적용 완료 (high severity)
 │       └── backup/                 # 변경 전 backup
 │
 └── archive/                        # History Only (실행 입력 금지)
-    └── work_YYYYMMDD_HHMMSS/       # clean 시 보관
+    └── work_YYYYMMDD_HHMMSS/       # /clean 시 보관
 ```
 
 ---
 
-## 기술 스택
+## 정책 체계 (31개)
 
-| 항목 | 기술 |
+### Analyze 정책 (`system/policies/analyze/`) — 5개
+
+| 파일 | 역할 |
 |------|------|
-| 대상 프레임워크 | GDI FERP Backoffice (Spring Boot + Thymeleaf + MyBatis + Webix) |
-| DB | PostgreSQL (10.10.1.100:5466/GDI_SERVICE) |
-| 언어 | Java 17+ (Jakarta) |
-| 템플릿 | Thymeleaf fragment 기반 |
-| ORM | MyBatis XML Mapper |
-| 프론트엔드 | Webix UI + jQuery + Bootstrap 5 |
-| 자동화 도구 | Claude Code (.claude/commands + skills) |
+| `ppt_extraction.yml` | GROUP 재귀탐색, 위치기반 영역분류, 라벨/입력 패턴, gravity 추출 (PE-001~006) |
+| `classify_tags.yml` | 13개 태그 분류 (META, SEARCH, GRID, FORM, BUTTON 등) + CT-001 |
+| `screen_type_rules.yml` | 화면유형 자동 분류 조건 + unknown 수작업 전환 |
+| `default_resolution.yml` | 보완 우선순위 5단계 (DDL → 코드정의서 → 화면유형 → 업무규칙 → 에이전트 판단) |
+| `spec_generation.yml` | people_spec/machine_spec 생성 규칙, 미확정 처리, cache 연계, 태그 규칙 |
+
+### Framework 정책 (`system/policies/framework/`) — 13개
+
+| 파일 | 역할 |
+|------|------|
+| `layout_rules.yml` | 5칸 gravity 배치, CSS 클래스, data-grid 필수 (LR-001~006) |
+| `html_patterns.yml` | Thymeleaf fragment, IIFE+listener, webix.ui 패턴 |
+| `xml_patterns.yml` | namespace, SQL ID, 동적SQL, audit 컬럼, ON CONFLICT |
+| `controller_patterns.yml` | @AddUserInfo, BaseResponse, 예외처리 패턴 |
+| `service_patterns.yml` | @Transactional, mapper 호출, 벌크 최적화 |
+| `template_selection.yml` | 화면유형별 skeleton 선택 + confidence 기반 manual fallback |
+| `skeleton_contract.yml` | placeholder 계약 + artifact required structure + CG-001~003 |
+| `forbidden_apis.yml` | 금지 패턴 (자유 HTML, jQuery AJAX, 전역 함수, SELECT * 등) |
+| `sql_generation.yml` | SQL 산출물 생성 조건, 파일명 규칙, execution_order 연계 (SG-001~008) |
+| `code_registration.yml` | comm_cd 순수값 규칙, 기존 코드그룹 재사용 금지 (CR-001~005) |
+| `button_mapping.yml` | 표준 7 + 비표준 etc{N} 매핑, 자동 교정 (BM-001~003) |
+| `code_component_defaults.yml` | 코드콤보/코드헬프 기본값, DATA_VIEW/DATA_CODE_TYPE 상수 (CC-001~007) |
+| `postgresql_rules.yml` | 집계+윈도우 금지, 중첩집계 금지, STRING_AGG 제한 (PG-001~004) |
+
+### Verify 정책 (`system/policies/verify/`) — 8개
+
+| 파일 | 역할 |
+|------|------|
+| `html_checks.yml` | HTML 검증 18 critical + 3 warning (IIFE, PGM, fragment, 버튼, 코드콤보 등) |
+| `xml_checks.yml` | XML 검증 10 critical + 2 warning (namespace, resultType, audit, 금지컬럼 등) |
+| `sql_checks.yml` | SQL 검증 6 critical (메뉴등록 SQL, pgm_path, 감사컬럼 8개, execution_order) |
+| `controller_checks.yml` | Controller 검증 6 critical (@Slf4j, 생성자주입, BaseResponse, CommonController 일관성) |
+| `service_checks.yml` | Service 검증 6 critical (BaseService, reader/writer, @Transactional, namespace) |
+| `self_diagnosis.yml` | 자기진단 4규칙 (DDL보완 제안, 코드등록 제안, 불명확 경고, 자동/수동 구분) |
+| `escalation_rules.yml` | 오류 escalation (자동수정→재검증, manual_required, system-fix 트리거, build 종료 정책) |
+| `issue_classification.yml` | Fix 오류 유형 5분류 + 에러 코드 9카테고리 + patch 판정 기준 |
+
+### Runtime 정책 (`system/policies/runtime/`) — 5개
+
+| 파일 | 역할 |
+|------|------|
+| `allowed_paths.yml` | command별 읽기/쓰기/금지 경로 + system-fix 쓰기 권한 |
+| `db_access.yml` | DB 접속정보, cache-first 원칙, fallback 조건/절차, 기록 규칙 (DB-001~006) |
+| `context_isolation.yml` | task/fix 격리, lock 형식, active_context 갱신 시점 |
+| `lifecycle.yml` | 필수 산출물 검증, unresolved 정책, failed 복구, zone 규칙 |
+| `deploy_policy.yml` | deploy 모드(prepare-only/apply), 진입조건, target path 규칙, 충돌처리 |
 
 ---
 
-## 화면 유형
+## Manifest 체계
 
-| 유형 | 설명 | 필수 산출물 | 대표 샘플 |
-|------|------|-------------|-----------|
-| **list** | 검색 + 목록 그리드 | HTML, XML | DTA010 |
-| **list-detail** | 목록 + 상세/편집 (좌우분할, 탭) | HTML, XML | DTA020, DTJ010 |
-| **form** | 단건 입력/수정 폼 | HTML, XML | (서브화면) |
-| **popup** | 모달 팝업 | HTML | DTA030_P01 |
-
-Controller/Service는 CommonController로 충분하면 생성하지 않는다. 엑셀 업로드, 서버 검증, 복잡 트랜잭션 등 CG-002 조건에 해당할 때만 생성한다.
+| Manifest | 생성자 | 주요 필드 | Schema |
+|----------|--------|-----------|--------|
+| `analyze.manifest.yml` | /analyze | status, screens[], cache, unresolved | `analyze_manifest.schema.json` |
+| `build.manifest.yml` | /build | review_summary, artifact_plan, verify(critical_pass, details, self_diagnosis), cache, deploy | `build_manifest.schema.json` |
+| `verify_result.yml` | /build, /fix | checks[], critical_pass, manual_required, auto_fixed[], details(5유형), self_diagnosis | `verify_result.schema.json` |
+| `deploy_summary.yml` | /build 선택적 | mode, target_paths[], warnings[], conflicts[] | `deploy_summary.schema.json` |
+| `fix.manifest.yml` | /fix | issue_type, error_classification, system_fix, verify, cache | `fix_manifest.schema.json` |
 
 ---
 
-## Skeleton 기반 생성 원리
+## 코드 생성 파이프라인
 
 ```
-people_spec.md (사용자 검토)
-       ↓ diff
+PPT
+ ↓ ppt_extraction.yml (PE-001~006)
+ ↓ classify_tags.yml
+ ↓ screen_type_rules.yml
+화면 분류 결과
+ ↓ spec_generation.yml + default_resolution.yml
+people_spec.md + machine_spec.yml (original)
+ ↓ (사용자 검토/수정)
+people_spec.md (final)
+ ↓ review skill — diff 분석
 machine_spec.yml (final)
-       ↓
-template_selection.yml → skeleton 선택 (html/xml/controller/service)
-       ↓
-skeleton_contract.yml → placeholder 완전성 검증
-       ↓
-skeleton 파일 + {{placeholder}} 치환 → 코드 생성
-       ↓
-forbidden_apis.yml + verify_result → self-check
-       ↓
-deliverables/
+ ↓ template_selection.yml → skeleton 선택
+ ↓ skeleton_contract.yml → placeholder 완전성 검증
+ ↓ skeleton + {{placeholder}} 치환
+   ├── code_component_defaults.yml (코드콤보/코드헬프)
+   ├── button_mapping.yml (버튼 → listener)
+   ├── layout_rules.yml (5칸 gravity)
+   └── forbidden_apis.yml (금지 패턴 차단)
+생성된 코드 (HTML/XML/Controller/Service)
+ ↓ sql_generation.yml → 메뉴등록/DDL보완/코드등록 SQL
+ ↓ verify 정책 (html/xml/sql/controller/service_checks.yml)
+ ↓ self_diagnosis.yml → DDL/코드 미등록 자동 탐지
+ ↓ escalation_rules.yml → auto_fix / manual_required / system-fix
+verify_result.yml
+ ↓ critical_pass → deliverables/
+ ↓ deploy_policy.yml → target path 계산
+deploy_summary.yml
 ```
-
-**placeholder 형식**: `{{name}}` (예: `{{screen_id}}`, `{{search_fields}}`, `{{grid_columns}}`)
-
-### 정책 반영 흐름
-
-```
-generate skill:
-  framework policies (생성 규칙) → skeleton 치환 + SQL 생성
-         ↓
-  verify policies (검증 규칙) → artifact별 검증 (html/xml/sql/controller/service)
-         ↓
-  self_diagnosis (자기진단) → DDL보완/코드등록 SQL 자동 생성
-         ↓
-  escalation_rules (오류처리) → auto_fix / manual_required / system-fix 트리거
-
-build command:
-  verify_result.critical_pass → build 성공/실패 판정
-  verify_result.manual_required → 사용자 안내
-  deploy 진입 조건에 critical_pass 반영
-
-fix command:
-  verify policies → 오류 분류 (check ID 매핑)
-  escalation_rules → system-fix 호출 판정
-  severity 기반 → 자동 적용 (high) / 제안만 (low)
-
-system-fix skill:
-  severity 판정 → backup → 정책 수정(high) 또는 proposals/ 기록(low)
-```
-
----
-
-## 책임 분리 구조
-
-```
-Policy (SSOT)          → system/policies/**/*.yml — "무엇을 지켜야 하는가"
-Command (Orchestrator) → .claude/commands/*.md    — "언제 어떤 순서로 실행하는가"
-Skill (Executor)       → .claude/skills/*.md      — "어떻게 실행하는가"
-Manifest (Evidence)    → work/**/manifests/*.yml   — "어떤 policy를 어떤 근거로 준수했는가"
-```
-
-- Command는 phase 전환, skill 호출 순서, 중단 조건만 담당
-- Skill은 정책을 로드하여 실제 실행을 수행
-- 같은 규칙이 여러 곳에 중복 서술되지 않음
-- 새 규칙 추가 시 policy 추가/수정이 우선, command 수정은 최소화
 
 ---
 
 ## Convention Cache
-
-```
-analyze 시작 → 무조건 cache refresh (psql → *.txt)
-       ↓
-build/fix → cache 읽기 전용 참조
-       ↓
-cache miss → DB fallback (SELECT only) → cache 보강
-```
 
 | 파일 | 내용 | 갱신 시점 |
 |------|------|-----------|
@@ -272,99 +302,120 @@ cache miss → DB fallback (SELECT only) → cache 보강
 | `function.txt` | fn_*/sp_* 함수/프로시저 | /analyze, /cache-refresh |
 | `trigger.txt` | 트리거 정의 | /analyze, /cache-refresh |
 
----
-
-## 정책 체계
-
-### Framework 정책 (`system/policies/framework/`)
-| 파일 | 역할 |
-|------|------|
-| `layout_rules.yml` | 5칸 gravity 배치, CSS 클래스, data-grid 필수 |
-| `html_patterns.yml` | Thymeleaf fragment, IIFE+listener, webix.ui 패턴 |
-| `xml_patterns.yml` | namespace, SQL ID, 동적SQL, audit 컬럼, ON CONFLICT |
-| `controller_patterns.yml` | @AddUserInfo, BaseResponse, 예외처리 패턴 |
-| `service_patterns.yml` | @Transactional, mapper 호출, 벌크 최적화 |
-| `template_selection.yml` | 화면유형별 skeleton 조합 선택 + confidence 기반 manual fallback |
-| `skeleton_contract.yml` | placeholder 계약 + artifact required structure + CG-001~003 |
-| `forbidden_apis.yml` | 금지 패턴 (자유 HTML, jQuery AJAX, 전역 함수, SELECT * 등) |
-| `sql_generation.yml` | SQL 산출물 생성 조건, 파일명 규칙, 출력 위치, execution_order 연계 |
-| `code_registration.yml` | 코드등록 SQL comm_cd 규칙, 기존 코드그룹 재사용 금지, 신규 코드 제안 기준 |
-| `button_mapping.yml` | 표준/비표준 버튼 매핑, etc{N} listener, 자동 교정 규칙 |
-| `code_component_defaults.yml` | 코드콤보/코드헬프 기본값, DATA_VIEW/DATA_CODE_TYPE 상수, elements 직접 선언 |
-| `postgresql_rules.yml` | PostgreSQL 금지 패턴 (집계+윈도우, 중첩집계, STRING_AGG+서브쿼리), 자동교정 |
-
-### Analyze 정책 (`system/policies/analyze/`)
-| 파일 | 역할 |
-|------|------|
-| `ppt_extraction.yml` | GROUP 재귀탐색, 위치기반 영역분류, 라벨/입력 패턴, gravity 추출 |
-| `classify_tags.yml` | 13개 태그 분류 (META, SEARCH, GRID, FORM, BUTTON 등) |
-| `screen_type_rules.yml` | 화면유형 자동 분류 조건 + unknown 수작업 전환 |
-| `default_resolution.yml` | 보완 우선순위 (DDL → 코드정의서 → 화면유형 → 업무규칙 → 에이전트 판단) |
-| `spec_generation.yml` | people_spec/machine_spec 생성 규칙, 추출 원칙, 미확정 처리, cache 연계 |
-
-### Verify 정책 (`system/policies/verify/`)
-| 파일 | 역할 |
-|------|------|
-| `html_checks.yml` | HTML 검증 (IIFE, PGM, fragment, 버튼 매핑, 코드콤보, 그리드 이벤트 등) |
-| `xml_checks.yml` | XML 검증 (namespace, resultType, audit 컬럼, 금지 컬럼, COALESCE 등) |
-| `sql_checks.yml` | SQL 검증 (메뉴등록 SQL, pgm_path, 감사컬럼 8개, execution_order) |
-| `controller_checks.yml` | Controller 검증 (@Slf4j, 생성자 주입, BaseResponse, try-catch) |
-| `service_checks.yml` | Service 검증 (BaseService, reader/writer, @Transactional, namespace) |
-| `self_diagnosis.yml` | 자기진단 (DDL 미존재 컬럼, 미등록 코드, 자동/수동 수정 구분) |
-| `escalation_rules.yml` | 오류 escalation (자동수정→재검증, manual_required, system-fix 트리거) |
-| `issue_classification.yml` | Fix 오류 유형 분류 체계, 에러 코드 분류, patch 판정 기준 |
-
-### Runtime 정책 (`system/policies/runtime/`)
-| 파일 | 역할 |
-|------|------|
-| `allowed_paths.yml` | command별 읽기/쓰기/금지 경로 + deploy 경로 + system-fix 쓰기 경로 |
-| `db_access.yml` | DB 접속정보, cache-first 원칙, fallback 규칙 |
-| `context_isolation.yml` | task/fix 격리, lock 형식, active_context 갱신 시점, deploy 격리 |
-| `lifecycle.yml` | 필수 산출물 검증, unresolved 정책, failed 복구 |
-| `deploy_policy.yml` | deploy 모드(prepare-only/apply), 진입조건, 충돌처리, 실패영향 |
+**전략**: cache-first → cache miss/insufficient/mismatch → DB fallback (SELECT only) → manifest 기록.
+**SSOT**: `system/policies/runtime/db_access.yml`
 
 ---
 
-## Manifest 체계
+## 화면 유형
 
-모든 command는 manifest를 생성하여 실행 이력을 기록한다.
+| 유형 | 설명 | 필수 산출물 | Controller/Service |
+|------|------|-------------|-------------------|
+| **list** | 검색 + 목록 그리드 | HTML, XML | CommonController (기본) |
+| **list-detail** | 목록 + 상세/편집 | HTML, XML | CG-002 조건 시 Custom |
+| **form** | 단건 입력/수정 폼 | HTML, XML | CG-002 조건 시 Custom |
+| **popup** | 모달 팝업 | HTML | 불필요 |
 
-| Manifest | 생성 command | 주요 필드 |
-|----------|-------------|-----------|
-| `analyze.manifest.yml` | /analyze | status, screens[], cache refresh 결과, unresolved |
-| `build.manifest.yml` | /build | status, review_summary, selected_templates, artifact_plan, verify(critical_pass, details, self_diagnosis), cache, deploy |
-| `verify_result.yml` | /build, /fix | checks[], critical_pass, manual_required, auto_fixed[], details(html/xml/sql/controller/service), self_diagnosis, deploy_checks[] |
-| `deploy_summary.yml` | /build (선택적) | mode, status, target_paths[], warnings[], conflicts[] |
-| `fix.manifest.yml` | /fix | issue_type, impact_scope, error_classification, system_fix, verify, cache, actions_taken |
+CG-002 (Custom 필수): 암호화, 복합 로직, 외부 API, 프로시저 호출, 다중 테이블 트랜잭션
+CG-003 (Common 충분): 단순 CRUD, saveAll, 코드헬프
 
-각 manifest는 `system/schemas/*.schema.json`으로 구조 검증 가능하다.
+---
+
+## 기술 스택
+
+| 항목 | 기술 |
+|------|------|
+| 대상 프레임워크 | GDI FERP Backoffice (Spring Boot + Thymeleaf + MyBatis + Webix) |
+| DB | PostgreSQL |
+| 언어 | Java 17+ (Jakarta) |
+| 프론트엔드 | Webix UI + jQuery + Bootstrap 5 |
+| 자동화 도구 | Claude Code (.claude/commands + skills) |
+| Base 클래스 | BaseController, BaseService, BaseParm, BaseResponse |
+| 공통 서비스 | CommonController, CommonService, FileService |
 
 ---
 
 ## 빠른 시작
 
 ```bash
-# 1. Convention cache 갱신 (최초 1회 또는 필요 시)
+# 1. Convention cache 갱신 (최초 1회)
 /cache-refresh
 
-# 2. PPT를 work/task/1.Prep/ 에 배치
-cp 화면설계서.pptx work/task/1.Prep/
+# 2. PPT 배치
+# work/task/1.Prep/ 에 화면설계서.pptx 배치
 
-# 3. 분석 실행
+# 3. 분석
 /analyze
 
-# 4. 사용자가 final/people_spec.md 검토/수정
+# 4. 사용자 검토
+# work/task/2.Working/final/people_spec.md 확인/수정
 
-# 5. 빌드 실행 (review + generate)
+# 5. 빌드
 /build
 
-# 6. 문제 있으면 fix 요청 배치 후 수정
-cp fix_request.md work/fix/1.Prep/
+# 6. 문제 발견 시 수정
+# work/fix/1.Prep/ 에 fix 요청 배치
 /fix
 
 # 7. 완료 후 정리
 /clean
 ```
+
+---
+
+## SSOT (진실원천) 맵
+
+| 관심사 | SSOT 위치 | 소비자 |
+|--------|----------|--------|
+| 시스템 규칙 | `system/policies/**/*.yml` (31개) | command, skill |
+| 실행 계약 / 상태 전이 | `system/config/runtime.yml` | command |
+| 경로 체계 | `system/config/paths.yml` | 전체 |
+| 네이밍 규칙 | `system/config/naming.yml` | analyze, review, generate |
+| 프레임워크 정의 | `system/config/framework_manifest.yml` | deploy, generate |
+| 산출물 구조 | `system/schemas/*.json` (9개) | manifest 검증 |
+| 생성 골격 | `system/templates/skeletons/**` (16개) | generate |
+| 화면유형 정의 | `system/templates/screen-types/*.yml` (4개) | analyze, review, generate |
+
+---
+
+## 시스템 설계 철학
+
+이 시스템은 **통제형 워크플로우 엔진**이다.
+
+| 관점 | 설계 |
+|------|------|
+| 통제 전략 | policy-first, schema-first, stateful control |
+| 생성 방식 | constrained generation — skeleton + placeholder 치환만 허용 |
+| Context 관리 | single-active + archive 차단 + spec 이원화 기반 격리 |
+| 루프 구조 | 사용자 검토 루프 + fix 루프 + 선택적 deploy 루프 |
+| 지식 접근 | LLM 기억보다 외부 근거(cache, DDL, 정책 파일) 우선 |
+| Manifest | 실행 계약이자 단계별 상태 증거물 |
+| 인간 개입 | analyze 후 spec 검토, deploy apply 전 확인, fix 후 정책 보정 판단 |
+| 운영 철학 | autonomous agent가 아니라 **constrained orchestration engine** |
+
+> AI를 통제 가능한 공정 안에 넣어 다루는 시스템.
+> 자유도를 줄이는 대신 재현성, 추적성, 품질 일관성을 확보한다.
+
+---
+
+## 변경 시 동기화 가이드
+
+### 정책 추가
+1. `system/policies/{domain}/` 에 yml 생성
+2. 해당 command/skill의 "필수 정책 로드" 테이블에 추가
+3. 이 README 정책 체계 테이블에 추가
+
+### Command 추가
+1. `.claude/commands/` 에 md 생성
+2. `system/config/runtime.yml` → `commands` 섹션에 계약 추가
+3. `system/policies/runtime/allowed_paths.yml`에 경로 규칙 추가
+4. `.claude/settings.json` → `workflow.commands`에 등록
+5. 이 README 반영
+
+### Manifest 필드 추가
+1. `system/schemas/*.schema.json` 수정
+2. command/skill의 기록 구조 확인
+3. 이 README manifest 체계 테이블 확인
 
 ---
 
@@ -376,165 +427,10 @@ cp fix_request.md work/fix/1.Prep/
 | Skeleton 추출 | `skeleton_extraction_report.md` |
 | Manifest 계약화 | `manifest_contract_report.md` |
 | Command 구현 | `command_implementation_report.md` |
-| v5 이식 | `migration_report_v1.md`, `migration_todo_v1.md` |
+| v5 이식 | `migration_report_v1.md` |
 | Cache 통합 | `cache_integration_report.md` |
 | DB Fallback 통합 | `cache_db_fallback_integration_report.md` |
 | Build-Deploy 연결 | `build_deploy_integration_report.md` |
 | v5 잔존 정책 이관 | `migration_report_v2.md` |
 | 정책 중심 리팩토링 | `refactoring_report_v1.md` |
-
----
-
-## 시스템 설계 철학
-
-이 시스템은 단순한 "프롬프트 모음"이 아니라, **통제형 에이전트 파이프라인**이다. 핵심 특성은 다음과 같다.
-
-- 자율형이 아니라 **통제형** 시스템
-- 대화형 추론이 아니라 **manifest 기반 단계 실행** 시스템
-- 문맥 누적형이 아니라 **context 격리형** 시스템
-- 1회 생성형이 아니라 **수정·보정 루프 내장** 시스템
-- AI 단독 결정이 아니라 **사람 검토를 끼운 half-automated** 구조
-
-이 해석은 single-active workspace, manifest/schema 검증 우선, skeleton 기반 생성, archive 입력 금지를 원칙으로 두고, workflow를 `analyze → (사용자 검토) → build → (fix if needed) → clean`으로 정의한 점에서 직접 읽힌다.
-
----
-
-### 1. 통제전략: "자율성 최소화, 결정 가능성 최대화"
-
-AI의 자유도를 의도적으로 낮추는 것이 이 시스템의 가장 큰 특징이다.
-
-- 동시에 하나의 task 또는 fix만 허용하는 **single-active workspace**
-- 입력/출력은 반드시 schema와 manifest를 통과해야 하는 **계약 우선**
-- 자유 생성 금지, **skeleton 기반 생성 강제**
-- archive를 실행 입력으로 쓰지 않는 **과거 분리**
-- build도 곧바로 반영하지 않고 verify와 선택적 deploy 준비를 거치는 **단계화**
-
-AI를 "똑똑한 창작자"로 보는 게 아니라, 정해진 공정 안에서 움직이는 작업 엔진으로 보는 전략이다. command = orchestration, skill = 세부 실행으로 역할을 분리한다.
-
-> **"AI를 믿지 않아서 막는 게 아니라, AI가 잘할 수 있는 범위만 남기고 나머지는 제약으로 고정하는 방식"**
-
-### 2. Manifest 중심성: "프롬프트 시스템이 아니라 실행 계약 시스템"
-
-manifest는 부수 파일이 아니라 중심 개념이다. analyze/build/fix/clean 흐름의 입출력, 상태전이, 검증 규칙을 기계적으로 검증 가능한 **계약층**으로 정의한다.
-
-각 단계가 끝날 때마다 다음을 manifest에 기록한다:
-
-- 무엇을 입력으로 썼는지
-- 무엇을 출력으로 만들었는지
-- 어떤 화면이 추출됐는지
-- 어떤 cache를 썼는지
-- DB fallback이 있었는지
-- 어떤 상태로 끝났는지
-
-> **"대화가 다음 단계를 이어준다"가 아니라 "manifest가 다음 단계를 이어준다"**
-
-실행을 대화 메모리에서 **파일 기반 상태 데이터**로 옮겨 놓은 구조이다.
-
-### 3. 컨텍스트 오염 방지 전략: "문맥을 쌓지 않고, 문맥을 격리한다"
-
-| 전략 | 설명 |
-|------|------|
-| **single-active** | 한 번에 하나의 task 또는 fix만 다룬다. 여러 작업의 화면·규칙·spec·수정 이력이 섞이는 것을 구조적으로 차단 |
-| **archive 입력 금지** | 과거 작업은 남겨 두되 실행 입력으로 쓰지 못한다. 기록 보존과 실행 입력을 분리 |
-| **work 영역 분리** | work/task, work/fix, archive를 분리하여 실행 중인 맥락과 완료된 맥락을 격리 |
-| **spec 이원화** | people_spec(사람 검토용 Markdown)과 machine_spec(build 입력용 YAML)을 분리하여, 사람이 가독성을 위해 넣은 설명이 기계 입력을 오염시키지 않도록 방지 |
-
-> 문맥을 풍부하게 모으는 게 아니라, **문맥을 용도별로 잘라서 오염 없이 전달하는 구조**이다.
-
-### 4. 루프 구조: "선형 파이프라인이 아니라 제한된 피드백 루프"
-
-겉으로 보면 `analyze → build → fix → clean`이므로 선형처럼 보이지만, 실제로는 **제한된 루프 시스템**이다.
-
-- **사용자 검토 루프** — analyze 후 사용자가 final people_spec을 검토/수정한 뒤 다음 단계로 진행 (human-in-the-loop)
-- **fix 루프** — build 이후 영향 범위를 판정하고, 필요하면 재분석/재생성/정책 보정을 트리거. 반복 오류는 시스템 차원 보완 대상
-- **deploy 루프** — build 성공과 deploy 성공을 분리하여 생성과 반영을 같은 단계로 뭉개지 않음
-
-> 허용된 피드백 루프만 갖는 **제어형 루프 시스템**이다.
-
-### 5. 지식 접근 전략: "LLM 기억보다 외부 근거 우선"
-
-AI가 알아서 기억하는 방식보다 **외부 근거 참조**를 우선한다. 기본 모드는 cache-first이고, 부족할 때만 DB lookup을 허용하며, 그 결과를 manifest에 남긴다.
-
-근거 레이어:
-
-```
-PPT → people_spec → machine_spec → convention cache → 정책 파일 → skeleton → manifest → (필요 시) DB lookup
-```
-
-> **내재 기억형이 아니라 외재 근거형 시스템**이다.
-
-### 6. 생성 전략: "자유 생성이 아니라 constrained generation"
-
-생성 자유도를 의도적으로 줄인다:
-
-1. screen-type으로 유형 먼저 고정
-2. template_selection으로 skeleton 조합 결정
-3. skeleton_contract로 placeholder 계약 강제
-4. generate skill은 skeleton 기반 치환만 수행
-5. framework policy 위반 시 실패 처리
-
-> 모델이 전체 결과를 창작하는 게 아니라, **정해진 골격 안에 값만 채우는 방식**이다.
-
-### 7. 상태 기계 특성: "에이전트라기보다 workflow engine"
-
-runtime은 사실상 **workflow engine**이다. idle, task_analyzed, task_built, fix_applied, failed, cleaned 같은 상태가 있고, 각 상태마다 허용 명령과 다음 상태가 정의된다.
-
-command는 "도구"가 아니라 **상태 전이 트리거**이다:
-
-| Command | 상태 전이 |
-|---------|-----------|
-| analyze | idle/task_prepared → task_analyzed |
-| build | task_analyzed → task_built |
-| fix | task_built → fix_applied |
-| clean | 여러 상태 → idle/cleaned |
-
-> **stateful workflow + AI generation modules** 구조이다.
-
-### 8. 인간 개입 전략: "AI 단독 결정 금지 구간"
-
-일부러 사람이 개입해야 하는 지점을 남겨 둔다:
-
-- analyze 후 **people_spec 검토**
-- deploy apply 전 **사용자 확인**
-- fix 이후 **정책 보정 여부 판단**
-- target path 미확정 시 **prepare-only로 멈춤**
-
-> "AI 자동화율 100%"가 아니라, 위험이 큰 결정 구간만 인간 승인 지점으로 남겨 둔 **반자동 시스템**이다.
-
----
-
-### 강점과 약점
-
-| 강점 | 근거 |
-|------|------|
-| 문맥 오염에 강함 | single-active, archive 분리, spec 이원화 |
-| 재현성이 좋음 | skeleton 강제, manifest 기록 |
-| 실행 이력 추적 용이 | manifest 중심 설계 |
-| 정책/계약 위반 구조적 발견 | schema 검증, self-check |
-| 사람 검토로 품질 손실 감소 | human-in-the-loop |
-
-| 약점 | 설명 |
-|------|------|
-| 초기 설정 복잡 | schema/runtime/command 전체 정의 필요 |
-| 불일치 시 전체 차단 | schema/runtime/command가 어긋나면 동작 불가 |
-| 예외 케이스 유연성 낮음 | 정해진 공정 밖의 상황 대응 어려움 |
-| skeleton 품질 의존 | skeleton과 정책이 부족하면 생성력 급락 |
-| 간단한 작업에도 무거운 공정 | 유연성보다 통제성을 택한 트레이드오프 |
-
----
-
-### 시스템 요약
-
-| 관점 | 정의 |
-|------|------|
-| 통제전략 | policy-first, schema-first, stateful control |
-| Manifest | 실행 계약이자 단계별 상태 증거물 |
-| Context 관리 | single-active + archive 차단 + spec 분리 기반의 context isolation |
-| 생성 방식 | constrained generation (free-form 금지) |
-| 루프 구조 | user review loop + fix loop + optional deploy loop |
-| 지식 접근 | model memory보다 externalized evidence 우선 |
-| 운영 철학 | autonomous agent보다 **controlled workflow engine** |
-
-> 이 시스템은 본질적으로 "AI가 알아서 다 하는 시스템"이 아니라, **AI를 통제 가능한 공정 안에 넣어 다루는 시스템**이다.
-> LLM-native chat system보다는 **manifest-driven workflow system**에,
-> autonomous agent보다는 **constrained orchestration engine**에 가깝다.
+| 시스템 정합성 정비 | `consistency_report_v1.md` |

@@ -1,0 +1,86 @@
+version: 1
+id: controller_checks
+description: "Controller 산출물 검증 규칙 — 어노테이션, 생성자 주입, BaseResponse, 예외처리 등"
+
+# Controller 검증 규칙
+# v5 generate.md Integrated Verify에서 이관
+
+checks:
+
+  # === CRITICAL ===
+
+  class_annotations:
+    id: CC-001
+    severity: critical
+    description: "@Slf4j @Controller 어노테이션 필수"
+    rule: "Controller 클래스에 @Slf4j, @Controller 어노테이션 필수"
+    pattern:
+      - "@Slf4j"
+      - "@Controller"
+
+  constructor_injection:
+    id: CC-002
+    severity: critical
+    description: "생성자 주입 방식 사용"
+    rule: "Service 의존성은 생성자 주입. @Autowired 필드 주입 금지."
+    correct: |
+      private final XxxService xxxService;
+      public XxxController(XxxService xxxService) {
+          this.xxxService = xxxService;
+      }
+    wrong: |
+      @Autowired
+      private XxxService xxxService;
+
+  method_annotations:
+    id: CC-003
+    severity: critical
+    description: "메서드 어노테이션 필수"
+    rule: "모든 요청 처리 메서드에 필수 어노테이션 적용"
+    required:
+      - "@AddUserInfo"
+      - "@LogAction"
+      - "@ResponseBody"
+      - "@RequestMapping"
+
+  base_response:
+    id: CC-004
+    severity: critical
+    description: "BaseResponse 반환 타입"
+    rule: "모든 요청 처리 메서드의 반환 타입은 BaseResponse"
+
+  exception_handling:
+    id: CC-005
+    severity: critical
+    description: "try-catch + log.error 예외처리"
+    rule: "요청 처리 메서드는 try-catch로 감싸고, catch에서 log.error + BaseResponse.Error 반환"
+    pattern: |
+      try {
+          ...
+          return new BaseResponse(ResultCode.SUCCESS, result);
+      } catch (Exception e) {
+          log.error(e.getMessage(), e);
+          return new BaseResponse(ResultCode.ERROR, e.getMessage());
+      }
+
+  common_controller_consistency:
+    id: CC-006
+    severity: critical
+    description: "CommonController 사용 여부 일관성"
+    rule: >
+      skeleton_contract.yml의 CG-002/CG-003 기준에 따라:
+      CommonController로 충분한 경우 Custom Controller 생성 금지.
+      Custom Controller가 필요한 경우 CommonController 호출 금지.
+    reference: "system/policies/framework/skeleton_contract.yml"
+    cg002_custom_required:
+      - "암호화/복호화 처리"
+      - "복합 비즈니스 로직"
+      - "외부 API 연동"
+      - "CommonController로 불충분한 파일 처리"
+      - "프로시저 호출 + 후처리"
+      - "다중 테이블 조건부 트랜잭션"
+    cg003_common_sufficient:
+      - "단순 SELECT (단건/다건/페이징)"
+      - "단순 INSERT/UPDATE/DELETE"
+      - "다건 저장 (saveAll)"
+      - "코드헬프 조회"

@@ -1,86 +1,105 @@
 # generate skill
 
-## 목적
-build command가 호출하는 코드 생성 skill. machine_spec(final)을 읽고 skeleton 기반으로 html/xml/controller/service artifact를 생성한다.
+## 역할
+build command가 호출하는 코드 생성 **실행자**.
+machine_spec(final)을 읽고, 정책 파일 기반으로 skeleton 치환 → artifact 생성 → SQL 생성 → verify 수행.
 
-**절대 규칙: skeleton 파일을 직접 사용하여 placeholder를 치환한다. 자유 생성 금지.**
+## 입력
+- `work/task/2.Working/final/machine_spec.yml`
 
-## 입력 (build command로부터)
+## 필수 정책 로드
 
-- `work/task/2.Working/final/machine_spec.yml` — 생성 대상 스펙
-- `system/policies/framework/template_selection.yml` — skeleton 선택 규칙
+**Framework 정책 (생성 규칙):**
+- `system/policies/framework/template_selection.yml` — skeleton 선택
 - `system/policies/framework/skeleton_contract.yml` — placeholder 계약
-- `system/templates/screen-types/*.yml` — 화면유형 정의
-- `system/templates/skeletons/**` — skeleton 파일들
 - `system/policies/framework/forbidden_apis.yml` — 금지 패턴
-- `system/policies/framework/html_patterns.yml` — HTML 규칙
-- `system/policies/framework/xml_patterns.yml` — XML 규칙
-- `system/policies/framework/controller_patterns.yml` — Controller 규칙
-- `system/policies/framework/service_patterns.yml` — Service 규칙
-- `system/config/naming.yml` — 네이밍 규칙
+- `system/policies/framework/html_patterns.yml` — HTML 패턴
+- `system/policies/framework/xml_patterns.yml` — XML 패턴
+- `system/policies/framework/controller_patterns.yml` — Controller 패턴
+- `system/policies/framework/service_patterns.yml` — Service 패턴
+- `system/policies/framework/layout_rules.yml` — 레이아웃
+- `system/policies/framework/sql_generation.yml` — SQL 생성
+- `system/policies/framework/code_registration.yml` — 코드등록
+- `system/policies/framework/button_mapping.yml` — 버튼 매핑
+- `system/policies/framework/code_component_defaults.yml` — 코드 컴포넌트
+- `system/policies/framework/postgresql_rules.yml` — PostgreSQL 금지 패턴
+
+**Verify 정책 (검증 규칙):**
+- `system/policies/verify/html_checks.yml`
+- `system/policies/verify/xml_checks.yml`
+- `system/policies/verify/sql_checks.yml`
+- `system/policies/verify/controller_checks.yml`
+- `system/policies/verify/service_checks.yml`
+- `system/policies/verify/self_diagnosis.yml`
+- `system/policies/verify/escalation_rules.yml`
+
+**기타:**
+- `system/config/naming.yml`
+- `system/templates/screen-types/*.yml`
+- `system/templates/skeletons/**`
 
 ## 수행 절차
 
 ### 1. Machine Spec 읽기
-`final/machine_spec.yml`을 읽고 screen_type, skeleton_choice, placeholders, sql, artifacts 구조를 파싱한다.
+screen_type, skeleton_choice, placeholders, sql, artifacts 파싱.
 
 ### 2. Screen Type 확인
-machine_spec의 screen_type이 `system/templates/screen-types/{type}.yml`에 정의된 유효 유형인지 확인. 없으면 실패.
+`screen-types/{type}.yml` 유효 유형 확인. 없으면 실패.
 
 ### 3. Skeleton 조합 결정
-`template_selection.yml`의 규칙에 따라:
-- 필수 skeleton (html, xml) 경로 확정
-- 선택 skeleton (controller, service) 필요 여부 결정
-- machine_spec.skeleton_choice와 일치 확인
+`template_selection.yml` 규칙 적용.
 
 ### 4. Placeholder Completeness 확인
-`skeleton_contract.yml`의 `required_matrix.{screen_type}`에 따라:
-- 각 아티팩트별 필수 placeholder가 machine_spec.placeholders에 모두 존재하는지 확인
-- 누락 시 **즉시 실패** — 누락 항목 목록 반환
+`skeleton_contract.yml` → `required_matrix.{screen_type}` 검증.
+누락 시 즉시 실패.
 
 ### 5. Placeholder 치환
-각 skeleton 파일을 읽어 `{{placeholder_name}}` 형식의 placeholder를 machine_spec 값으로 치환한다.
-- 단일값 placeholder: 문자열 직접 치환
-- 배열형 placeholder (search_fields, grid_columns 등): machine_spec의 배열 데이터를 해당 프레임워크 코드 블록으로 변환
-  - search_fields → webix.ui dataForm elements 코드 블록
-  - grid_columns → webix.ui datagrid columns 코드 블록
-  - insert_columns, insert_values → SQL INSERT 절 코드 블록
-- OPTIONAL 블록: machine_spec에 해당 기능이 없으면 주석 처리 또는 제거
+skeleton 파일의 `{{placeholder}}` 를 machine_spec 값으로 치환.
+- `code_component_defaults.yml` 규칙으로 코드콤보/코드헬프 생성
+- `button_mapping.yml` 규칙으로 버튼 → listener 매핑
 
-### 6. Artifact 생성
-치환된 파일을 `work/task/2.Working/generated/`에 저장:
-- HTML: `{SCREEN_ID}.html`
-- XML: `{module_id}.xml`
-- Controller: `{ModuleId}Controller.java` (필요 시)
-- Service: `{ModuleId}Service.java` (필요 시)
+### 6. Artifact 저장
+`work/task/2.Working/generated/` 에 `naming.yml` 규칙 기준 파일명으로 저장.
 
-### 7. Self-check 수행
-생성된 파일에 대해:
-- `{{` 잔존 placeholder 검출 → error
-- forbidden_apis.yml 패턴 매칭 → error
-- naming.yml 규칙 준수 확인 → warn/error
-- XML: comp_cd 필터, audit 컬럼 포함 확인 → error
-- HTML: PGM prefix, fragment include, IIFE 패턴 확인 → error
+### 7. SQL 산출물 생성
+`sql_generation.yml` 규칙 적용:
+- 메뉴등록 SQL (SG-001): 필수
+- DDL보완 SQL (SG-002): `self_diagnosis.yml` SD-001 기준
+- 코드등록 SQL (SG-003): `code_registration.yml` + `self_diagnosis.yml` SD-002 기준
+- execution_order.md (SG-004): SQL 1개 이상 시 필수
 
-### 8. 결과 반환
-build command에 반환:
+### 8. Verify 수행
+각 artifact에 해당 verify 정책 적용:
+- HTML → `html_checks.yml` (HC-*)
+- XML → `xml_checks.yml` (XC-*)
+- SQL → `sql_checks.yml` (SC-*)
+- Controller → `controller_checks.yml` (CC-*)
+- Service → `service_checks.yml` (SVC-*)
+- PostgreSQL → `postgresql_rules.yml` (PG-*)
+- 자기진단 → `self_diagnosis.yml` (SD-*)
+- Escalation → `escalation_rules.yml` (ER-*)
+
+### 9. 결과 반환
 ```yaml
-generated_paths: ["work/task/2.Working/generated/DTA030.html", ...]
-self_check:
-  - id: "placeholder_complete"
-    result: "pass"
-  - id: "forbidden_pattern"
-    result: "pass"
-violations: []
+generated_paths: [...]
+verify_details:
+  html_checks: { passed: N, failed: N, warnings: N }
+  xml_checks: { passed: N, failed: N, warnings: N }
+  sql_checks: { passed: N, failed: N, warnings: N }
+  controller_checks: { passed: N, failed: N, warnings: N }
+  service_checks: { passed: N, failed: N, warnings: N }
+self_diagnosis:
+  ddl_supplements: []
+  code_registrations: []
+  auto_fixed: []
+  manual_required: []
+critical_pass: true|false
+manual_required: true|false
+auto_fixed: []
 ```
 
 ## 실패 조건
-- 필수 placeholder 누락
-- skeleton 파일 없음
-- screen_type 불명확
-- self-check에 error 존재
+placeholder 누락, skeleton 없음, screen_type 불명, critical fail + 자동 수정 불가.
 
 ## 성공 조건
-- artifact_plan에 맞는 파일 모두 생성
-- generated_paths 목록 완성
-- self_check에 error 없음 (warn은 허용)
+artifact 전체 생성, critical_pass=true (자동 수정 포함), warn 허용.

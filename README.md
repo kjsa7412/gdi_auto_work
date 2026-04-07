@@ -118,12 +118,17 @@ gdi_auto_work/
 │   │
 │   ├── schemas/                    # JSON Schema (manifest/spec/context/deploy 검증)
 │   │
+│   ├── runtime/                    # 런타임 상태 (실행 시 생성)
+│   │   ├── active/task/            # task 실행 중 임시 상태
+│   │   ├── active/fix/             # fix 실행 중 임시 상태
+│   │   └── logs/                   # 실행 로그
+│   │
 │   └── policies/
-│       ├── analyze/                # PPT 추출, 태그 분류, 화면유형 판정
-│       ├── framework/              # 레이아웃, 패턴, skeleton 계약, 금지 API
+│       ├── analyze/                # PPT 추출, 태그 분류, 화면유형 판정, 보완 우선순위
+│       ├── framework/              # 레이아웃, 패턴, skeleton 계약, 금지 API, SQL생성, 코드등록, 버튼, 코드컴포넌트, PostgreSQL
 │       ├── runtime/                # 경로 접근, DB 접근, 격리, 생명주기, deploy 정책
 │       │   └── deploy_policy.yml   # deploy 실행 정책 (모드, 진입조건, 충돌처리)
-│       └── verify/                 # self-check 규칙
+│       └── verify/                 # HTML/XML/SQL/Controller/Service 검증, 자기진단, escalation
 │
 ├── work/                           # 활성 작업 영역
 │   ├── .active_context.yml         # 현재 실행 상태
@@ -145,6 +150,12 @@ gdi_auto_work/
 │       ├── 1.Prep/                 # fix 요청 파일
 │       ├── 2.Working/              # fix 중간 산출물
 │       └── 3.Result/               # fix 결과
+│
+├── proposals/                      # system-fix 정책 제안
+│   └── policy_changes/
+│       ├── new/                    # 미적용 제안 (low severity)
+│       ├── done/                   # 적용 완료 제안 (high severity)
+│       └── backup/                 # 변경 전 backup
 │
 └── archive/                        # History Only (실행 입력 금지)
     └── work_YYYYMMDD_HHMMSS/       # clean 시 보관
@@ -199,6 +210,48 @@ deliverables/
 
 **placeholder 형식**: `{{name}}` (예: `{{screen_id}}`, `{{search_fields}}`, `{{grid_columns}}`)
 
+### 정책 반영 흐름
+
+```
+generate skill:
+  framework policies (생성 규칙) → skeleton 치환 + SQL 생성
+         ↓
+  verify policies (검증 규칙) → artifact별 검증 (html/xml/sql/controller/service)
+         ↓
+  self_diagnosis (자기진단) → DDL보완/코드등록 SQL 자동 생성
+         ↓
+  escalation_rules (오류처리) → auto_fix / manual_required / system-fix 트리거
+
+build command:
+  verify_result.critical_pass → build 성공/실패 판정
+  verify_result.manual_required → 사용자 안내
+  deploy 진입 조건에 critical_pass 반영
+
+fix command:
+  verify policies → 오류 분류 (check ID 매핑)
+  escalation_rules → system-fix 호출 판정
+  severity 기반 → 자동 적용 (high) / 제안만 (low)
+
+system-fix skill:
+  severity 판정 → backup → 정책 수정(high) 또는 proposals/ 기록(low)
+```
+
+---
+
+## 책임 분리 구조
+
+```
+Policy (SSOT)          → system/policies/**/*.yml — "무엇을 지켜야 하는가"
+Command (Orchestrator) → .claude/commands/*.md    — "언제 어떤 순서로 실행하는가"
+Skill (Executor)       → .claude/skills/*.md      — "어떻게 실행하는가"
+Manifest (Evidence)    → work/**/manifests/*.yml   — "어떤 policy를 어떤 근거로 준수했는가"
+```
+
+- Command는 phase 전환, skill 호출 순서, 중단 조건만 담당
+- Skill은 정책을 로드하여 실제 실행을 수행
+- 같은 규칙이 여러 곳에 중복 서술되지 않음
+- 새 규칙 추가 시 policy 추가/수정이 우선, command 수정은 최소화
+
 ---
 
 ## Convention Cache
@@ -234,6 +287,11 @@ cache miss → DB fallback (SELECT only) → cache 보강
 | `template_selection.yml` | 화면유형별 skeleton 조합 선택 + confidence 기반 manual fallback |
 | `skeleton_contract.yml` | placeholder 계약 + artifact required structure + CG-001~003 |
 | `forbidden_apis.yml` | 금지 패턴 (자유 HTML, jQuery AJAX, 전역 함수, SELECT * 등) |
+| `sql_generation.yml` | SQL 산출물 생성 조건, 파일명 규칙, 출력 위치, execution_order 연계 |
+| `code_registration.yml` | 코드등록 SQL comm_cd 규칙, 기존 코드그룹 재사용 금지, 신규 코드 제안 기준 |
+| `button_mapping.yml` | 표준/비표준 버튼 매핑, etc{N} listener, 자동 교정 규칙 |
+| `code_component_defaults.yml` | 코드콤보/코드헬프 기본값, DATA_VIEW/DATA_CODE_TYPE 상수, elements 직접 선언 |
+| `postgresql_rules.yml` | PostgreSQL 금지 패턴 (집계+윈도우, 중첩집계, STRING_AGG+서브쿼리), 자동교정 |
 
 ### Analyze 정책 (`system/policies/analyze/`)
 | 파일 | 역할 |
@@ -241,11 +299,25 @@ cache miss → DB fallback (SELECT only) → cache 보강
 | `ppt_extraction.yml` | GROUP 재귀탐색, 위치기반 영역분류, 라벨/입력 패턴, gravity 추출 |
 | `classify_tags.yml` | 13개 태그 분류 (META, SEARCH, GRID, FORM, BUTTON 등) |
 | `screen_type_rules.yml` | 화면유형 자동 분류 조건 + unknown 수작업 전환 |
+| `default_resolution.yml` | 보완 우선순위 (DDL → 코드정의서 → 화면유형 → 업무규칙 → 에이전트 판단) |
+| `spec_generation.yml` | people_spec/machine_spec 생성 규칙, 추출 원칙, 미확정 처리, cache 연계 |
+
+### Verify 정책 (`system/policies/verify/`)
+| 파일 | 역할 |
+|------|------|
+| `html_checks.yml` | HTML 검증 (IIFE, PGM, fragment, 버튼 매핑, 코드콤보, 그리드 이벤트 등) |
+| `xml_checks.yml` | XML 검증 (namespace, resultType, audit 컬럼, 금지 컬럼, COALESCE 등) |
+| `sql_checks.yml` | SQL 검증 (메뉴등록 SQL, pgm_path, 감사컬럼 8개, execution_order) |
+| `controller_checks.yml` | Controller 검증 (@Slf4j, 생성자 주입, BaseResponse, try-catch) |
+| `service_checks.yml` | Service 검증 (BaseService, reader/writer, @Transactional, namespace) |
+| `self_diagnosis.yml` | 자기진단 (DDL 미존재 컬럼, 미등록 코드, 자동/수동 수정 구분) |
+| `escalation_rules.yml` | 오류 escalation (자동수정→재검증, manual_required, system-fix 트리거) |
+| `issue_classification.yml` | Fix 오류 유형 분류 체계, 에러 코드 분류, patch 판정 기준 |
 
 ### Runtime 정책 (`system/policies/runtime/`)
 | 파일 | 역할 |
 |------|------|
-| `allowed_paths.yml` | command별 읽기/쓰기/금지 경로 + deploy 경로 |
+| `allowed_paths.yml` | command별 읽기/쓰기/금지 경로 + deploy 경로 + system-fix 쓰기 경로 |
 | `db_access.yml` | DB 접속정보, cache-first 원칙, fallback 규칙 |
 | `context_isolation.yml` | task/fix 격리, lock 형식, active_context 갱신 시점, deploy 격리 |
 | `lifecycle.yml` | 필수 산출물 검증, unresolved 정책, failed 복구 |
@@ -260,10 +332,10 @@ cache miss → DB fallback (SELECT only) → cache 보강
 | Manifest | 생성 command | 주요 필드 |
 |----------|-------------|-----------|
 | `analyze.manifest.yml` | /analyze | status, screens[], cache refresh 결과, unresolved |
-| `build.manifest.yml` | /build | status, selected_templates, artifact_plan, cache 사용 현황, deploy 결과 |
-| `verify_result.yml` | /build, /fix | checks[], cache_checks[], warnings[], errors[], deploy_checks[] |
+| `build.manifest.yml` | /build | status, review_summary, selected_templates, artifact_plan, verify(critical_pass, details, self_diagnosis), cache, deploy |
+| `verify_result.yml` | /build, /fix | checks[], critical_pass, manual_required, auto_fixed[], details(html/xml/sql/controller/service), self_diagnosis, deploy_checks[] |
 | `deploy_summary.yml` | /build (선택적) | mode, status, target_paths[], warnings[], conflicts[] |
-| `fix.manifest.yml` | /fix | issue_type, impact_scope, cache mismatch, actions_taken |
+| `fix.manifest.yml` | /fix | issue_type, impact_scope, error_classification, system_fix, verify, cache, actions_taken |
 
 각 manifest는 `system/schemas/*.schema.json`으로 구조 검증 가능하다.
 
@@ -308,6 +380,8 @@ cp fix_request.md work/fix/1.Prep/
 | Cache 통합 | `cache_integration_report.md` |
 | DB Fallback 통합 | `cache_db_fallback_integration_report.md` |
 | Build-Deploy 연결 | `build_deploy_integration_report.md` |
+| v5 잔존 정책 이관 | `migration_report_v2.md` |
+| 정책 중심 리팩토링 | `refactoring_report_v1.md` |
 
 ---
 

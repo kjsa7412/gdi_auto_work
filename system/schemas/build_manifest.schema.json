@@ -20,15 +20,9 @@
       "required": ["people_spec_original", "people_spec_final", "machine_spec_original"],
       "additionalProperties": false,
       "properties": {
-        "people_spec_original": {
-          "type": "string"
-        },
-        "people_spec_final": {
-          "type": "string"
-        },
-        "machine_spec_original": {
-          "type": "string"
-        }
+        "people_spec_original": { "type": "string" },
+        "people_spec_final": { "type": "string" },
+        "machine_spec_original": { "type": "string" }
       }
     },
     "outputs": {
@@ -36,19 +30,22 @@
       "required": ["machine_spec_final", "generated_paths", "deliverables_path", "report_path"],
       "additionalProperties": false,
       "properties": {
-        "machine_spec_final": {
-          "type": "string"
-        },
-        "generated_paths": {
-          "type": "array",
-          "items": { "type": "string" }
-        },
-        "deliverables_path": {
-          "type": "string"
-        },
-        "report_path": {
-          "type": "string"
-        }
+        "machine_spec_final": { "type": "string" },
+        "generated_paths": { "type": "array", "items": { "type": "string" } },
+        "deliverables_path": { "type": "string" },
+        "report_path": { "type": "string" }
+      }
+    },
+    "review_summary": {
+      "type": "object",
+      "description": "review skill diff 요약",
+      "properties": {
+        "changed_search_fields": { "type": "integer" },
+        "changed_grid_columns": { "type": "integer" },
+        "changed_detail_fields": { "type": "integer" },
+        "changed_buttons": { "type": "integer" },
+        "screen_type_changed": { "type": "boolean" },
+        "total_changes": { "type": "integer" }
       }
     },
     "selected_templates": {
@@ -75,6 +72,35 @@
         "additionalProperties": false
       }
     },
+    "verify": {
+      "type": "object",
+      "description": "verify 정책 기반 검증 결과 요약",
+      "properties": {
+        "critical_pass": { "type": "boolean" },
+        "auto_fixed": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "manual_required": { "type": "boolean" },
+        "details": {
+          "type": "object",
+          "properties": {
+            "html_checks": { "$ref": "#/$defs/check_count" },
+            "xml_checks": { "$ref": "#/$defs/check_count" },
+            "sql_checks": { "$ref": "#/$defs/check_count" },
+            "controller_checks": { "$ref": "#/$defs/check_count" },
+            "service_checks": { "$ref": "#/$defs/check_count" }
+          }
+        },
+        "self_diagnosis": {
+          "type": "object",
+          "properties": {
+            "ddl_supplements": { "type": "array", "items": { "type": "string" } },
+            "code_registrations": { "type": "array", "items": { "type": "string" } }
+          }
+        }
+      }
+    },
     "started_at": {
       "type": "string",
       "format": "date-time"
@@ -91,18 +117,6 @@
           "rule": { "type": "string" },
           "description": { "type": "string" },
           "severity": { "type": "string", "enum": ["error", "warning", "info"] }
-        },
-        "additionalProperties": false
-      }
-    },
-    "self_check": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "check_id": { "type": "string" },
-          "result": { "type": "string", "enum": ["pass", "warn", "fail"] },
-          "message": { "type": "string" }
         },
         "additionalProperties": false
       }
@@ -124,28 +138,11 @@
       "type": "object",
       "description": "선택적 deploy 준비 결과. deploy는 build 필수 성공 조건이 아님",
       "properties": {
-        "attempted": {
-          "type": "boolean",
-          "description": "deploy 준비 시도 여부"
-        },
-        "mode": {
-          "type": "string",
-          "enum": ["prepare-only", "apply"],
-          "description": "deploy 동작 모드"
-        },
-        "status": {
-          "type": "string",
-          "enum": ["prepared", "warn", "failed", "skipped", "applied", "partial"],
-          "description": "deploy 결과 상태"
-        },
-        "summary_path": {
-          "type": ["string", "null"],
-          "description": "deploy_summary.yml 경로"
-        },
-        "total_files": {
-          "type": "integer",
-          "description": "deploy 대상 파일 수"
-        },
+        "attempted": { "type": "boolean" },
+        "mode": { "type": "string", "enum": ["prepare-only", "apply"] },
+        "status": { "type": "string", "enum": ["prepared", "warn", "failed", "skipped", "applied", "partial"] },
+        "summary_path": { "type": ["string", "null"] },
+        "total_files": { "type": "integer" },
         "target_paths": {
           "type": "array",
           "items": {
@@ -158,14 +155,18 @@
             "additionalProperties": false
           }
         },
-        "warnings": {
-          "type": "array",
-          "items": {"type": "string"}
-        },
-        "conflicts": {
-          "type": "array",
-          "items": {"type": "string"}
-        }
+        "warnings": { "type": "array", "items": {"type": "string"} },
+        "conflicts": { "type": "array", "items": {"type": "string"} }
+      }
+    }
+  },
+  "$defs": {
+    "check_count": {
+      "type": "object",
+      "properties": {
+        "passed": { "type": "integer" },
+        "failed": { "type": "integer" },
+        "warnings": { "type": "integer" }
       }
     }
   }

@@ -1,0 +1,60 @@
+version: 1
+id: service_checks
+description: "Service 산출물 검증 규칙 — BaseService 상속, reader/writer 분리, 트랜잭션, namespace 등"
+
+# Service 검증 규칙
+# v5 generate.md Integrated Verify에서 이관
+
+checks:
+
+  # === CRITICAL ===
+
+  base_service_extends:
+    id: SVC-001
+    severity: critical
+    description: "extends BaseService 필수"
+    rule: "Service 클래스는 BaseService를 상속해야 한다"
+    pattern: "extends BaseService"
+
+  reader_writer_injection:
+    id: SVC-002
+    severity: critical
+    description: "reader/writer SqlSessionTemplate 주입"
+    rule: "SqlSessionTemplate을 reader(읽기용)와 writer(쓰기용)로 분리 주입"
+    correct: |
+      @Resource(name = "sqlSessionFerpReader")
+      private SqlSessionTemplate reader;
+      @Resource(name = "sqlSessionFerpWriter")
+      private SqlSessionTemplate writer;
+
+  reader_for_read:
+    id: SVC-003
+    severity: critical
+    description: "읽기 메서드 reader 사용"
+    rule: "SELECT 계열 메서드는 reader를 사용해야 한다"
+    check: "selectOne, selectList 등 읽기 메서드에서 reader 사용 확인"
+
+  writer_for_write:
+    id: SVC-004
+    severity: critical
+    description: "쓰기 메서드 writer + @Transactional"
+    rule: "INSERT/UPDATE/DELETE 메서드는 writer를 사용하고 @Transactional 필수"
+    transactional_value: "txManagerFerpWriter"
+    pattern: "@Transactional(value = \"txManagerFerpWriter\")"
+
+  namespace_lowercase:
+    id: SVC-005
+    severity: critical
+    description: "namespace.statementId 소문자 namespace"
+    rule: "Service에서 호출하는 mapper statement는 소문자 namespace 사용"
+    correct: "reader.selectList(\"dta030.selectList\", param)"
+    wrong: "reader.selectList(\"DTA030.selectList\", param)"
+
+  common_service_consistency:
+    id: SVC-006
+    severity: critical
+    description: "CommonService 사용 여부 일관성"
+    rule: >
+      Controller가 CommonController를 사용하면 Service도 CommonService 기반.
+      Custom Controller면 Custom Service 필수.
+    reference: "system/policies/verify/controller_checks.yml"

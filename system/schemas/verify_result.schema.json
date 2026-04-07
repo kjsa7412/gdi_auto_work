@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "verify_result.schema.json",
   "title": "Verify Result",
-  "description": "Schema for verify_result.yml",
+  "description": "Schema for verify_result.yml — verify 정책 기반 검증 결과 구조",
   "type": "object",
   "required": ["version", "stage", "status", "checks", "generated_at"],
   "additionalProperties": false,
@@ -19,6 +19,27 @@
       "type": "string",
       "enum": ["pass", "warn", "fail"]
     },
+    "critical_pass": {
+      "type": "boolean",
+      "description": "모든 critical severity 체크가 pass인지 여부"
+    },
+    "manual_required": {
+      "type": "boolean",
+      "description": "수동 확인이 필요한 항목이 있는지 여부"
+    },
+    "auto_fixed": {
+      "type": "array",
+      "description": "자동 교정 수행 항목 목록",
+      "items": {
+        "type": "object",
+        "properties": {
+          "check_id": {"type": "string"},
+          "description": {"type": "string"},
+          "before": {"type": "string"},
+          "after": {"type": "string"}
+        }
+      }
+    },
     "checks": {
       "type": "array",
       "items": {
@@ -28,7 +49,7 @@
         "properties": {
           "id": {
             "type": "string",
-            "description": "Unique check identifier"
+            "description": "Unique check identifier (e.g., HC-001, XC-001, SC-001)"
           },
           "description": {
             "type": "string",
@@ -41,7 +62,88 @@
           "message": {
             "type": "string",
             "description": "Detail message about the check result"
+          },
+          "severity": {
+            "type": "string",
+            "enum": ["critical", "warning"],
+            "description": "Check severity level"
+          },
+          "auto_fixable": {
+            "type": "boolean",
+            "description": "자동 교정 가능 여부"
+          },
+          "manual_required": {
+            "type": "boolean",
+            "description": "수동 확인 필요 여부"
           }
+        }
+      }
+    },
+    "details": {
+      "type": "object",
+      "description": "Artifact 유형별 검증 결과 상세",
+      "properties": {
+        "html_checks": {
+          "$ref": "#/$defs/check_summary"
+        },
+        "xml_checks": {
+          "$ref": "#/$defs/check_summary"
+        },
+        "sql_checks": {
+          "$ref": "#/$defs/check_summary"
+        },
+        "controller_checks": {
+          "$ref": "#/$defs/check_summary"
+        },
+        "service_checks": {
+          "$ref": "#/$defs/check_summary"
+        }
+      }
+    },
+    "self_diagnosis": {
+      "type": "object",
+      "description": "자기진단 결과",
+      "properties": {
+        "ddl_supplements": {
+          "type": "array",
+          "description": "DDL보완 필요 항목",
+          "items": {
+            "type": "object",
+            "properties": {
+              "table": {"type": "string"},
+              "column": {"type": "string"},
+              "suggested_type": {"type": "string"},
+              "sql_generated": {"type": "boolean"}
+            }
+          }
+        },
+        "code_registrations": {
+          "type": "array",
+          "description": "코드등록 필요 항목",
+          "items": {
+            "type": "object",
+            "properties": {
+              "wrk_tp_cd": {"type": "string"},
+              "cd_tp_cd": {"type": "string"},
+              "description": {"type": "string"},
+              "sql_generated": {"type": "boolean"}
+            }
+          }
+        },
+        "unclear_warnings": {
+          "type": "array",
+          "description": "불명확 항목 경고",
+          "items": {"type": "string"}
+        },
+        "auto_fixed": {
+          "type": "array",
+          "description": "자동 교정 수행 항목",
+          "items": {"type": "string"}
+        },
+        "manual_required": {
+          "type": "array",
+          "description": "수동 확인 필요 항목",
+          "items": {"type": "string"}
         }
       }
     },
@@ -95,6 +197,29 @@
       "type": "array",
       "description": "deploy 관련 경고",
       "items": {"type": "string"}
+    }
+  },
+  "$defs": {
+    "check_summary": {
+      "type": "object",
+      "description": "Artifact 유형별 검증 요약",
+      "properties": {
+        "passed": {"type": "integer", "description": "통과한 체크 수"},
+        "failed": {"type": "integer", "description": "실패한 체크 수"},
+        "warnings": {"type": "integer", "description": "경고 체크 수"},
+        "items": {
+          "type": "array",
+          "description": "개별 체크 결과",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {"type": "string"},
+              "result": {"type": "string", "enum": ["pass", "warn", "fail"]},
+              "message": {"type": "string"}
+            }
+          }
+        }
+      }
     }
   }
 }

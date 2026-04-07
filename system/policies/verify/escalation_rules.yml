@@ -1,0 +1,86 @@
+version: 1
+id: escalation_rules
+description: "Verify 오류처리/escalation 규칙 — critical 자동수정, manual_required, warning 기록, system-fix 트리거"
+
+# Verify 오류처리 / escalation 규칙
+# v5 generate.md Integrated Verify에서 이관
+
+escalation_flow:
+
+  critical_auto_fix:
+    id: ER-001
+    description: "critical 오류 자동 수정 후 재검증"
+    rule: >
+      critical severity이고 auto_fixable=true인 오류는:
+      1. 자동 수정 수행
+      2. 수정 내역을 verify_result.auto_fixed에 기록
+      3. 수정 후 해당 체크를 재실행하여 pass 확인
+      4. 재검증 실패 시 manual_required로 전환
+    max_retry: 1
+
+  manual_required:
+    id: ER-002
+    description: "자동 수정 불가 시 manual_required 표시"
+    rule: >
+      critical severity이고 auto_fixable=false이거나,
+      자동 수정 후 재검증 실패인 경우:
+      1. verify_result에 manual_required: true 설정
+      2. 해당 체크 결과에 manual_required: true 추가
+      3. build는 verify_result.status를 fail로 설정
+      4. 사용자에게 수동 확인 필요 항목 목록 표시
+
+  warning_recording:
+    id: ER-003
+    description: "warning 기록 기준"
+    rule: >
+      severity=warning인 항목은:
+      1. verify_result.warnings에 기록
+      2. verify_result.status에 영향 없음 (pass 또는 warn 유지)
+      3. build 종료를 차단하지 않음
+      4. build_report.md에 경고 사항으로 기재
+
+  system_fix_trigger:
+    id: ER-004
+    description: "반복 오류 발생 시 system-fix 트리거 기준"
+    rule: >
+      아래 조건 중 하나라도 충족되면 system-fix skill 검토 또는 자동 호출:
+      1. 동일 check id가 2회 이상 연속 fail (같은 task 내)
+      2. fix.manifest에서 policy_patch_required=true로 분류된 오류
+      3. verify_result에서 동일 패턴의 오류가 여러 artifact에 걸쳐 발생
+    action:
+      - "fix command에서 system-fix skill 자동 호출"
+      - "system-fix 결과를 proposals/policy_changes/에 기록"
+      - "severity high면 자동 적용, low면 제안만"
+
+result_fields:
+  description: "escalation 결과로 verify_result에 추가되는 필드"
+  fields:
+    critical_pass:
+      type: boolean
+      description: "모든 critical 체크가 pass인지 여부"
+    auto_fixed:
+      type: array
+      description: "자동 교정된 항목 목록 (check_id, before, after)"
+    manual_required:
+      type: boolean
+      description: "수동 확인이 필요한 항목이 있는지 여부"
+    escalated_to_system_fix:
+      type: boolean
+      description: "system-fix skill이 호출되었는지 여부"
+
+build_termination_policy:
+  description: "verify 결과에 따른 build 종료 정책"
+  rules:
+    - condition: "critical_pass=true, manual_required=false"
+      build_status: "completed"
+      verify_status: "pass"
+    - condition: "critical_pass=true, warnings 존재"
+      build_status: "completed"
+      verify_status: "warn"
+    - condition: "critical_pass=false, auto_fix 성공"
+      build_status: "completed"
+      verify_status: "pass (auto_fixed)"
+    - condition: "critical_pass=false, auto_fix 실패 또는 불가"
+      build_status: "failed"
+      verify_status: "fail"
+      action: "manual_required=true 설정, 사용자 안내"

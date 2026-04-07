@@ -1,124 +1,75 @@
 # /analyze command
 
-## 목적
-work/task/1.Prep에 배치된 PPT 파일을 분석하여 people_spec(original), machine_spec(original), people_spec(final)을 생성한다. 코드를 생성하지 않는다.
+## 역할
+PPT를 분석하여 people_spec + machine_spec을 생성하는 **오케스트레이터**.
+코드를 생성하지 않는다.
 
-## 실행 전 확인
+## 진입 조건
+`system/config/runtime.yml` → `commands.analyze.start_condition` 참조.
+- phase: idle 또는 task_prepared
+- lock: UNLOCKED
+- 입력: `work/task/1.Prep/`에 .ppt 또는 .pptx 존재
+- 금지: `archive/**`, `work/fix/**` 입력 사용 금지
 
-1. **Lock 확인**: `work/.lock` 파일을 읽어 `UNLOCKED`인지 확인. `LOCKED:*`이면 즉시 중단.
-2. **Active Context 확인**: `work/.active_context.yml`의 `current.phase`가 `idle` 또는 `task_prepared`인지 확인. 다른 상태이면 즉시 중단.
-3. **입력 파일 확인**: `work/task/1.Prep/`에서 `.ppt` 또는 `.pptx` 파일 검색. 없으면 즉시 중단.
-4. **금지 확인**: `archive/**`, `work/fix/**`를 입력으로 사용하지 않는다.
+## 필수 정책 로드
 
-## 필수 참조 파일 (읽기 전용)
-
-- `system/config/paths.yml`
-- `system/config/framework_manifest.yml`
-- `system/config/naming.yml`
-- `system/policies/framework/template_selection.yml`
-- `system/templates/screen-types/*.yml`
-- `system/templates/spec/people_spec.md`
-- `system/templates/spec/machine_spec.yml`
-- `system/schemas/analyze_manifest.schema.json`
-- `system/schemas/people_spec.schema.json`
-- `system/schemas/machine_spec.schema.json`
-- `system/cache/convention/**`
-- `system/cache/convention/*.txt` — convention cache (code/table/view/function/trigger)
-- `system/cache/convention/sql/*.sql` — cache refresh용 SQL
-- `system/policies/runtime/allowed_paths.yml`
+| 정책 | 역할 |
+|------|------|
+| `system/config/runtime.yml` | 진입 조건, 필수 산출물, 상태 전이 |
+| `system/policies/runtime/db_access.yml` | DB 접속, cache-first 원칙, fallback 규칙 |
+| `system/policies/runtime/allowed_paths.yml` | 읽기/쓰기 허용 경로 |
+| `system/policies/runtime/context_isolation.yml` | task 격리, lock 형식 |
+| `system/policies/runtime/lifecycle.yml` | 필수 산출물 검증, unresolved 정책 |
+| `system/policies/analyze/ppt_extraction.yml` | PPT 추출 규칙 (PE-001~PE-006) |
+| `system/policies/analyze/classify_tags.yml` | 13개 태그 분류 |
+| `system/policies/analyze/screen_type_rules.yml` | 화면유형 판정 |
+| `system/policies/analyze/default_resolution.yml` | 보완 우선순위, 태그 규칙 |
+| `system/policies/analyze/spec_generation.yml` | spec 생성 규칙, 미확정 처리, cache 연계 |
+| `system/config/naming.yml` | 네이밍 규칙 |
+| `system/policies/framework/template_selection.yml` | skeleton 선택 |
 
 ## 수행 절차
 
-### 1. Workspace 초기화
-- `work/.lock` ← `LOCKED:task:analyze`
-- `work/.active_context.yml` ← current.type: task, current.phase: task_prepared, current.command: analyze, current.started_at: {now}
+### 1. Lock 획득 + Active Context 갱신
+`context_isolation.yml` lock 형식에 따라 `LOCKED:task:analyze` 설정.
 
 ### 2. Convention Cache Refresh (필수)
-analyze는 시작 시 **반드시 1회** convention cache refresh를 수행한다. 조건 판정 없이 무조건 실행한다.
+`db_access.yml` 정책에 따라 cache refresh 수행.
+- `db_access.yml` → `connection` 정보로 psql 실행
+- `db_access.yml` → `cache_refresh` 규칙에 따라 무조건 1회 수행
+- 실패 시: `db_access.yml` → `cache_refresh.failure_handling` 정책 적용
 
-**refresh 수행 방식** (`system/policies/runtime/db_access.yml` connection 정보 사용):
-```bash
-PGPASSWORD='sjinc12#$' psql -h 10.10.1.100 -p 5466 -U sjinc -d GDI_SERVICE -f {sql_file} -o {output_file} -t -A
-```
+### 3. Cache 기반 정보 보강 및 DB Fallback
+`db_access.yml` → `db_fallback` 정책에 따라 부족한 정보 보완.
+결과를 analyze.manifest에 기록.
 
-| SQL | 결과 저장 |
-|-----|-----------|
-| `system/cache/convention/sql/code_select.sql` | `system/cache/convention/code.txt` |
-| `system/cache/convention/sql/table_select.sql` | `system/cache/convention/table.txt` |
-| `system/cache/convention/sql/view_select.sql` | `system/cache/convention/view.txt` |
-| `system/cache/convention/sql/function_select.sql` | `system/cache/convention/function.txt` |
-| `system/cache/convention/sql/trigger_select.sql` | `system/cache/convention/trigger.txt` |
+### 4. analyze.manifest 초기화
+`lifecycle.yml` → `mandatory_output_check.analyze` 기준으로 필수 산출물 목록 확인.
 
-**refresh 실패 시**: DB 접속 불가면 warning 기록 후 기존 cache로 진행.
+### 5. PPT 분석 → 화면 추출 → 분류
+`ppt_extraction.yml` (PE-001~PE-006) 규칙으로 PPT 추출.
+`classify_tags.yml` 규칙으로 태그 분류.
+`screen_type_rules.yml` 규칙으로 화면유형 판정.
 
-**결과 기록**: analyze.manifest에 cache.refresh_attempted, cache.refresh_status, cache.refreshed_files, cache.hit_categories, cache.miss_categories 기록
+### 6. people_spec(original) 생성
+`spec_generation.yml` → `people_spec_rules` 적용.
+`default_resolution.yml` → 보완 우선순위 및 태그 규칙 적용.
 
-> 별도로 cache만 갱신하려면 `/cache-refresh` command를 사용한다.
+### 7. machine_spec(original) 생성
+`spec_generation.yml` → `machine_spec_rules` 적용.
+`naming.yml` 규칙으로 정규화.
+`template_selection.yml` 규칙으로 skeleton_choice 결정.
+`machine_spec.schema.json` 으로 검증.
 
-### 2-1. Cache 기반 정보 보강 및 DB Fallback
-refresh 후에도 분석에 필요한 정보가 cache에 없으면(cache miss/insufficient), DB에 직접 조회하여 보완한다.
+### 8. people_spec(final) 초기 복사
+`spec_generation.yml` → `final_people_spec` 규칙 적용.
 
-**DB fallback 조건** (하나라도 해당하면):
-- cache hit 실패: 필요한 테이블/코드/함수가 cache에 없음 (cache miss)
-- cache 불충분: 일부 존재하지만 판단에 부족함 (cache insufficient)
-- cache 불일치: cache 정보와 PPT 추출 결과가 충돌 (cache mismatch)
-
-**DB fallback 절차**:
-1. 필요한 정보 카테고리 식별 (code/table/view/function/trigger)
-2. `db_access.yml` connection 정보로 SELECT 조회 수행
-3. 조회 결과를 해당 cache *.txt 파일에 보강 반영
-4. fallback reason을 analyze.manifest에 기록
-
-**fallback 실패 시**:
-- 기존 cache에 부분 정보 있으면: warning 후 진행
-- cache 전무 + DB 불가: analyze 실패
-
-**결과 기록**: cache.db_fallback_used, cache.db_fallback_reason[], cache.db_fallback_queries[], cache.db_fallback_status
-
-### 3. analyze.manifest 초기화
-`work/task/2.Working/manifests/analyze.manifest.yml` 생성 (status: in_progress, inputs.prep_files: [발견된 파일들])
-
-### 4. PPT 분석 및 화면 추출
-1. PPT 파일을 읽어 슬라이드별 내용 추출 → `work/task/2.Working/extracted/`
-2. 화면 후보 식별
-3. screen_type 분류 (list/list-detail/form/popup) — `system/templates/screen-types/*.yml` 기준
-4. 분류 결과 → `work/task/2.Working/classified/`
-
-### 5. people_spec(original) 생성
-- `system/templates/spec/people_spec.md` 템플릿 기반
-- PPT에서 추출한 화면 개요, 조회 조건, 그리드 컬럼, 버튼, 비즈니스 규칙 채움
-- 미확인 항목은 "미확정 항목" 섹션 기록
-- 저장: `work/task/2.Working/original/people_spec.md`
-
-### 6. machine_spec(original) 생성
-- `system/templates/spec/machine_spec.yml` 템플릿 기반
-- naming.yml 규칙에 따라 screen_id, module_id, mapper_namespace 결정
-- template_selection.yml에 따라 skeleton_choice 결정
-- PPT에서 확인 가능한 placeholder 채움, 불가 항목은 unresolved 기록
-- convention cache를 참조하여 naming/table/code/function 정보 보강 (unresolved 감소)
-- cache에 없는 항목은 DB fallback 결과를 활용
-- `system/schemas/machine_spec.schema.json`으로 검증
-- 저장: `work/task/2.Working/original/machine_spec.yml`
-
-### 7. people_spec(final) 초기 복사
-`original/people_spec.md` → `final/people_spec.md` 복사. **이 파일이 사용자 검토/수정 대상**.
-
-### 8. analyze.manifest 완료
-status: completed, outputs 경로, screens 목록, unresolved, completed_at 기록
-
-### 9. Active Context 갱신
-- current.phase: task_analyzed, task.status: analyzed, task.last_analyze_at: {now}
-- spec 경로들 기록
-- `work/.lock` ← `UNLOCKED`
+### 9. Manifest 완료 + Active Context 갱신 + Lock 해제
+`runtime.yml` → `commands.analyze.success_state`: task_analyzed
 
 ### 10. 결과 보고
-- 추출 화면 수, screen_type 분류 결과, unresolved 목록
-- **사용자 검토 대상: `work/task/2.Working/final/people_spec.md`**
-- 검토/수정 완료 후 `/build` 실행 (build가 review skill을 자동 호출하여 final/machine_spec.yml 생성)
+추출 화면 수, screen_type, unresolved 목록 안내.
+**사용자 검토 대상**: `work/task/2.Working/final/people_spec.md`
 
-## 실패 조건
-- Prep에 PPT 없음, Lock 충돌, 화면 식별 실패, spec 생성 실패 → failed 상태, lock 해제
-
-## 성공 조건
-- original/people_spec.md + original/machine_spec.yml + final/people_spec.md + analyze.manifest.yml 존재
-- active_context.current.phase == task_analyzed
+## 실패/성공 조건
+`runtime.yml` → `commands.analyze` 및 `lifecycle.yml` → `mandatory_output_check.analyze` 참조.

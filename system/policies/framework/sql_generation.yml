@@ -1,0 +1,77 @@
+version: 1
+id: sql_generation
+description: "SQL 산출물 생성 조건, 파일명 규칙, 출력 위치 규칙"
+
+# SQL 산출물 생성 규칙
+# v5 generate.md에서 이관 (PP-20260404-001 포함)
+
+sql_artifacts:
+
+  menu_registration:
+    id: SG-001
+    description: "메뉴등록 SQL"
+    filename_pattern: "{screenId}_메뉴등록.sql"
+    generation_condition: "모든 화면에 대해 필수 생성"
+    output_location: "work/task/2.Working/generated/"
+    required_tables:
+      - sy_pgm_info
+      - sy_menu_info
+    rules:
+      - "sy_pgm_info INSERT 필수 (pgm_id, pgm_nm, pgm_path 등)"
+      - "pgm_path 형식: /project/{module}/{category}/{ScreenId}"
+      - "서브화면(popup, tab)은 sy_menu_info에 등록 금지"
+      - "감사컬럼 8개 포함 필수"
+    pgm_path_format: "/project/{module}/{category}/{ScreenId}"
+    audit_columns:
+      - firs_reg_pgm_id
+      - firs_reg_dts
+      - firs_reg_user_id
+      - firs_reg_ip
+      - fina_reg_pgm_id
+      - fina_reg_dts
+      - fina_reg_user_id
+      - fina_reg_ip
+
+  ddl_supplement:
+    id: SG-002
+    description: "DDL 보완 SQL"
+    filename_pattern: "{screenId}_DDL보완.sql"
+    generation_condition: "machine_spec에서 사용하는 컬럼이 DDL(convention cache table.txt)에 없을 때"
+    output_location: "work/task/2.Working/generated/"
+    rules:
+      - "DDL 미존재 컬럼 발견 시에만 생성"
+      - "ALTER TABLE ADD COLUMN 형태로 생성"
+      - "컬럼 타입/크기는 machine_spec 또는 유사 컬럼 기준으로 추정"
+      - "추정 근거가 부족하면 [사용자 확인 필요] 태그 부착"
+
+  code_registration:
+    id: SG-003
+    description: "코드등록 SQL"
+    filename_pattern: "{screenId}_코드등록.sql"
+    generation_condition: "machine_spec에서 사용하는 코드가 convention cache code.txt에 미등록일 때"
+    output_location: "work/task/2.Working/generated/"
+    rules:
+      - "상세 규칙은 code_registration.yml 참조"
+      - "미등록 코드 발견 시에만 생성"
+
+execution_order:
+  id: SG-004
+  description: "execution_order.md 생성 규칙"
+  filename: "execution_order.md"
+  generation_condition: "SQL 산출물이 1개 이상 존재할 때 필수 생성"
+  output_location: "work/task/2.Working/generated/"
+  content_rules:
+    - "SQL 파일별 실행 순서 명시"
+    - "DDL보완 → 코드등록 → 메뉴등록 순서 권장"
+    - "의존성이 있으면 의존성 순서 기재"
+    - "각 SQL 파일의 실행 목적 한 줄 설명 포함"
+
+general_rules:
+  - id: SG-005
+    rule: "SQL 파일은 반드시 work/task/2.Working/generated/ 에 생성"
+  - id: SG-006
+    rule: "deliverables 단계에서 work/task/3.Result/deliverables/ 로 복사"
+  - id: SG-007
+    rule: "SQL 파일명에 한글 허용 (메뉴등록, DDL보완, 코드등록)"
+  - id: SG-008
+    rule: "execution_order.md가 존재하면 verify 시 SQL 파일 목록과 정합성 검증"

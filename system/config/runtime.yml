@@ -172,6 +172,31 @@ commands:
     failure_state: "failed"
     next_command: "clean (완료 시) 또는 fix (추가 수정 시)"
 
+  cache-refresh:
+    purpose: "convention cache를 DB에서 최신 데이터로 갱신"
+    start_condition:
+      required_state: ["idle", "task_prepared", "task_analyzed", "task_built", "fix_applied", "failed"]
+      description: "어떤 phase에서든 실행 가능. phase 변경 없음."
+    inputs:
+      required:
+        - "system/cache/convention/sql/*.sql"
+      readable:
+        - "system/policies/runtime/db_access.yml"
+        - "system/cache/convention/**"
+      writable:
+        - "system/cache/convention/*.txt"
+        - "work/.lock"
+    outputs:
+      required:
+        - "system/cache/convention/code.txt"
+        - "system/cache/convention/table.txt"
+        - "system/cache/convention/view.txt"
+        - "system/cache/convention/function.txt"
+        - "system/cache/convention/trigger.txt"
+    success_state: null
+    failure_state: null
+    note: "phase를 변경하지 않음. lock만 사용."
+
   clean:
     purpose: "work 전체를 archive로 이동하고 active context 초기화"
     start_condition:

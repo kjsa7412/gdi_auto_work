@@ -1,0 +1,111 @@
+version: 1
+id: issue_classification
+description: "Fix 오류 유형 분류 체계, 단순 patch vs 정책 patch 판정 기준, 오류 코드 분류 체계"
+
+# Fix 오류 유형 분류 체계
+# fix.md에서 승격
+
+issue_types:
+  output_patch:
+    id: IT-001
+    description: "산출물 단순 수정"
+    examples: ["컬럼 순서 변경", "라벨 텍스트 수정", "CSS 클래스 교정"]
+    impact: "해당 화면만"
+    target: "work/fix 산출물"
+    recurrence: "낮음"
+    system_fix_required: false
+
+  skeleton_patch:
+    id: IT-002
+    description: "skeleton 템플릿 구조 문제"
+    examples: ["skeleton에 누락된 블록", "placeholder 위치 오류"]
+    impact: "동일 유형 화면 전체"
+    target: "system/templates/skeletons/**"
+    recurrence: "높음"
+    system_fix_required: true
+
+  reanalyze:
+    id: IT-003
+    description: "분석부터 재실행 필요"
+    examples: ["화면유형 오분류", "PPT 재해석 필요"]
+    impact: "전체 워크플로우"
+    target: "분석 재실행"
+    recurrence: "낮음"
+    system_fix_required: false
+
+  rebuild:
+    id: IT-004
+    description: "machine_spec 수정 후 build 재실행 필요"
+    examples: ["필드 추가/삭제", "테이블 변경", "SQL 구조 변경"]
+    impact: "build 이후 전체"
+    target: "machine_spec 수정 → /build 재실행"
+    recurrence: "낮음"
+    system_fix_required: false
+
+  policy_patch:
+    id: IT-005
+    description: "정책 누락/오류로 인한 구조적 문제"
+    examples: ["검증 규칙 gap", "금지 API 미등록", "네이밍 규칙 불완전"]
+    impact: "다른 화면에서도 발생 가능"
+    target: "system/policies/** 또는 system/templates/**"
+    recurrence: "높음 (미수정 시)"
+    system_fix_required: true
+
+patch_distinction:
+  description: "단순 산출물 patch vs 정책 patch 판정 기준"
+  criteria:
+    - factor: "영향 범위"
+      output_patch: "해당 화면만"
+      policy_patch: "다른 화면에서도 발생 가능"
+    - factor: "원인"
+      output_patch: "데이터 오류, 매핑 오류"
+      policy_patch: "정책/규칙 누락 또는 오류"
+    - factor: "수정 대상"
+      output_patch: "work/fix 산출물"
+      policy_patch: "system/policies/** 또는 system/templates/**"
+    - factor: "재발 가능성"
+      output_patch: "낮음"
+      policy_patch: "높음 (미수정 시)"
+    - factor: "system-fix 필요"
+      output_patch: "불필요"
+      policy_patch: "필수"
+
+error_code_taxonomy:
+  description: "오류 분류 코드 체계"
+  categories:
+    - code: "API"
+      prefix: "API-xxx"
+      description: "금지 API 사용"
+      verify_reference: "html_checks.yml HC-006, HC-007"
+    - code: "XML"
+      prefix: "XML-xxx"
+      description: "XML 패턴 위반"
+      verify_reference: "xml_checks.yml XC-*"
+    - code: "CCH"
+      prefix: "CCH-xxx"
+      description: "코드콤보 오류"
+      verify_reference: "html_checks.yml HC-013, HC-014, HC-018"
+    - code: "MOD"
+      prefix: "MOD-xxx"
+      description: "모드 전환 오류"
+      verify_reference: "html_checks.yml HC-W01"
+    - code: "NAV"
+      prefix: "NAV-xxx"
+      description: "화면 네비게이션 오류"
+      verify_reference: "html_checks.yml HC-016"
+    - code: "FRM"
+      prefix: "FRM-xxx"
+      description: "폼/그리드 오류"
+      verify_reference: "html_checks.yml HC-010, HC-017"
+    - code: "SQL"
+      prefix: "SQL-xxx"
+      description: "SQL 오류"
+      verify_reference: "sql_checks.yml SC-*, postgresql_rules.yml PG-*"
+    - code: "STR"
+      prefix: "STR-xxx"
+      description: "구조 오류"
+      verify_reference: "controller_checks.yml CC-*, service_checks.yml SVC-*"
+    - code: "FW"
+      prefix: "FW-xxx"
+      description: "프레임워크 위반"
+      verify_reference: "forbidden_apis.yml, layout_rules.yml"

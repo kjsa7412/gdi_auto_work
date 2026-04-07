@@ -1,0 +1,113 @@
+version: 1
+id: xml_checks
+description: "XML mapper 산출물 검증 규칙 — namespace, resultType, audit 컬럼, 금지 패턴 등"
+
+# XML 검증 규칙
+# v5 generate.md Integrated Verify에서 이관
+
+checks:
+
+  # === CRITICAL ===
+
+  namespace_lowercase:
+    id: XC-001
+    severity: critical
+    description: "namespace 소문자"
+    rule: "XML mapper의 namespace는 반드시 소문자 (module_id와 일치)"
+    wrong: "namespace=\"DTA030\""
+    correct: "namespace=\"dta030\""
+    auto_fixable: true
+
+  result_type_map:
+    id: XC-002
+    severity: critical
+    description: "resultType은 java.util.Map"
+    rule: "resultType=\"java.util.Map\" 사용. resultType=\"map\" 금지."
+    wrong: "resultType=\"map\""
+    correct: "resultType=\"java.util.Map\""
+    auto_fixable: true
+
+  forbidden_columns:
+    id: XC-003
+    severity: critical
+    description: "금지 컬럼 미사용"
+    forbidden:
+      - "comp_cd"
+      - "brndz_cd"
+    reason: "TOBE 삭제 대상 컬럼. 신규 SQL에서 사용 금지."
+    auto_fixable: false
+
+  insert_audit_columns:
+    id: XC-004
+    severity: critical
+    description: "INSERT 감사컬럼 4개 필수"
+    required:
+      - firs_reg_pgm_id
+      - firs_reg_dts
+      - firs_reg_user_id
+      - firs_reg_ip
+    rule: "INSERT 문에는 4개 감사컬럼(최초등록) 반드시 포함"
+
+  update_audit_columns:
+    id: XC-005
+    severity: critical
+    description: "UPDATE 감사컬럼 4개 필수"
+    required:
+      - fina_reg_pgm_id
+      - fina_reg_dts
+      - fina_reg_user_id
+      - fina_reg_ip
+    rule: "UPDATE 문에는 4개 감사컬럼(최종수정) 반드시 포함"
+
+  current_timestamp:
+    id: XC-006
+    severity: critical
+    description: "current_timestamp 사용"
+    rule: "타임스탬프는 current_timestamp 사용. now() 금지."
+    wrong: "now()"
+    correct: "current_timestamp"
+    auto_fixable: true
+
+  dts_suffix:
+    id: XC-007
+    severity: critical
+    description: "_dts 접미사 사용"
+    rule: "날짜시간 컬럼은 _dts 접미사. _dtm 접미사 금지."
+    wrong: "_dtm"
+    correct: "_dts"
+    auto_fixable: true
+
+  ddl_column_match:
+    id: XC-008
+    severity: critical
+    description: "DDL 컬럼과 SQL 컬럼 일치"
+    rule: "XML SQL에서 사용하는 컬럼이 DDL(convention cache table.txt)에 존재하는지 검증"
+    action_on_failure: "불일치 발견 시 self_diagnosis로 DDL보완 SQL 제안"
+    reference: "system/policies/verify/self_diagnosis.yml"
+
+  coalesce_type:
+    id: XC-009
+    severity: critical
+    description: "COALESCE 인자 타입 통일"
+    rule: "COALESCE의 모든 인자는 동일 타입. 혼합 타입 사용 시 명시적 CAST 필요."
+
+  select_code_name:
+    id: XC-010
+    severity: critical
+    description: "SELECT에서 코드명 서브쿼리 포함"
+    rule: "코드값을 표시하는 그리드 컬럼은 코드명(comm_cd_nm) 서브쿼리를 포함해야 한다"
+
+  # === WARNING ===
+
+  nullif_pattern:
+    id: XC-W01
+    severity: warning
+    description: "NULLIF 패턴 확인"
+    rule: "0으로 나누기 방지 시 NULLIF 사용 권장"
+
+  parameter_prefix:
+    id: XC-W02
+    severity: warning
+    description: "파라미터 prefix 규칙"
+    rule: "검색 파라미터는 P_ prefix, 로그인 파라미터는 login_ prefix"
+    reference: "system/config/naming.yml"

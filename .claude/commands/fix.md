@@ -1,82 +1,71 @@
 # /fix command
 
-## 목적
-fix 요청을 분석하여 영향 범위 판정 후 패치/재생성/정책 보완을 수행한다. 재발 방지를 위해 system-fix skill 연계를 항상 검토한다.
+## 역할
+fix 요청을 분석하여 영향 범위를 판정하고, 패치/재생성/정책 보완을 수행하는 **오케스트레이터**.
 
-## 실행 전 확인
+## 진입 조건
+`system/config/runtime.yml` → `commands.fix.start_condition` 참조.
+- phase: task_built
+- lock: UNLOCKED
+- 입력: `work/fix/1.Prep/`에 fix 요청 파일 존재
+- 금지: `archive/**` 입력, `work/task/**` 직접 수정
 
-1. **Lock**: `work/.lock` == `UNLOCKED`.
-2. **상태**: `current.phase` == `task_built`. 아니면 "build 미완료" 안내 후 중단.
-3. **입력**: `work/fix/1.Prep/`에 fix 요청 파일 존재 (.md, .txt, .png 등).
-4. **Task 산출물**: `work/task/2.Working/**`, `work/task/3.Result/**` 존재 확인.
-5. **금지**: `archive/**` 입력 금지. `work/task/**` 직접 수정 금지 (읽기 전용 참조만).
+## 필수 정책 로드
+
+| 정책 | 역할 |
+|------|------|
+| `system/config/runtime.yml` | 진입 조건, 상태 전이 |
+| `system/policies/runtime/db_access.yml` | cache 조회, DB fallback |
+| `system/policies/runtime/allowed_paths.yml` | 경로 접근 (system-fix 쓰기 포함) |
+| `system/policies/runtime/context_isolation.yml` | fix 격리, task 읽기전용 |
+| `system/policies/runtime/lifecycle.yml` | 필수 산출물, unresolved 정책 |
+| `system/policies/verify/issue_classification.yml` | 오류 유형 분류, 에러 코드 체계 |
+| `system/policies/verify/escalation_rules.yml` | system-fix 트리거 조건 |
+| `system/policies/verify/*.yml` | 전체 verify 정책 (오류 판정 근거) |
+| `system/policies/framework/*.yml` | 전체 framework 정책 |
 
 ## 수행 절차
 
-### 1. Workspace 잠금
-`work/.lock` ← `LOCKED:fix:fix`, active_context 갱신
+### 1. Lock 획득 + Manifest 초기화
+`context_isolation.yml` lock 형식: `LOCKED:fix:fix`
 
-### 2. fix.manifest 초기화
-`work/fix/2.Working/manifests/fix.manifest.yml` (status: in_progress)
+### 2. Fix 요청 분석
+`work/fix/1.Prep/` 파일 읽기 및 내용 분석.
 
-### 3. Fix 요청 분석
-`work/fix/1.Prep/` 파일 읽기 및 내용 분석
+### 3. 오류 유형 분류
+`issue_classification.yml` → `issue_types` 기준으로 분류:
+output_patch / skeleton_patch / reanalyze / rebuild / policy_patch
 
-### 4. 오류 유형 분류 (issue_type)
-- **output_patch**: 산출물 단순 수정 (컬럼 순서, 라벨 등)
-- **skeleton_patch**: skeleton 템플릿 구조 문제
-- **reanalyze**: 화면유형 오분류 등 분석부터 재실행 필요
-- **rebuild**: machine_spec 수정 후 build 재실행 필요
+`issue_classification.yml` → `patch_distinction` 기준으로 단순 patch vs 정책 patch 판정.
 
-### 4-1. Convention Cache 기반 원인 조회 및 DB Fallback
-오류가 naming/DDL/SQL ID/구조 관련이면, convention cache를 먼저 조회한다.
-
-**조회 대상**:
-- 테이블/컬럼 존재 오류 → `table.txt` 조회
-- 코드 정의 오류 → `code.txt` 조회
-- 함수 참조 오류 → `function.txt` 조회
-- 뷰 참조 오류 → `view.txt` 조회
-
-**cache hit**: 원인 확정, DB fallback 불필요
-**cache miss/insufficient/mismatch**: DB fallback 판정
-
-**DB fallback 절차**:
-1. 필요한 카테고리 식별
-2. `db_access.yml` connection 정보로 SELECT 조회
-3. 조회 결과로 원인 분석 보강
-4. cache 정보와 DB 결과의 차이가 있으면 cache mismatch로 기록
-5. 필요 시 cache *.txt에 결과 보강 반영
-6. fallback reason을 fix.manifest에 기록
-
-**DB fallback도 실패 시**: 원인 분류를 "근거 부족"으로 기록, system-fix에 위임 검토
-
-**결과 기록**: fix.manifest에 cache.used, cache.hit_categories, cache.miss_categories, cache.insufficient, cache.mismatch_detected, cache.db_fallback_used, cache.db_fallback_reason[], cache.db_fallback_status 기록
+### 4. Cache 기반 원인 조회
+`db_access.yml` → `db_fallback` 정책에 따라 convention cache 조회 및 DB fallback.
 
 ### 5. 영향 범위 판정
-reanalyze_required, rebuild_required, policy_patch_required, affected_paths 결정
+reanalyze_required, rebuild_required, policy_patch_required, affected_paths 결정.
 
-### 6. System-fix Skill 연계
-policy_patch_required==true이거나 반복 오류 가능성이 있으면 `system-fix` skill 호출.
-policy/template/skeleton 보완 제안 수신.
+### 6. Verify 정책 기반 오류 판정
+`issue_classification.yml` → `error_code_taxonomy` 기준으로 오류를 verify check ID에 매핑.
 
-### 7. 수정 수행
-- output_patch: `work/fix/2.Working/patched/`에 수정 파일 → `work/fix/3.Result/deliverables/`
-- rebuild: "machine_spec 수정 후 /build 재실행 필요" 안내
-- reanalyze: "people_spec 수정 후 /analyze + /build 재실행 필요" 안내
-- skeleton_patch: system-fix 결과에 따라 보정안 제시
+### 7. System-fix Skill 연계 판정
+`escalation_rules.yml` → ER-004 기준으로 system-fix 자동 호출 여부 결정.
+호출 시 system-fix skill에 오류 분류 결과 + severity + 영향 범위 전달.
 
-### 8. Verify Result 생성
-`work/fix/2.Working/manifests/verify_result.yml` — patch_applied, no_regression
+### 8. 수정 수행
+`issue_classification.yml` → issue_type에 따라:
+- output_patch → patched/ → deliverables/
+- rebuild → "/build 재실행 필요" 안내
+- reanalyze → "/analyze + /build 재실행 필요" 안내
+- skeleton_patch/policy_patch → system-fix 결과에 따라 처리
 
-### 9. fix.manifest 완료
-status: completed, issue_type, impact_scope, actions_taken
+### 9. Verify Result 생성
+fix 적용 후 재검증 결과를 `verify_result.yml`로 생성.
 
-### 10. Active Context 갱신
-current.phase: fix_applied, fix.status: applied, lock ← UNLOCKED
+### 10. Manifest 완료 + Active Context 갱신 + Lock 해제
+`runtime.yml` → `commands.fix.success_state`: fix_applied
 
 ### 11. 결과 보고
-fix 유형, 영향 범위, 수행 조치, 다음 단계 안내
+fix 유형, 영향 범위, 수행 조치, verify 결과 요약.
 
 ## 실패/성공 조건
-실패: 입력 없음, task 산출물 없음, 판정 불가 → failed
-성공: fix.manifest + verify_result 존재, 영향 범위 명확화
+`runtime.yml` → `commands.fix` 및 `lifecycle.yml` → `mandatory_output_check.fix` 참조.

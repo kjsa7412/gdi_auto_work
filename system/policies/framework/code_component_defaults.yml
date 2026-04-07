@@ -1,0 +1,86 @@
+version: 1
+id: code_component_defaults
+description: "코드콤보/코드헬프 컬럼 기본값, DATA_VIEW/DATA_CODE_TYPE 상수, elements 직접 선언 원칙"
+
+# 코드 컴포넌트 기본값 규칙
+# v5 generate.md에서 이관
+
+code_combo:
+  id: CC-001
+  description: "코드콤보 기본 패턴"
+  default_pattern:
+    view: "DATA_VIEW.codeNone"
+    type: "DATA_CODE_TYPE.codeValue"
+    label: "코드명"
+    name: "P_field_cd"
+    param:
+      wrk_tp_cd: "XX"
+      cd_tp_cd: "YYY"
+  rules:
+    - "코드콤보는 elements 배열에 직접 선언 (외부 참조 금지)"
+    - "APP_CODE.load() 호출 금지 — elements > type 선언으로 대체"
+    - "wrk_tp_cd, cd_tp_cd는 convention cache code.txt에서 확인하여 실제 값 사용"
+
+code_help:
+  id: CC-002
+  description: "코드헬프 검색 기본 패턴"
+  rules:
+    - "사용자는 코드 ID/PK를 알 필요 없음"
+    - "화면은 코드명(명칭) 기반 검색을 기본 지원"
+    - "명시적 요청이 있을 때만: view: DATA_VIEW.code, type: DATA_CODE_TYPE.code"
+  search_principle: "코드명(comm_cd_nm) 기반 검색이 기본, 코드값(comm_cd) 검색은 명시 요청 시만"
+
+data_view_constants:
+  id: CC-003
+  description: "DATA_VIEW 상수 목록"
+  values:
+    - "DATA_VIEW.code — 코드헬프 팝업"
+    - "DATA_VIEW.codeNone — 코드콤보 (팝업 없이 드롭다운)"
+    - "DATA_VIEW.user — 사용자 검색"
+    - "DATA_VIEW.dept — 부서 검색"
+    - "DATA_VIEW.style — 스타일 검색"
+  rule: "DATA_VIEW 상수만 사용. 문자열 직접 입력 금지."
+
+data_code_type_constants:
+  id: CC-004
+  description: "DATA_CODE_TYPE 상수 목록"
+  values:
+    - "DATA_CODE_TYPE.code — 코드 검색 (코드헬프용)"
+    - "DATA_CODE_TYPE.codeValue — 코드 드롭다운 (코드콤보용)"
+    - "DATA_CODE_TYPE.user — 사용자 검색"
+    - "DATA_CODE_TYPE.dept — 부서 검색"
+    - "DATA_CODE_TYPE.style — 스타일 검색"
+  rule: "DATA_CODE_TYPE 상수만 사용. 문자열 직접 입력 금지."
+
+grid_code_help:
+  id: CC-005
+  description: "그리드 코드헬프 컬럼 기본 패턴"
+  rules:
+    - "그리드 컬럼에 코드헬프 필요 시 editor: GRID_VIEW.code 사용"
+    - "GRID_VIEW.text 사용 금지 (코드헬프가 필요한 컬럼에)"
+    - "type: DATA_CODE_TYPE.{적절한 타입} 지정 필수"
+    - "targetCols: 선택 시 자동 채움할 컬럼 매핑 필수"
+  default_grid_pattern:
+    editor: "GRID_VIEW.code"
+    type: "DATA_CODE_TYPE.code"
+    targetCols: ["연관컬럼 자동 매핑"]
+
+dependency_pattern:
+  id: CC-006
+  description: "코드콤보 의존성(부모-자식) 패턴"
+  parent:
+    depElement: ["child_cd"]
+    description: "부모 변경 시 자식 코드 목록 갱신"
+  child:
+    refElement:
+      - name: "parent_cd"
+        field: "rel_comm_cd"
+    description: "부모 코드값을 참조하여 필터링"
+
+elements_declaration:
+  id: CC-007
+  description: "elements 직접 선언 원칙"
+  rule: >
+    코드콤보/코드헬프는 반드시 해당 form 또는 grid의 elements/columns 배열 내에
+    직접 선언한다. 외부 함수 호출(APP_CODE.load 등)로 동적 로딩하지 않는다.
+  reason: "skeleton 기반 생성 원칙 유지. 외부 호출은 runtime 의존성을 만들어 검증 불가."

@@ -1,0 +1,61 @@
+version: 1
+id: code_registration
+description: "코드등록 SQL 생성 시 comm_cd 규칙, 기존 코드그룹 재사용 금지, 신규 코드 제안 기준"
+
+# 코드등록 SQL 생성 규칙
+# v5 generate.md PP-20260404-001에서 이관
+
+rules:
+
+  comm_cd_value:
+    id: CR-001
+    description: "comm_cd는 순수 코드값만 사용"
+    severity: critical
+    correct_examples:
+      - "comm_cd = '010'"
+      - "comm_cd = '020'"
+      - "comm_cd = '030'"
+    wrong_examples:
+      - "comm_cd = 'RP080010' (wrk_tp_cd+cd_tp_cd를 prefix로 결합 금지)"
+      - "comm_cd = 'XX_010' (구분자 포함 금지)"
+    rule: "comm_cd 필드에는 순수 코드값(숫자 또는 짧은 코드)만 입력. wrk_tp_cd나 cd_tp_cd를 접두어로 붙이지 않는다."
+
+  existing_code_check:
+    id: CR-002
+    description: "기존 wrk_tp_cd + cd_tp_cd 존재 여부 확인 후 신규 생성"
+    severity: critical
+    procedure:
+      - "convention cache code.txt에서 wrk_tp_cd + cd_tp_cd 조합 검색"
+      - "동일 조합이 이미 존재하면 해당 코드그룹 사용 (신규 생성 금지)"
+      - "존재하지 않으면 미사용 cd_tp_cd 번호를 찾아 신규 할당"
+    rule: "코드등록 SQL 생성 전 반드시 기존 코드그룹 존재 여부를 확인한다."
+
+  reuse_prohibition:
+    id: CR-003
+    description: "기존 코드그룹/타입 다른 목적 재사용 금지"
+    severity: critical
+    rule: "이미 존재하는 cd_tp_cd를 다른 용도로 재사용하면 기존 데이터가 파괴된다. 절대 금지."
+    action_on_violation: "기존 코드그룹이 다른 용도로 사용 중이면 반드시 새 cd_tp_cd를 할당한다."
+
+  new_code_proposal:
+    id: CR-004
+    description: "신규 코드 제안과 실제 코드등록 SQL 생성의 구분"
+    rule: >
+      machine_spec에서 코드가 필요하지만 convention cache에 없는 경우:
+      1. people_spec에 [신규코드제안] 태그로 기록
+      2. machine_spec.unresolved에 코드 관련 항목 추가
+      3. 코드등록 SQL은 실제 생성하되, 주석으로 "[신규코드제안] 사용자 확인 후 실행" 표기
+    distinction:
+      proposal_only: "people_spec 분석 단계에서 코드가 불명확할 때 → 제안만"
+      sql_generation: "machine_spec 확정 후 build 단계에서 미등록 코드 확인 → SQL 생성"
+
+  sql_structure:
+    id: CR-005
+    description: "코드등록 SQL 기본 구조"
+    target_tables:
+      - sy_code_mst: "코드마스터 (wrk_tp_cd, cd_tp_cd, cd_tp_nm 등)"
+      - sy_code_dtl: "코드상세 (wrk_tp_cd, cd_tp_cd, comm_cd, comm_cd_nm 등)"
+    insert_order:
+      - "sy_code_mst INSERT (코드마스터가 없을 때만)"
+      - "sy_code_dtl INSERT (코드상세 각 행)"
+    audit_columns_required: true

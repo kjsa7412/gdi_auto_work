@@ -1,0 +1,70 @@
+version: 1
+id: default_resolution
+description: "Analyze 단계 보완 우선순위 — DDL, 코드정의서, 화면유형 기본규칙, 업무규칙, 에이전트 판단 순서"
+
+# Analyze 보완 우선순위
+# v5 analyze.md PHASE 4에서 이관
+
+resolution_priority:
+  description: >
+    PPT 추출 결과에서 불명확하거나 누락된 정보를 보완할 때,
+    아래 우선순위에 따라 참조 소스를 선택한다.
+    상위 소스의 정보가 하위 소스와 충돌하면 상위 소스를 우선한다.
+
+  levels:
+    - priority: 1
+      source: "DDL (convention cache table.txt)"
+      description: "테이블/컬럼명, 타입, 제약조건, PK 구조"
+      usage: "컬럼명 확정, 타입 추정, 필수값 판단"
+      path: "system/cache/convention/table.txt"
+
+    - priority: 2
+      source: "코드정의서 (convention cache code.txt)"
+      description: "wrk_tp_cd, cd_tp_cd, comm_cd, comm_cd_nm"
+      usage: "코드콤보/코드헬프 매핑, 코드값 확인"
+      path: "system/cache/convention/code.txt"
+
+    - priority: 3
+      source: "화면유형 기본규칙 (screen-type definitions)"
+      description: "화면유형별 기본 레이아웃, 필수 기능, 이벤트 패턴"
+      usage: "누락된 이벤트/기능 보완, 레이아웃 기본값 적용"
+      path: "system/templates/screen-types/*.yml"
+
+    - priority: 4
+      source: "일반 업무규칙"
+      description: "감사컬럼, PK 패턴, 네이밍 규칙, 공통 컴포넌트 규칙"
+      usage: "감사컬럼 자동 추가, 네이밍 교정, 공통 패턴 적용"
+      paths:
+        - "system/config/naming.yml"
+        - "system/policies/framework/*.yml"
+
+    - priority: 5
+      source: "에이전트 판단 (최하위)"
+      description: "위 참조 소스에서 정보를 얻을 수 없을 때만 에이전트가 추론"
+      usage: "추론 결과에는 반드시 [추론/보완 항목] 태그 부착"
+      constraint: "에이전트 판단은 최후 수단. 추론 근거를 people_spec 비고에 기재."
+
+tagging_rules:
+  description: "보완 소스에 따른 태그 규칙"
+  tags:
+    - tag: "[원문 반영]"
+      condition: "PPT 원문 그대로 반영"
+    - tag: "[기본값 적용]"
+      condition: "화면유형 패턴 또는 업무규칙으로 기본값 적용"
+    - tag: "[코드확인필요]"
+      condition: "코드가 convention cache에서 확인되지 않음"
+    - tag: "[사용자 확인 필요]"
+      condition: "PPT 정보가 불명확하여 사용자 판단 필요"
+    - tag: "[신규코드제안]"
+      condition: "신규 코드 등록이 필요한 것으로 판단됨"
+    - tag: "[추론/보완 항목]"
+      condition: "에이전트가 합리적으로 추론/보완 (검토 권장)"
+
+field_validation:
+  description: "보완 시 검증해야 하는 필드 규칙"
+  rules:
+    - "search/form 테이블의 row, col_order, gravity 필수"
+    - "row 전체 gravity 합 = 5"
+    - "빈 칸은 {} 로 채움"
+    - "그리드 코드헬프 컬럼: editor: GRID_VIEW.code 필수 (GRID_VIEW.text 금지)"
+    - "그리드 코드헬프: type: DATA_CODE_TYPE.{type} + targetCols 필수"

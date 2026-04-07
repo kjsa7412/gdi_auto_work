@@ -87,11 +87,21 @@ commands:
     allowed_outputs:
       - "work/fix/2.Working/**"
       - "work/fix/3.Result/**"
+      - "system/policies/**"
+      - "system/templates/**"
+      - "proposals/policy_changes/**"
       - "work/.active_context.yml"
       - "work/.lock"
     mandatory_outputs:
       - "work/fix/2.Working/manifests/fix.manifest.yml"
       - "work/fix/2.Working/manifests/verify_result.yml"
+    system_fix_writable:
+      description: "system-fix skill이 high severity 정책 수정 시 사용. backup 필수."
+      paths:
+        - "system/policies/**"
+        - "system/templates/**"
+        - "system/config/**"
+        - "proposals/policy_changes/**"
     task_reference_mode: "read_only"
 
   clean:

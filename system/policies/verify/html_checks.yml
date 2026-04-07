@@ -1,0 +1,158 @@
+version: 1
+id: html_checks
+description: "HTML 산출물 검증 규칙 — IIFE, PGM, fragment, 버튼 매핑, 코드콤보, 그리드 이벤트 등"
+
+# HTML 검증 규칙
+# v5 generate.md Integrated Verify에서 이관
+
+checks:
+
+  # === CRITICAL (fail if not passed) ===
+
+  iife_pattern:
+    id: HC-001
+    severity: critical
+    description: "IIFE 패턴 필수"
+    rule: "HTML 파일의 script 블록은 (() => { ... })() 패턴으로 감싸야 한다"
+    pattern: "(() => {"
+
+  pgm_variable:
+    id: HC-002
+    severity: critical
+    description: "PGM 변수 선언 필수"
+    rule: "const PGM = /*[[${PGM}]]*/ null; 선언 필수"
+    pattern: "const PGM = /*[[${PGM}]]*/ null;"
+
+  listener_init:
+    id: HC-003
+    severity: critical
+    description: "listener 초기화 필수"
+    rule: "const listener = platform.listener[PGM]; 선언 필수"
+    pattern: "const listener = platform.listener[PGM];"
+
+  init_pgm_exists:
+    id: HC-004
+    severity: critical
+    description: "initPgm 함수 존재 필수"
+    rule: "initPgm 함수가 정의되어 있어야 한다"
+
+  active_pgm_exists:
+    id: HC-005
+    severity: critical
+    description: "activePgm 함수 존재 필수"
+    rule: "activePgm(param, isNew) 함수가 정의되어 있어야 한다"
+
+  forbidden_api_not_used:
+    id: HC-006
+    severity: critical
+    description: "금지 API 미사용 확인"
+    rule: "forbidden_apis.yml에 정의된 금지 패턴이 사용되지 않았는지 확인"
+    reference: "system/policies/framework/forbidden_apis.yml"
+
+  correct_api_used:
+    id: HC-007
+    severity: critical
+    description: "올바른 API 사용 확인"
+    checks:
+      - "APP_PGM.openPgm() 사용 (platform.openPgm 금지)"
+      - "APP_PGM.closePgm() 사용 (platform.closePgm 금지)"
+      - "popup.alert.show() 사용 (platform.msg 금지)"
+      - "popup.confirm.show() 사용 (platform.confirm 금지)"
+      - "grid.getCheckedData() 사용 (grid.getCheckedItems 금지)"
+      - "form.formReadonly() 사용 (form.formEnable/Disable 금지)"
+
+  button_mapping:
+    id: HC-008
+    severity: critical
+    description: "버튼 매핑 정확성"
+    rule: "button_mapping.yml의 표준 버튼 → 올바른 listener 경로 매핑 확인"
+    reference: "system/policies/framework/button_mapping.yml"
+
+  etc_listener_format:
+    id: HC-009
+    severity: critical
+    description: "etc{N} listener 형식"
+    correct: "listener.button.etc{N}.click"
+    wrong: "listener.button.etc_desc{N}.click"
+    auto_fixable: true
+
+  webix_ui_usage:
+    id: HC-010
+    severity: critical
+    description: "webix.ui 사용 필수"
+    rule: "form, grid, layout 등은 webix.ui() 호출로 생성해야 한다"
+
+  fragment_include:
+    id: HC-011
+    severity: critical
+    description: "fragment include 방식"
+    rule: "th:block th:replace 형식 사용"
+    pattern: "th:block th:replace"
+
+  dynamic_id:
+    id: HC-012
+    severity: critical
+    description: "동적 ID 규칙"
+    rule: "th:id=\"|${PGM}...|\" 형식 사용. 하드코딩 ID 금지"
+    pattern: "th:id=\"|${PGM}"
+
+  data_view_constants:
+    id: HC-013
+    severity: critical
+    description: "DATA_VIEW 상수 사용"
+    rule: "DATA_VIEW.code, DATA_VIEW.codeNone 등 상수만 사용. 문자열 직접 입력 금지."
+    reference: "system/policies/framework/code_component_defaults.yml"
+
+  code_combo_declaration:
+    id: HC-014
+    severity: critical
+    description: "코드콤보 elements 직접 선언"
+    rule: "코드콤보는 elements 배열에 직접 선언. APP_CODE.load() 호출 금지."
+    reference: "system/policies/framework/code_component_defaults.yml"
+
+  editor_change_name:
+    id: HC-015
+    severity: critical
+    description: "editor.change 이벤트에서 el.config.name 사용"
+    rule: "에디터 변경 이벤트 핸들러에서 el.config.name으로 필드 식별"
+
+  subscreen_navigation:
+    id: HC-016
+    severity: critical
+    description: "서브화면 네비게이션"
+    rule: "그리드 더블클릭으로 서브화면 이동 시 gridRow.dblclick 사용"
+    pattern: "listener.gridRow.dblclick"
+
+  empty_result_handling:
+    id: HC-017
+    severity: critical
+    description: "조회 결과 0건 처리"
+    rule: "API 반환 결과가 0건일 때 undefined 오류 방지 및 안내 메시지 표시"
+
+  grid_code_help_column:
+    id: HC-018
+    severity: critical
+    description: "그리드 코드헬프 컬럼 검증"
+    rule: "코드헬프 필요 컬럼은 editor: GRID_VIEW.code 사용. GRID_VIEW.text 사용 금지."
+    reference: "system/policies/framework/code_component_defaults.yml"
+
+  # === WARNING ===
+
+  reset_state:
+    id: HC-W01
+    severity: warning
+    description: "resetState() 존재 확인"
+    rule: "화면 초기화 함수 존재 권장"
+
+  css_alignment:
+    id: HC-W02
+    severity: warning
+    description: "CSS 정렬 규칙 준수"
+    rule: "layout_rules.yml의 CSS 클래스 규칙 준수 여부"
+    reference: "system/policies/framework/layout_rules.yml"
+
+  code_combo_self_ref:
+    id: HC-W03
+    severity: warning
+    description: "코드콤보 refElement 자기참조 금지"
+    rule: "refElement에서 자기 자신을 참조하지 않는지 확인"

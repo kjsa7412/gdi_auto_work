@@ -1,0 +1,72 @@
+version: 1
+id: sql_checks
+description: "SQL 산출물 검증 규칙 — 메뉴등록 SQL, pgm_path, 감사컬럼, execution_order 등"
+
+# SQL 검증 규칙
+# v5 generate.md Integrated Verify에서 이관
+
+checks:
+
+  # === CRITICAL ===
+
+  menu_sql_exists:
+    id: SC-001
+    severity: critical
+    description: "메뉴등록 SQL 존재 여부"
+    rule: "모든 화면에 대해 {screenId}_메뉴등록.sql이 생성되어야 한다"
+    reference: "system/policies/framework/sql_generation.yml"
+
+  pgm_info_columns:
+    id: SC-002
+    severity: critical
+    description: "sy_pgm_info 컬럼 DDL 일치"
+    rule: "메뉴등록 SQL의 sy_pgm_info INSERT 컬럼이 DDL 정의와 일치해야 한다"
+    check_target: "convention cache table.txt의 sy_pgm_info 테이블 정의"
+
+  pgm_path_format:
+    id: SC-003
+    severity: critical
+    description: "pgm_path 형식 규칙"
+    rule: "pgm_path는 /project/{module}/{category}/{ScreenId} 형식"
+    pattern: "/project/{module}/{category}/{ScreenId}"
+    wrong_examples:
+      - "/project/DTA030 (module/category 누락)"
+      - "/project/dt/DTA030 (category 누락)"
+
+  subscreen_menu_prohibition:
+    id: SC-004
+    severity: critical
+    description: "서브화면 sy_menu_info 등록 금지"
+    rule: "popup, tab 등 서브화면은 sy_menu_info에 등록하지 않는다"
+    affected_screen_types:
+      - popup
+      - tab
+    reason: "서브화면은 독립 메뉴가 아니므로 메뉴 트리에 등록 불필요"
+
+  audit_columns_8:
+    id: SC-005
+    severity: critical
+    description: "감사컬럼 8개 확인"
+    rule: "INSERT 문에 최초등록 4개 + 최종수정 4개 = 총 8개 감사컬럼 포함"
+    columns:
+      initial:
+        - firs_reg_pgm_id
+        - firs_reg_dts
+        - firs_reg_user_id
+        - firs_reg_ip
+      final:
+        - fina_reg_pgm_id
+        - fina_reg_dts
+        - fina_reg_user_id
+        - fina_reg_ip
+
+  execution_order_exists:
+    id: SC-006
+    severity: critical
+    description: "execution_order.md 존재 및 정합성"
+    rule: "SQL 산출물이 1개 이상이면 execution_order.md 필수. SQL 파일 목록과 일치해야 한다."
+    reference: "system/policies/framework/sql_generation.yml"
+    checks:
+      - "execution_order.md에 나열된 SQL 파일이 실제 존재하는지"
+      - "생성된 SQL 파일이 execution_order.md에 모두 포함되어 있는지"
+      - "실행 순서가 의존성에 맞는지 (DDL보완 → 코드등록 → 메뉴등록)"

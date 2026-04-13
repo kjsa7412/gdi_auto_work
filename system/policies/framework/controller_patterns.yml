@@ -13,27 +13,24 @@ class_structure:
     - "@Slf4j"
     - "@Controller"
     - "@RequestMapping(\"/{module_id}\")"
-  extends: "없음 (BaseController 상속은 선택적)"
-  # 근거: Dta030Controller는 BaseController 미상속, GDI의 Syb020Controller는 상속
+  extends: "BaseController (필수 — GDI 프로젝트 표준)"
   dependency_injection:
     method: "생성자 주입"
     common_dependencies:
-      - "CommonService commonService"
-      - "{ModuleId}Service {moduleId}Service"
+      - "{ModuleId}Service {moduleId}Service (자신의 Service만 주입)"
+    note: "CommonService는 개별 Controller에 주입하지 않음. CommonController가 별도로 존재"
     optional_dependencies:
       - "HttpServletRequest request (메서드 파라미터로 수신)"
   example:
-    file: "Dta030Controller.java"
+    file: "Syb020Controller.java"
     code: |
       @Slf4j
       @Controller
-      @RequestMapping("/dta030")
-      public class Dta030Controller {
-          private final CommonService commonService;
-          private final Dta030Service dta030Service;
-          public Dta030Controller(CommonService commonService, Dta030Service dta030Service) {
-              this.commonService = commonService;
-              this.dta030Service = dta030Service;
+      @RequestMapping("/syb020")
+      public class Syb020Controller extends BaseController {
+          private final Syb020Service syb020Service;
+          public Syb020Controller(Syb020Service syb020Service) {
+              this.syb020Service = syb020Service;
           }
       }
   근거:

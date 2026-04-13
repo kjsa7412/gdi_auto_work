@@ -14,6 +14,13 @@ principle: "프레임워크가 제공하는 공통 구조와 skeleton 기반 생
 # -----------------------------------------------------------------------------
 html_forbidden:
 
+  - id: "F-HTML-008"
+    pattern: "data-content-half-left / data-content-half-right 사용"
+    description: "좌우 균등분할 CSS 클래스 사용"
+    reason: "반드시 data-content-N-left + data-content-fill 조합 사용. 섹션 크기가 큰 쪽을 fill로 지정"
+    대안: "data-content-2-left + data-content-fill, data-content-3-left + data-content-fill, data-content-fill + data-content-4-right 중 선택"
+    근거: "layout_rules.yml LR-009"
+
   - id: "F-HTML-001"
     pattern: "순수 자유 HTML 구조 작성"
     description: "data-page, data-content-wrapper 등 프레임워크 CSS 클래스를 사용하지 않는 임의 HTML 구조"
@@ -146,16 +153,19 @@ xml_forbidden:
     대안: "필요 컬럼만 명시적 열거"
 
   - id: "F-XML-003"
-    pattern: "audit 컬럼 누락"
-    description: "INSERT/UPDATE 시 firs_reg_*/fina_reg_* 감사 컬럼 미포함"
+    pattern: "audit 컬럼 규칙 위반"
+    description: "INSERT/UPDATE 시 감사 컬럼 누락 또는 잘못된 바인딩"
     reason: "데이터 이력 관리 불가"
-    대안: "8개 감사 컬럼 필수 포함"
+    대안: |
+      INSERT: firs_reg_* 4개(#{reg_pgm_id}, now(), #{login_emp_no}, #{login_user_ip}) + fina_reg_* 4개(동일값)
+      UPDATE: fina_reg_* 4개만 갱신(#{reg_pgm_id}, now(), #{login_emp_no}, #{login_user_ip}). firs_reg_* 절대 수정 금지
+      상세: xml_patterns.yml AUD-001~AUD-004 참조
 
   - id: "F-XML-004"
-    pattern: "login_comp_cd 없는 WHERE"
-    description: "comp_cd 필터링 없는 조회/수정/삭제"
+    pattern: "comp_cd 컬럼이 있는 테이블에서 comp_cd 필터링 누락"
+    description: "comp_cd 컬럼이 실제로 존재하는 테이블에서 WHERE 조건 누락"
     reason: "멀티 회사 체계에서 데이터 격리 위반"
-    대안: "모든 WHERE 절에 comp_cd = #{login_comp_cd} 필수"
+    대안: "cache table.txt에서 comp_cd 컬럼 존재 확인 후 WHERE comp_cd = #{login_comp_cd} 추가. comp_cd 컬럼이 없는 테이블(rp_*, ct_*, se_* 등 대부분의 업무 테이블)에는 추가하지 않음"
 
   - id: "F-XML-005"
     pattern: "DDL 문 포함"
@@ -185,3 +195,197 @@ generation_forbidden:
     description: "skeleton_contract.yml의 placeholder 계약을 따르지 않는 생성"
     reason: "일관성 없는 산출물 품질"
     대안: "skeleton 기반 생성 + placeholder 치환"
+
+# -----------------------------------------------------------------------------
+# API 메서드 금지 패턴
+# -----------------------------------------------------------------------------
+api_forbidden:
+
+  - pattern: "listener.grid.*.getSelectedData()"
+    correct: "listener.grid.*.getSelectedItem()"
+    reason: "getSelectedData는 존재하지 않는 메서드. webix.custom2.js의 getSelectedItem 사용"
+    severity: critical
+    auto_fixable: true
+
+  - pattern: "listener.grid.*.getAllData()"
+    correct: "listener.grid.*.getData()"
+    reason: "getAllData는 존재하지 않는 메서드. getData 사용"
+    severity: critical
+    auto_fixable: true
+
+  - pattern: "view: 'dataFile'"
+    correct: "view: 'dataForm' + elements 내 DATA_VIEW.file 또는 DATA_VIEW.fileMulti"
+    reason: "dataFile은 존재하지 않는 view 타입. 파일 컴포넌트는 dataForm의 elements에 DATA_VIEW.file/fileMulti로 선언"
+    severity: critical
+    auto_fixable: false
+
+  - pattern: "*.loadFile()"
+    correct: "form.getView('name').setData(fileId)"
+    reason: "loadFile은 존재하지 않는 메서드. SYY046.html 참조: getView(name).setData(fileId)로 기존 파일 로드"
+    severity: critical
+    auto_fixable: true
+
+  - pattern: "view: DATA_VIEW.dateRange (name/name2 방식)"
+    correct: "view: DATA_VIEW.dateRange2 (startName/endName 방식)"
+    reason: "dateRange는 레거시. dateRange2가 표준 기간 컴포넌트. 별도 지시 없으면 gravity 지정하지 않음"
+    severity: critical
+    auto_fixable: true
+
+  - pattern: "view: 'button' (dataToolbar elements 내)"
+    correct: "view: DATA_VIEW.button"
+    reason: "본문 섹션 버튼은 view: DATA_VIEW.button 사용. view: 'button'은 webix 기본 버튼이며 프레임워크 스타일이 적용되지 않음"
+    severity: critical
+    auto_fixable: true
+
+# -----------------------------------------------------------------------------
+# 존재하지 않는 편의 함수 금지 (에이전트 추론 생성 방지)
+# 근거: 2026-04-09 SE 모듈 14개 화면에서 발견된 잘못된 API 일괄 수정 사례
+# -----------------------------------------------------------------------------
+hallucinated_api_forbidden:
+  description: >
+    아래 패턴은 프레임워크에 존재하지 않는 함수이다.
+    에이전트가 직관적으로 "있을 법한" 이름을 추론하여 만들어 쓴 것으로,
+    skeleton과 html_patterns.yml에 정의된 올바른 API만 사용해야 한다.
+
+  - pattern: "platform.alert("
+    correct: "popup.alert.show("
+    reason: "platform.alert는 존재하지 않음. popup.js의 popup.alert.show 사용"
+    severity: critical
+    auto_fixable: true
+
+  - pattern: "platform.confirm("
+    correct: "popup.confirm.show("
+    reason: "platform.confirm은 존재하지 않음. popup.js의 popup.confirm.show 사용"
+    severity: critical
+    auto_fixable: true
+
+  - pattern: "platform.dataSearchForm("
+    correct: "listener.form.searchForm = webix.ui({view: 'dataForm', search: true, ...})"
+    reason: "platform.dataSearchForm은 존재하지 않음. webix.ui로 직접 생성하여 listener.form에 할당"
+    severity: critical
+    auto_fixable: false
+
+  - pattern: "platform.dataForm("
+    correct: "listener.form.xxx = webix.ui({view: 'dataForm', ...})"
+    reason: "platform.dataForm은 존재하지 않음. webix.ui로 직접 생성하여 listener.form에 할당"
+    severity: critical
+    auto_fixable: false
+
+  - pattern: "platform.dataGrid("
+    correct: "listener.grid.xxx = webix.ui({view: 'datagrid', ...})"
+    reason: "platform.dataGrid는 존재하지 않음. webix.ui로 직접 생성하여 listener.grid에 할당"
+    severity: critical
+    auto_fixable: false
+
+  - pattern: "platform.dataToolbar("
+    correct: "listener.toolbar.xxx = webix.ui({view: 'dataToolbar', ...})"
+    reason: "platform.dataToolbar는 존재하지 않음. webix.ui로 직접 생성하여 listener.toolbar에 할당"
+    severity: critical
+    auto_fixable: false
+
+  - pattern: "platform.getSearchFormParam("
+    correct: "listener.form.searchForm.getData()"
+    reason: "platform.getSearchFormParam은 존재하지 않음"
+    severity: critical
+    auto_fixable: true
+
+  - pattern: "platform.getFormValues("
+    correct: "listener.form.xxx.getData()"
+    reason: "platform.getFormValues는 존재하지 않음"
+    severity: critical
+    auto_fixable: true
+
+  - pattern: "platform.setFormValues("
+    correct: "listener.form.xxx.setData(data)"
+    reason: "platform.setFormValues는 존재하지 않음"
+    severity: critical
+    auto_fixable: true
+
+  - pattern: "platform.setSearchFormValues("
+    correct: "listener.form.searchForm.setData(data)"
+    reason: "platform.setSearchFormValues는 존재하지 않음"
+    severity: critical
+    auto_fixable: true
+
+  - pattern: "platform.setFormReadonly("
+    correct: "listener.form.xxx.setReadonly(flag)"
+    reason: "platform.setFormReadonly는 존재하지 않음"
+    severity: critical
+    auto_fixable: true
+
+  - pattern: "platform.resetSearchForm("
+    correct: "listener.form.searchForm.init()"
+    reason: "platform.resetSearchForm은 존재하지 않음"
+    severity: critical
+    auto_fixable: true
+
+  - pattern: "platform.setGridData("
+    correct: "listener.grid.xxx.setData(data)"
+    reason: "platform.setGridData는 존재하지 않음"
+    severity: critical
+    auto_fixable: true
+
+  - pattern: "platform.getGridData("
+    correct: "listener.grid.xxx.getData()"
+    reason: "platform.getGridData는 존재하지 않음"
+    severity: critical
+    auto_fixable: true
+
+  - pattern: "platform.getCheckedGridData("
+    correct: "listener.grid.xxx.getCheckedData()"
+    reason: "platform.getCheckedGridData는 존재하지 않음"
+    severity: critical
+    auto_fixable: true
+
+  - pattern: "platform.getSelectedGridData("
+    correct: "listener.grid.xxx.getSelectedItem()"
+    reason: "platform.getSelectedGridData는 존재하지 않음. getSelectedItem 사용"
+    severity: critical
+    auto_fixable: true
+
+  - pattern: "platform.setFormFieldVisible("
+    correct: "listener.form.xxx.getView(field).show() / .hide()"
+    reason: "platform.setFormFieldVisible는 존재하지 않음"
+    severity: critical
+    auto_fixable: false
+
+  - pattern: "platform.setFormFieldReadonly("
+    correct: "listener.form.xxx.getView(field).config.readonly = flag; .refresh()"
+    reason: "platform.setFormFieldReadonly는 존재하지 않음"
+    severity: critical
+    auto_fixable: false
+
+  - pattern: "platform.setFormFieldValue("
+    correct: "listener.form.xxx.getView(field).setData(value)"
+    reason: "platform.setFormFieldValue는 존재하지 않음"
+    severity: critical
+    auto_fixable: false
+
+  - pattern: "platform.setGridReadonly("
+    correct: "listener.grid.xxx.setReadonly(flag)"
+    reason: "platform.setGridReadonly는 존재하지 않음"
+    severity: critical
+    auto_fixable: true
+
+  - pattern: "platform.addGridData("
+    correct: "listener.grid.xxx.addData(rows)"
+    reason: "platform.addGridData는 존재하지 않음"
+    severity: critical
+    auto_fixable: true
+
+  - pattern: "platform.removeGridData("
+    correct: "listener.grid.xxx.removeData(rows)"
+    reason: "platform.removeGridData는 존재하지 않음"
+    severity: critical
+    auto_fixable: true
+
+  - pattern: "platform.openPopup("
+    correct: "new DataModalNew() + DataModalConfig 패턴"
+    reason: "platform.openPopup은 존재하지 않음. html_patterns.yml popup 섹션 참조"
+    severity: critical
+    auto_fixable: false
+
+  detection_rule: >
+    platform.post, platform.url.*, platform.listener 외에
+    platform.으로 시작하는 함수 호출이 있으면 hallucinated API로 판정한다.
+    허용되는 platform 접근: platform.post(), platform.url.select/selectOne/save/saveAll/procedure, platform.listener[PGM]

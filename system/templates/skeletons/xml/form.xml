@@ -3,46 +3,86 @@
 
 <mapper namespace="{{mapper_namespace}}">
 
-    /* OPTIONAL: search for edit mode */
+    /* OPTIONAL: select block start */
     <!-- 단건 조회 -->
     <select id="{{select_sql_id}}" resultType="java.util.Map">
+        /*{{mapper_namespace}}.{{select_sql_id}}*/
         SELECT
             {{detail_columns_sql}}
         FROM {{main_table}} a
-        WHERE a.comp_cd = #{login_comp_cd}
-          AND {{pk_conditions}}
+        {{join_clauses}}
+        WHERE {{pk_conditions}}
     </select>
+    /* OPTIONAL: select block end */
 
-    <!-- 저장 (upsert) -->
+    /* OPTIONAL: upsert-onconflict block start */
+    <!-- 저장 (ON CONFLICT UPSERT) -->
     <insert id="{{insert_sql_id}}">
+        /*{{mapper_namespace}}.{{insert_sql_id}}*/
         INSERT INTO {{main_table}} (
-            comp_cd,
             {{insert_columns}},
             firs_reg_pgm_id, firs_reg_dts, firs_reg_user_id, firs_reg_ip,
             fina_reg_pgm_id, fina_reg_dts, fina_reg_user_id, fina_reg_ip
         ) VALUES (
-            #{login_comp_cd},
             {{insert_values}},
-            #{reg_pgm_id}, now(), #{login_emp_no}, #{login_user_ip},
-            #{reg_pgm_id}, now(), #{login_emp_no}, #{login_user_ip}
+            #{reg_pgm_id}, now(), #{login_user_id}, #{login_user_ip},
+            #{reg_pgm_id}, now(), #{login_user_id}, #{login_user_ip}
         )
-        <if test='allow_update == "Y"'>
         ON CONFLICT ({{pk_columns}})
         DO UPDATE SET
             {{update_set_columns}},
-            fina_reg_pgm_id = excluded.firs_reg_pgm_id,
+            fina_reg_pgm_id = #{reg_pgm_id},
             fina_reg_dts = now(),
-            fina_reg_user_id = excluded.firs_reg_user_id,
-            fina_reg_ip = excluded.firs_reg_ip
-        </if>
+            fina_reg_user_id = #{login_user_id},
+            fina_reg_ip = #{login_user_ip}
     </insert>
+    /* OPTIONAL: upsert-onconflict block end */
 
-    /* OPTIONAL: delete block */
+    /* OPTIONAL: upsert-with block start */
+    <!-- 저장 (WITH UPSERT) -->
+    <!--
+    <insert id="{{insert_sql_id}}">
+        /*{{mapper_namespace}}.{{insert_sql_id}}*/
+        WITH sdata AS (
+        UPDATE {{main_table}}
+        SET {{update_set_columns}},
+            fina_reg_pgm_id = #{reg_pgm_id},
+            fina_reg_dts = current_timestamp,
+            fina_reg_user_id = #{login_user_id},
+            fina_reg_ip = #{login_user_ip}
+        WHERE {{pk_conditions}}
+        RETURNING *
+        )
+        INSERT INTO {{main_table}} (
+            {{insert_columns}},
+            firs_reg_pgm_id, firs_reg_dts, firs_reg_user_id, firs_reg_ip
+        )
+        SELECT
+            {{insert_values}},
+            #{reg_pgm_id}, current_timestamp, #{login_user_id}, #{login_user_ip}
+        WHERE NOT EXISTS (SELECT * FROM sdata)
+    </insert>
+    -->
+    /* OPTIONAL: upsert-with block end */
+
+    /* OPTIONAL: delete block start */
     <!-- 삭제 -->
     <delete id="{{delete_sql_id}}">
+        /*{{mapper_namespace}}.{{delete_sql_id}}*/
         DELETE FROM {{main_table}}
-        WHERE comp_cd = #{login_comp_cd}
-          AND {{delete_conditions}}
+        WHERE {{delete_conditions}}
     </delete>
+    /* OPTIONAL: delete block end */
+
+    /* OPTIONAL: check count block start */
+    <!-- 참조 무결성 검사 -->
+    <!--
+    <select id="checkCount" resultType="int">
+        /*{{mapper_namespace}}.checkCount*/
+        SELECT COUNT(*) FROM {{ref_table}}
+        WHERE {{ref_fk_conditions}}
+    </select>
+    -->
+    /* OPTIONAL: check count block end */
 
 </mapper>

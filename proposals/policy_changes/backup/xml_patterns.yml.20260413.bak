@@ -518,27 +518,6 @@ naming:
   alias: "a, b, c... 순차 알파벳"
 
 # -----------------------------------------------------------------------------
-# 버튼 상태 조건용 컬럼 SELECT 필수 규칙 (PP-20260413-007)
-# -----------------------------------------------------------------------------
-state_check_columns:
-  id: QRY-001
-  description: "버튼 상태 조건(BM-006)에 사용되는 컬럼은 SELECT에 반드시 포함"
-  severity: critical
-  rule: >
-    HTML에서 버튼 실행 전 상태 체크(rsch_prgrs_stat_cd, prgrs_stat_cd 등)를 수행하려면,
-    해당 컬럼이 SELECT 쿼리 결과에 포함되어야 한다.
-    특히 JOIN된 테이블의 진행상태(예: rp_rsch_prj_mst.prgrs_stat_cd)는
-    AS rsch_prgrs_stat_cd 등 별칭으로 SELECT에 추가해야 한다.
-  적용_대상:
-    - "selectMainGrid (목록 조회) — 그리드에서 버튼 상태 체크 시"
-    - "selectData (단건 조회) — 서브화면에서 activePgm/loadDetail 후 상태 체크 시"
-  example: >
-    SELECT a.prgrs_stat_cd, b.prgrs_stat_cd AS rsch_prgrs_stat_cd
-    FROM rp_prj_rcpt_mst a
-    LEFT OUTER JOIN rp_rsch_prj_mst b ON a.rsch_prj_id = b.rsch_prj_id
-  근거: "sea010~021.xml, seb010~011.xml — rsch_prgrs_stat_cd 누락으로 상태 체크 불가"
-
-# -----------------------------------------------------------------------------
 # 금지 SQL 작성 방식
 # -----------------------------------------------------------------------------
 forbidden:

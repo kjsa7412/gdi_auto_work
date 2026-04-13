@@ -51,6 +51,36 @@ diagnosis_rules:
       - "코드 그룹 할당이 기존 데이터와 충돌 가능한 경우"
       - "PostgreSQL 금지 패턴 재작성 (서브쿼리 구조 변경)"
 
+  sql_artifact_completeness:
+    id: SD-006
+    description: "SQL 산출물 누락 검출 — 필수 SQL이 모두 생성되었는지 확인"
+    trigger: "build generate 완료 후 verify 단계"
+    action:
+      check_items:
+        - "메뉴등록 SQL: 화면이 1개 이상이면 반드시 존재"
+        - "DDL보완 SQL: ddl_supplements 항목이 있으면 반드시 존재"
+        - "코드등록 SQL: code_registrations 항목이 있으면 반드시 존재"
+        - "커스텀 코드헬프 SQL: DATA_CODE_TYPE.custom 사용 화면이 있으면 반드시 존재"
+        - "트리거 SQL: description_texts에 트리거/자동 상태변경 요구 시 반드시 존재"
+        - "execution_order.md: SQL 파일이 1개 이상이면 반드시 존재"
+      on_missing: "critical 오류. 누락된 SQL 파일 즉시 생성 후 재검증"
+    severity: critical
+    auto_fixable: true
+    reference: "system/policies/framework/sql_generation.yml → SG-011"
+
+  hallucination_check:
+    id: SD-005
+    description: "환각(hallucination) 검출 — PPT 원본과 spec 불일치 탐지"
+    trigger: "spec 생성 완료 후 verify 단계"
+    action:
+      check_items:
+        - "그리드 컬럼명이 PPT TABLE 헤더와 1:1 일치하는지 검증"
+        - "검색 필드명이 PPT GROUP 라벨과 일치하는지 검증"
+        - "spec에 PPT에 없는 컬럼/필드가 추가되지 않았는지 검증"
+      on_mismatch: "critical 오류. spec을 PPT 원본 기준으로 교정 필수"
+    severity: critical
+    auto_fixable: false
+
 result_structure:
   description: "verify_result.yml의 self_diagnosis 섹션 구조"
   fields:
@@ -69,3 +99,13 @@ result_structure:
     - name: "manual_required"
       type: "array"
       description: "수동 확인 필요 항목 목록"
+    - name: "sql_artifacts"
+      type: "object"
+      description: "SQL 산출물 생성 상태 (SD-006)"
+      fields:
+        - "menu_registration: {required: bool, generated: bool, path: string}"
+        - "ddl_supplement: {required: bool, generated: bool, paths: [string]}"
+        - "code_registration: {required: bool, generated: bool, paths: [string]}"
+        - "custom_code_help: {required: bool, generated: bool, paths: [string]}"
+        - "trigger: {required: bool, generated: bool, paths: [string]}"
+        - "execution_order: {required: bool, generated: bool, path: string}"

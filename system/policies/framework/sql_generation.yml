@@ -10,18 +10,111 @@ sql_artifacts:
   menu_registration:
     id: SG-001
     description: "메뉴등록 SQL"
-    filename_pattern: "{screenId}_메뉴등록.sql"
-    generation_condition: "모든 화면에 대해 필수 생성"
+    filename_pattern: "{wrk_tp_cd}_메뉴등록.sql"
+    generation_condition: "업무구분(wrk_tp_cd)별 통합 1개 파일 생성"
     output_location: "work/task/2.Working/generated/"
     required_tables:
       - sy_pgm_info
       - sy_menu_info
-    rules:
-      - "sy_pgm_info INSERT 필수 (pgm_id, pgm_nm, pgm_path 등)"
-      - "pgm_path 형식: /project/{module}/{category}/{ScreenId}"
-      - "서브화면(popup, tab)은 sy_menu_info에 등록 금지"
+
+    # =========================================================================
+    # sy_pgm_info 등록 규칙
+    # =========================================================================
+    pgm_info_rules:
+      - "메인화면 + 서브화면(팝업/탭) 모두 sy_pgm_info에 독립 등록"
+      - "sy_pgm_info PK는 pgm_id만. comp_cd 컬럼 없음 — INSERT/ON CONFLICT에서 comp_cd 사용 금지"
+      - "etc_use_yn 컬럼은 존재하지 않음 — etc_desc{N}만 사용 (커스텀 버튼 있는 화면만)"
+      - "menu_mdul_tp_id = pgm_ctg_cd(3자리 대문자, 예: SEA), menu_mdul_id = wrk_tp_cd(2자리 대문자, 예: SE)"
+      - "pgm_path 형식: /{module_group}/{sub_group}/{screen_id 소문자} (예: /se/sea/sea010, /se/sea/sea011)"
+      - "서브화면도 독립 pgm_path 사용 (부모 module_id가 아닌 자신의 screen_id 소문자)"
       - "감사컬럼 8개 포함 필수"
-    pgm_path_format: "/{module_group}/{sub_group}/{module_id}"
+      - "ON CONFLICT (pgm_id) DO UPDATE로 upsert"
+    pgm_info_button_columns:
+      id: SG-012
+      description: "sy_pgm_info 버튼 컬럼 등록 규칙 (PP-20260413-008)"
+      severity: critical
+      rule: >
+        sy_pgm_info INSERT 시 표준 버튼 7종과 커스텀/특수 버튼 컬럼을 모두 설정해야 한다.
+      standard_buttons:
+        description: "표준 버튼은 xxx_yn='Y' 또는 'N'으로 설정"
+        columns:
+          - {column: "srch_yn", label: "조회", default: "'Y'"}
+          - {column: "new_yn", label: "신규", default: "'N'"}
+          - {column: "save_yn", label: "저장", default: "'N'"}
+          - {column: "del_yn", label: "삭제", default: "'N'"}
+          - {column: "prnt_yn", label: "출력", default: "'N'"}
+          - {column: "upld_yn", label: "업로드", default: "'N'"}
+          - {column: "init_yn", label: "초기화", default: "'Y'"}
+        rule: "machine_spec의 button_events에 해당 슬롯이 있으면 'Y', 없으면 'N'"
+      custom_buttons:
+        description: "비표준 버튼은 etc_desc{N}에 라벨 문자열 등록"
+        columns: "etc_desc1 ~ etc_desc10"
+        rule: >
+          표준 7종에 해당하지 않는 버튼은 etc_desc1부터 순차적으로 할당한다.
+          etc_desc{N} 컬럼에 버튼 라벨(예: '접수', '초안작성')을 문자열로 저장한다.
+          etc_desc에 값이 있어야 프레임워크가 해당 버튼을 화면에 렌더링한다.
+          비표준 버튼이 없는 화면은 etc_desc 컬럼을 생략하거나 NULL로 둔다.
+        example: "etc_desc1 = '초안작성', etc_desc2 = '접수'"
+      special_buttons:
+        description: "특수 버튼(닫기 등)은 spcl_desc{N}에 라벨 문자열 등록"
+        columns: "spcl_desc1 ~ spcl_desc10"
+        rule: >
+          서브화면의 닫기 버튼 등 특수 기능 버튼은 spcl_desc1부터 순차적으로 할당한다.
+          spcl_desc1 = '닫기'가 관례 (BM-005).
+        example: "spcl_desc1 = '닫기'"
+    pgm_path_format: "/{module_group}/{sub_group}/{screen_id_lower}"
+
+    # =========================================================================
+    # sy_menu_info 등록 규칙
+    # =========================================================================
+    menu_info_rules:
+      description: "3단계 폴더 트리 구조로 등록. 컬럼은 반드시 convention cache table.txt의 sy_menu_info DDL과 일치해야 한다"
+      ddl_validation:
+        rule: "INSERT 컬럼 목록을 convention cache table.txt에서 확인한 sy_menu_info 실제 DDL과 반드시 대조한다"
+        severity: critical
+        actual_columns:
+          - "menu_mdul_id (PK)"
+          - "menu_id (PK)"
+          - "menu_nm"
+          - "uppr_menu_id"
+          - "menu_tp_cd"
+          - "pgm_id"
+          - "wrk_rmk"
+          - "감사컬럼 8개"
+        forbidden_columns:
+          - "menu_lvl — 실제 DDL에 미존재. 사용 금지"
+          - "sort_ord — 실제 DDL에 미존재. 사용 금지"
+          - "use_yn — sy_menu_info에 미존재 (sy_pgm_info에만 존재). 사용 금지"
+      structure:
+        - level: 1
+          type: "F (폴더)"
+          description: "최상위 폴더 — 업무구분명 (예: 연구과제선정)"
+          uppr_menu_id: null
+          pgm_id: null
+        - level: 2
+          type: "F (폴더)"
+          description: "중간 폴더 — 소분류명 (예: 과제접수, 사전검토)"
+          uppr_menu_id: "level 1의 menu_id"
+          pgm_id: null
+        - level: 3
+          type: "P (프로그램)"
+          description: "프로그램 — 메인화면만 (서브화면 등록 금지)"
+          uppr_menu_id: "level 2의 menu_id"
+          pgm_id: "화면 pgm_id (예: SEA010)"
+      rules:
+        - "PK: (menu_mdul_id, menu_id)"
+        - "menu_mdul_id = wrk_tp_cd(2자리, 예: SE)"
+        - "menu_id = 숫자 순번 (1부터 순차 채번, 문자열 타입이지만 숫자값 사용)"
+        - "menu_tp_cd: F(폴더) 또는 P(프로그램)"
+        - "서브화면(팝업/탭)은 sy_menu_info에 등록 금지 — 메인화면만 P로 등록"
+        - "감사컬럼 8개 포함 필수"
+        - "ON CONFLICT (menu_mdul_id, menu_id) DO UPDATE로 upsert"
+      menu_id_assignment:
+        description: "menu_id 채번 순서"
+        order:
+          - "1: 최상위 폴더"
+          - "2~: 중간 폴더 (소분류 수만큼)"
+          - "이후: 프로그램 (각 중간 폴더 하위에 순서대로)"
     audit_columns:
       - firs_reg_pgm_id
       - firs_reg_dts
@@ -34,15 +127,23 @@ sql_artifacts:
 
   ddl_supplement:
     id: SG-002
-    description: "DDL 보완 SQL"
+    description: "DDL 보완 SQL — column_resolution 절차 Step 3에서 트리거"
     filename_pattern: "{screenId}_DDL보완.sql"
-    generation_condition: "machine_spec에서 사용하는 컬럼이 DDL(convention cache table.txt)에 없을 때"
+    generation_condition: >
+      default_resolution.yml CR-001의 Step 1(cache) + Step 2(DB fallback) 모두 실패하고,
+      해당 컬럼이 화면 기능상 반드시 필요한 경우에만 생성.
+      에이전트가 컬럼명을 추론 생성한 것이 아니라, PPT에 명시된 필드에 대응하는
+      실제 DB 컬럼이 존재하지 않을 때만 해당.
     output_location: "work/task/2.Working/generated/"
     rules:
       - "DDL 미존재 컬럼 발견 시에만 생성"
       - "ALTER TABLE ADD COLUMN 형태로 생성"
-      - "컬럼 타입/크기는 machine_spec 또는 유사 컬럼 기준으로 추정"
-      - "추정 근거가 부족하면 [사용자 확인 필요] 태그 부착"
+      - "COMMENT ON COLUMN으로 한글 주석 필수 추가"
+      - "컬럼 타입/크기는 동일 테이블 유사 컬럼 또는 표준 패턴에서 추정"
+      - "추정 근거가 부족하면 character varying(100) 기본 + [사용자 확인 필요] 태그"
+      - "DDL 파일 내 각 컬럼별 추정 근거 주석 포함"
+      - "execution_order.md에 DDL 최우선 실행 표기"
+    trigger: "default_resolution.yml CR-001 Step 3"
 
   code_registration:
     id: SG-003
@@ -53,6 +154,42 @@ sql_artifacts:
     rules:
       - "상세 규칙은 code_registration.yml 참조"
       - "미등록 코드 발견 시에만 생성"
+
+  custom_code_help_sql:
+    id: SG-009
+    description: "커스텀 코드헬프 SQL — codeCustomMapper.xml에 추가할 SELECT"
+    filename_pattern: "{screenId}_코드헬프.sql"
+    generation_condition: >
+      machine_spec의 search_fields 또는 grid_columns에 DATA_CODE_TYPE.custom이 사용되고,
+      해당 statement의 SQL이 기존 codeCustomMapper.xml에 존재하지 않을 때 생성.
+    output_location: "work/task/2.Working/generated/"
+    rules:
+      - "namespace는 반드시 'codeCustom'으로 설정"
+      - "SQL ID는 codeCustom.{sqlId} 형식 (예: codeCustom.selectRschPrjList)"
+      - "실제 배포 대상: src/main/resources/mapper/sjerp/help/codeCustomMapper.xml에 추가"
+      - "조회 영역(모달 내 검색폼) + 그리드 컬럼 정의를 주석으로 포함"
+      - "idField, valueField 매핑 정보를 주석으로 포함"
+    severity: critical
+    trigger: "machine_spec에 DATA_CODE_TYPE.custom 존재 시"
+
+  trigger_sql:
+    id: SG-010
+    description: "트리거/자동화 SQL — people_spec의 [데이터] 섹션에서 트리거 요구 발견 시"
+    filename_pattern: "{screenId}_트리거.sql"
+    generation_condition: >
+      people_spec 또는 screens.json의 description_texts에서 트리거, 자동 업데이트,
+      연쇄 상태 변경 등의 요구사항이 발견될 때 생성.
+      예: "채택결과 등록 시 마스터 상태를 자동 변경", "모든 평가 완료 시 진행상태 변경" 등.
+    output_location: "work/task/2.Working/generated/"
+    rules:
+      - "CREATE OR REPLACE FUNCTION + CREATE TRIGGER 형태로 생성"
+      - "PostgreSQL plpgsql 함수 사용"
+      - "트리거 함수명: fn_{table_name}_{action}_trigger (예: fn_rp_pre_rview_opl_list_adpt_trigger)"
+      - "트리거명: trg_{table_name}_{action} (예: trg_rp_pre_rview_opl_list_adpt)"
+      - "주석으로 트리거 동작 설명, 원본 요구사항(PPT description_texts) 포함"
+      - "DROP TRIGGER IF EXISTS 선행 포함 (멱등성)"
+    severity: critical
+    trigger: "people_spec/screens.json에서 트리거/자동 상태변경 요구사항 발견 시"
 
 execution_order:
   id: SG-004
@@ -72,6 +209,34 @@ general_rules:
   - id: SG-006
     rule: "deliverables 단계에서 work/task/3.Result/deliverables/ 로 복사"
   - id: SG-007
-    rule: "SQL 파일명에 한글 허용 (메뉴등록, DDL보완, 코드등록)"
+    rule: "SQL 파일명에 한글 허용 (메뉴등록, DDL보완, 코드등록, 코드헬프, 트리거)"
   - id: SG-008
     rule: "execution_order.md가 존재하면 verify 시 SQL 파일 목록과 정합성 검증"
+
+mandatory_generation:
+  id: SG-011
+  description: "SQL 산출물 필수 생성 강제 규칙"
+  severity: critical
+  rule: >
+    build의 generate 단계에서 아래 조건을 반드시 검사하고,
+    해당 시 SQL 파일을 생성하지 않으면 verify에서 critical fail 처리한다.
+    SQL 산출물 생성은 HTML/XML 생성과 동일한 필수 단계이다.
+  checks:
+    - condition: "화면이 1개 이상 생성됨"
+      required: "SG-001 메뉴등록 SQL (항상 필수)"
+      severity: critical
+    - condition: "verify_result.self_diagnosis.ddl_supplements가 1개 이상"
+      required: "SG-002 DDL보완 SQL"
+      severity: critical
+    - condition: "verify_result.self_diagnosis.code_registrations가 1개 이상"
+      required: "SG-003 코드등록 SQL"
+      severity: critical
+    - condition: "machine_spec에 DATA_CODE_TYPE.custom 사용"
+      required: "SG-009 커스텀 코드헬프 SQL"
+      severity: critical
+    - condition: "people_spec/screens.json에 트리거/자동 상태변경 요구사항 존재"
+      required: "SG-010 트리거 SQL"
+      severity: critical
+    - condition: "SQL 산출물이 1개 이상 존재"
+      required: "SG-004 execution_order.md"
+      severity: critical

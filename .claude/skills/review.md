@@ -35,6 +35,12 @@ diff_summary를 original/machine_spec.yml에 반영.
 - 필드 변경 → placeholders 업데이트
 - `naming.yml` 규칙으로 정규화
 
+### 3-1. 컬럼명 실재 검증 (CR-001 Cross-Cutting, CRITICAL)
+diff로 추가/변경된 field_id, column_id가 있으면, `system/cache/convention/table.txt`에서 해당 테이블의 실제 컬럼으로 존재하는지 대조 검증한다.
+DB fallback으로 새로 추가된 컬럼도 동일하게 검증한다.
+에이전트가 추론한 컬럼명을 그대로 사용하는 것을 절대 금지한다.
+참조: `system/policies/analyze/default_resolution.yml` → `column_resolution (CR-001)`
+
 ### 4. Schema 검증
 `machine_spec.schema.json` 으로 구조 검증.
 unresolved 존재 → `lifecycle.yml` → `unresolved_policy.build` 적용 (차단).

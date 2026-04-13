@@ -19,9 +19,24 @@ checks:
   pgm_info_columns:
     id: SC-002
     severity: critical
-    description: "sy_pgm_info 컬럼 DDL 일치"
-    rule: "메뉴등록 SQL의 sy_pgm_info INSERT 컬럼이 DDL 정의와 일치해야 한다"
-    check_target: "convention cache table.txt의 sy_pgm_info 테이블 정의"
+    description: "sy_pgm_info / sy_menu_info 컬럼 DDL 일치"
+    rule: >
+      메뉴등록 SQL의 sy_pgm_info 및 sy_menu_info INSERT 컬럼이 실제 DDL 정의와 일치해야 한다.
+      반드시 convention cache table.txt에서 두 테이블의 실제 컬럼 목록을 조회하여 대조한다.
+      DDL에 없는 컬럼(menu_lvl, sort_ord 등)을 INSERT에 포함하면 critical fail.
+    check_target:
+      - "convention cache table.txt의 sy_pgm_info 테이블 정의"
+      - "convention cache table.txt의 sy_menu_info 테이블 정의"
+    known_mistakes:
+      - column: "menu_lvl"
+        table: "sy_menu_info"
+        reason: "실제 DDL에 미존재. 에이전트가 추론 생성한 컬럼"
+      - column: "sort_ord"
+        table: "sy_menu_info"
+        reason: "실제 DDL에 미존재. 에이전트가 추론 생성한 컬럼"
+      - column: "use_yn"
+        table: "sy_menu_info"
+        reason: "sy_menu_info에 미존재 (sy_pgm_info에만 존재). 테이블 혼동"
 
   pgm_path_format:
     id: SC-003
@@ -69,4 +84,45 @@ checks:
     checks:
       - "execution_order.md에 나열된 SQL 파일이 실제 존재하는지"
       - "생성된 SQL 파일이 execution_order.md에 모두 포함되어 있는지"
-      - "실행 순서가 의존성에 맞는지 (DDL보완 → 코드등록 → 메뉴등록)"
+      - "실행 순서가 의존성에 맞는지 (DDL보완 → 코드등록 → 트리거 → 코드헬프 → 메뉴등록)"
+
+  ddl_sql_completeness:
+    id: SC-007
+    severity: critical
+    description: "DDL 보완 SQL 누락 검사"
+    rule: >
+      verify_result.self_diagnosis.ddl_supplements에 항목이 있으면
+      해당 항목 수만큼 DDL보완 SQL 파일이 generated/에 존재해야 한다.
+      누락 시 critical fail.
+    reference: "system/policies/framework/sql_generation.yml → SG-002"
+
+  code_registration_sql_completeness:
+    id: SC-008
+    severity: critical
+    description: "코드등록 SQL 누락 검사"
+    rule: >
+      verify_result.self_diagnosis.code_registrations에 항목이 있으면
+      코드등록 SQL 파일이 generated/에 존재해야 한다.
+      누락 시 critical fail.
+    reference: "system/policies/framework/sql_generation.yml → SG-003"
+
+  custom_code_help_sql_completeness:
+    id: SC-009
+    severity: critical
+    description: "커스텀 코드헬프 SQL 누락 검사"
+    rule: >
+      machine_spec에 DATA_CODE_TYPE.custom이 사용된 화면이 있으면
+      해당 화면의 코드헬프 SQL 파일이 generated/에 존재해야 한다.
+      누락 시 critical fail.
+    reference: "system/policies/framework/sql_generation.yml → SG-009"
+
+  trigger_sql_completeness:
+    id: SC-010
+    severity: critical
+    description: "트리거 SQL 누락 검사"
+    rule: >
+      people_spec/screens.json의 description_texts에서 트리거, 자동 상태변경,
+      연쇄 업데이트 등의 요구사항이 발견된 화면이 있으면
+      해당 화면의 트리거 SQL 파일이 generated/에 존재해야 한다.
+      누락 시 critical fail.
+    reference: "system/policies/framework/sql_generation.yml → SG-010"

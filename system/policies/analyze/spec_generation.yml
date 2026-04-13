@@ -21,6 +21,8 @@ people_spec_rules:
     - "row 전체 gravity 합 = 5"
     - "빈 칸은 {} 로 채움"
     - "PPT에서 같은 행(top 좌표 동일/오차 0.3cm)의 필드는 반드시 같은 row 번호 할당. 코드 생성 시 같은 row의 필드는 하나의 cols 배열에 포함"
+    - "PPT 설명 영역([버튼], [그리드], [인풋폼], [데이터])의 텍스트를 비즈니스 규칙 섹션에 원문 그대로 기록한다"
+    - "트리거/프로시저 생성 요구사항은 '데이터 처리 규칙' 섹션에 별도 기록한다"
 
 machine_spec_rules:
   id: SPG-002
@@ -31,6 +33,14 @@ machine_spec_rules:
     - "template_selection.yml에 따라 skeleton_choice 결정"
     - "PPT에서 확인 가능한 placeholder 채움"
     - "불가 항목은 unresolved에 기록"
+    - "PPT 설명 영역([버튼], [그리드], [인풋폼], [데이터])에서 추출한 비즈니스 규칙을 business_rules 배열에 구조화하여 기록한다"
+    - "표준 버튼(조회/저장/삭제/신규/초기화)은 button_events에 표준 slot으로 기록한다"
+    - "비표준 버튼(초안작성, 접수, 과제접수 등)은 button_events에 etc{N} slot으로 순차 할당하여 기록한다 (button_mapping.yml BM-001 참조)"
+    - "트리거/프로시저 생성 요구는 sql_artifacts 배열에 type: trigger/function/procedure로 기록한다"
+    - "그리드 더블클릭 → 서브화면 이동 규칙은 button_events에 slot: 'gridRow.dblclick'으로 기록한다"
+    - "readonly 조건(특정 상태에서 인풋폼 readonly)은 business_rules에 type: 'readonly_condition'으로 기록한다"
+    - "PPT의 ▶ 섹션 라벨 목록을 machine_spec의 section_labels 배열에 순서대로 기록한다. generate 단계에서 각 섹션 라벨마다 독립 dataToolbar+콘텐츠를 생성하는 근거가 된다 (LR-012)"
+    - "PPT에서 ▶ 섹션 라벨로 구분된 첨부파일 영역은 machine_spec의 file_section 필드에 별도 기록한다. 이 필드가 존재하면 generate에서 postForm과 분리된 독립 fileForm을 생성한다 (LR-013, FC-001)"
   cache_enrichment:
     description: "convention cache를 참조하여 정보 보강"
     rules:
@@ -39,6 +49,21 @@ machine_spec_rules:
       - "function.txt로 함수 참조 확인"
       - "cache에 없는 항목은 DB fallback 결과 활용"
     reference: "system/policies/runtime/db_access.yml"
+
+  column_resolution:
+    description: "SQL 컬럼명은 반드시 cache/DB 검증을 거쳐야 한다"
+    mandatory: true
+    severity: critical
+    procedure: "system/policies/analyze/default_resolution.yml → column_resolution (CR-001)"
+    rules:
+      - "PPT 한글 라벨 → cache table.txt 추론 매칭 → 실제 컬럼명 확정"
+      - "cache miss → DB fallback 조회 → 추론 매칭"
+      - "DB miss + 필수 컬럼 → DDL 보완 SQL 생성 (sql_generation.yml SG-002)"
+      - "에이전트가 컬럼명을 임의 생성하는 것을 절대 금지"
+      - "매칭 결과를 machine_spec.column_resolution_log에 기록"
+    validation:
+      - "machine_spec 완성 후 모든 SQL 컬럼이 출처(cache/DB/DDL) 확인됨을 검증"
+      - "출처 없는 컬럼 → build 차단 (unresolved 처리)"
   schema_validation: "system/schemas/machine_spec.schema.json"
 
 final_people_spec:
@@ -68,3 +93,30 @@ screen_classification:
     - "system/policies/analyze/screen_type_rules.yml"
     - "system/policies/analyze/ppt_extraction.yml"
     - "system/policies/analyze/classify_tags.yml"
+
+data_source_integrity:
+  id: SPG-006
+  description: "원본 데이터 기반 생성 강제 — 모든 spec 항목의 출처 보장"
+  rules:
+    - id: DSI-001
+      rule: "그리드 컬럼명은 PPT TABLE shape의 row[0](헤더 행)에서만 추출. 추론 생성 절대 금지"
+      severity: critical
+    - id: DSI-002
+      rule: "검색 필드명은 PPT GROUP shape의 라벨 텍스트에서만 추출. 추론 생성 절대 금지"
+      severity: critical
+    - id: DSI-003
+      rule: "콘솔 인코딩 깨짐 시 반드시 JSON 파일을 Read 도구로 직접 읽어 원문 확인 후 진행"
+      severity: critical
+    - id: DSI-004
+      rule: "Agent 위임 시 추출 데이터 파일 경로를 전달하고 'Read 도구로 파일을 직접 읽어 데이터를 확인한 후 작성하라'고 지시. 자연어로 데이터를 설명하여 전달하는 것을 금지"
+      severity: critical
+    - id: DSI-005
+      rule: "spec 생성 완료 후 PPT 원본 TABLE 헤더와 spec 그리드 컬럼을 교차 검증. 불일치 시 PPT 기준으로 교정"
+      severity: critical
+    - id: DSI-006
+      rule: >
+        SQL에서 사용하는 모든 컬럼명은 반드시 convention cache table.txt 또는 DB fallback으로
+        실제 존재를 확인한 후 사용한다. 에이전트가 한글 라벨로부터 컬럼명을 추론 생성하는 것을 절대 금지한다.
+        절차: (1) cache table.txt 조회 → 추론 매칭 (2) miss 시 DB fallback (3) miss 시 DDL 생성.
+        상세 절차는 default_resolution.yml CR-001 참조.
+      severity: critical

@@ -60,6 +60,106 @@ tagging_rules:
     - tag: "[추론/보완 항목]"
       condition: "에이전트가 합리적으로 추론/보완 (검토 권장)"
 
+# =============================================================================
+# 컬럼명 해석 절차 (Column Name Resolution)
+# PPT 필드 라벨 → 실제 DB 컬럼명 매핑
+# =============================================================================
+column_resolution:
+  id: CR-001
+  description: >
+    PPT에서 추출한 한글 필드 라벨을 실제 DB 컬럼명으로 매핑하는 절차.
+    모든 machine_spec의 컬럼명은 이 절차를 거쳐야 하며,
+    에이전트가 임의로 컬럼명을 추론 생성하는 것을 금지한다.
+  severity: critical
+  scope: >
+    이 절차는 analyze 단계에만 국한되지 않는다.
+    컬럼명이 추가/변경되는 모든 시점(analyze, build review, fix, 수동 보강, Agent 위임)에서
+    반드시 이 절차를 따라야 한다.
+    generate.md Step 4-1에서 이중 검증을 수행하고,
+    xml_checks.yml XC-008에서 최종 검증을 수행한다.
+    어떤 경로로든 machine_spec에 컬럼명이 추가될 때, cache table.txt 대조 없이
+    에이전트가 추론한 컬럼명을 사용하는 것을 절대 금지한다.
+
+  procedure:
+    - step: 1
+      name: "Cache 테이블 정의 조회"
+      action: >
+        system/cache/convention/table.txt에서 대상 테이블의 컬럼 목록을 조회한다.
+        PPT 필드 라벨(한글)과 table.txt의 컬럼 설명(한글 주석)을 비교하여 추론 매칭한다.
+      matching_rules:
+        - "한글 주석 완전 일치 (예: '연구분류코드' → rsch_cls_cd)"
+        - "한글 주석 부분 일치 (예: '과제명' → prj_nm의 주석에 '과제' 포함)"
+        - "약어 패턴 매칭 (예: PPT '연구유형' → 컬럼명에 rsch + ctg/type/cls 등 포함)"
+        - "동일 업무 테이블의 유사 컬럼 참조 (같은 rp_ 접두 테이블 비교)"
+      on_hit: "매칭된 실제 컬럼명을 machine_spec에 확정 기록"
+      on_miss: "Step 2 진행"
+
+    - step: 2
+      name: "DB Fallback 조회"
+      action: >
+        cache에서 매칭 실패한 컬럼에 대해 DB를 직접 조회한다.
+        대상 테이블 및 관련 테이블의 컬럼 정보를 조회하여 추론 매칭한다.
+      query_template: |
+        SELECT c.column_name, c.data_type, c.character_maximum_length,
+               pgd.description AS column_comment
+        FROM information_schema.columns c
+        LEFT JOIN pg_catalog.pg_description pgd
+          ON pgd.objsubid = c.ordinal_position
+         AND pgd.objoid = (SELECT oid FROM pg_catalog.pg_class WHERE relname = c.table_name)
+        WHERE c.table_schema = 'public'
+          AND c.table_name = '{table_name}'
+        ORDER BY c.ordinal_position
+      search_scope:
+        - "지정된 메인 테이블"
+        - "JOIN 대상 테이블"
+        - "동일 업무 접두어(rp_, se_ 등) 테이블"
+      on_hit: "매칭된 실제 컬럼명을 machine_spec에 확정 기록. manifest에 db_fallback 기록"
+      on_miss: "Step 3 진행"
+
+    - step: 3
+      name: "신규 컬럼 DDL 생성"
+      condition: "Step 1, 2에서 매칭 실패 + 화면 기능상 반드시 필요한 컬럼"
+      action: >
+        해당 컬럼이 반드시 필요한 경우에만 DDL 보완 SQL을 생성한다.
+        sql_generation.yml SG-002 규칙에 따라 {screenId}_DDL보완.sql 파일을 생성한다.
+      ddl_template: |
+        -- [수동 실행 필요] PPT 필드 '{ppt_label}'에 대응하는 컬럼이 DB에 존재하지 않음
+        -- 추정 근거: {inference_reason}
+        ALTER TABLE {table_name} ADD COLUMN {column_name} {data_type} {constraints};
+        COMMENT ON COLUMN {table_name}.{column_name} IS '{column_comment}';
+      rules:
+        - "컬럼 타입/크기는 동일 테이블 유사 컬럼 또는 표준 패턴에서 추정"
+        - "추정 불가 시 character varying(100) 기본 + [사용자 확인 필요] 태그"
+        - "DDL 파일은 work/task/2.Working/generated/에 생성"
+        - "execution_order.md에 DDL 우선 실행 표기"
+      on_not_required: "machine_spec에서 해당 필드 제외. unresolved에 사유 기록"
+
+  validation:
+    description: "컬럼 해석 완료 후 검증"
+    rules:
+      - id: CR-V001
+        rule: "machine_spec의 모든 SQL 컬럼명은 반드시 출처가 있어야 한다: cache 확인, DB fallback, 또는 DDL 생성"
+        severity: critical
+      - id: CR-V002
+        rule: "출처 없는 컬럼명(에이전트 추론 생성)은 machine_spec에 사용 금지. unresolved 처리"
+        severity: critical
+      - id: CR-V003
+        rule: "매칭 결과를 machine_spec의 column_resolution_log에 기록 (원본라벨, 매칭컬럼, 출처, 매칭방법)"
+        severity: warning
+
+  anti_patterns:
+    description: "금지 패턴 — 이전 오류 사례 기반"
+    examples:
+      - wrong: "PPT '연구분류' → rsch_clsf_cd (에이전트가 classification 약어로 추론 생성)"
+        correct: "cache table.txt 조회 → rp_rsch_prj_mst.rsch_cls_cd 확인"
+        reason: "실제 DB 컬럼은 rsch_cls_cd. 에이전트 추론은 clsf로 잘못 축약"
+      - wrong: "PPT '연구유형' → rsch_type_cd (에이전트가 type으로 추론 생성)"
+        correct: "cache table.txt 조회 → rp_rsch_prj_mst.rsch_ctg_cd 확인"
+        reason: "실제 DB 컬럼은 rsch_ctg_cd(category). 에이전트는 type으로 잘못 추론"
+      - wrong: "PPT '연구과제명' → rsch_prj_nm (에이전트가 의미 기반 추론 생성)"
+        correct: "cache table.txt 조회 → rp_rsch_prj_mst.prj_nm 확인"
+        reason: "실제 DB 컬럼은 prj_nm. 에이전트는 rsch_ 접두사를 임의 추가"
+
 field_validation:
   description: "보완 시 검증해야 하는 필드 규칙"
   rules:

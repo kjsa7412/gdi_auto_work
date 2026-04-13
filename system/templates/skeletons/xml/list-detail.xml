@@ -5,59 +5,153 @@
 
     <!-- 마스터 목록 조회 -->
     <select id="{{select_sql_id}}" resultType="java.util.Map">
+        /*{{mapper_namespace}}.{{select_sql_id}}*/
         SELECT
             {{grid_columns_sql}}
         FROM {{main_table}} a
-        /* OPTIONAL: LEFT OUTER JOIN {{lookup_table}} b ON a.comp_cd = b.comp_cd AND a.xxx = b.xxx */
-        WHERE a.comp_cd = #{login_comp_cd}
-        <if test="P_brndz_cd != null and P_brndz_cd != ''">
-            AND a.brndz_cd = #{P_brndz_cd}
-        </if>
+        {{join_clauses}}
+        WHERE 1=1
         {{search_conditions_sql}}
         ORDER BY {{order_columns}}
     </select>
 
     <!-- 상세 목록 조회 -->
     <select id="{{detail_sql_id}}" resultType="java.util.Map">
+        /*{{mapper_namespace}}.{{detail_sql_id}}*/
         SELECT
             {{detail_columns_sql}}
         FROM {{detail_table}} a
-        /* OPTIONAL: LEFT OUTER JOIN ... */
-        WHERE a.comp_cd = #{login_comp_cd}
-          AND {{detail_join_conditions}}
-        {{detail_search_conditions_sql}}
+        {{detail_join_clauses}}
+        WHERE 1=1
+          AND {{detail_fk_conditions}}
         ORDER BY {{detail_order_columns}}
     </select>
 
-    <!-- 상세 저장 (upsert) -->
+    /* OPTIONAL: upsert-onconflict block start */
+    <!-- 상세 저장 (ON CONFLICT UPSERT) -->
     <insert id="{{insert_sql_id}}">
+        /*{{mapper_namespace}}.{{insert_sql_id}}*/
         INSERT INTO {{detail_table}} (
-            comp_cd,
             {{insert_columns}},
             firs_reg_pgm_id, firs_reg_dts, firs_reg_user_id, firs_reg_ip,
             fina_reg_pgm_id, fina_reg_dts, fina_reg_user_id, fina_reg_ip
         ) VALUES (
-            #{login_comp_cd},
             {{insert_values}},
-            #{reg_pgm_id}, now(), #{login_emp_no}, #{login_user_ip},
-            #{reg_pgm_id}, now(), #{login_emp_no}, #{login_user_ip}
+            #{reg_pgm_id}, now(), #{login_user_id}, #{login_user_ip},
+            #{reg_pgm_id}, now(), #{login_user_id}, #{login_user_ip}
         )
-        <if test='allow_update == "Y"'>
         ON CONFLICT ({{pk_columns}})
         DO UPDATE SET
             {{update_set_columns}},
-            fina_reg_pgm_id = excluded.firs_reg_pgm_id,
+            fina_reg_pgm_id = #{reg_pgm_id},
             fina_reg_dts = now(),
-            fina_reg_user_id = excluded.firs_reg_user_id,
-            fina_reg_ip = excluded.firs_reg_ip
-        </if>
+            fina_reg_user_id = #{login_user_id},
+            fina_reg_ip = #{login_user_ip}
     </insert>
+    /* OPTIONAL: upsert-onconflict block end */
+
+    /* OPTIONAL: upsert-with block start */
+    <!-- 상세 저장 (WITH UPSERT) -->
+    <!--
+    <insert id="{{insert_sql_id}}">
+        /*{{mapper_namespace}}.{{insert_sql_id}}*/
+        WITH sdata AS (
+        UPDATE {{detail_table}}
+        SET {{update_set_columns}},
+            fina_reg_pgm_id = #{reg_pgm_id},
+            fina_reg_dts = current_timestamp,
+            fina_reg_user_id = #{login_user_id},
+            fina_reg_ip = #{login_user_ip}
+        WHERE {{pk_conditions}}
+        RETURNING *
+        )
+        INSERT INTO {{detail_table}} (
+            {{insert_columns}},
+            firs_reg_pgm_id, firs_reg_dts, firs_reg_user_id, firs_reg_ip
+        )
+        SELECT
+            {{insert_values}},
+            #{reg_pgm_id}, current_timestamp, #{login_user_id}, #{login_user_ip}
+        WHERE NOT EXISTS (SELECT * FROM sdata)
+    </insert>
+    -->
+    /* OPTIONAL: upsert-with block end */
+
+    /* OPTIONAL: foreach-upsert block start */
+    <!-- 다건 저장 (FOREACH WITH UPSERT) -->
+    <!--
+    <insert id="{{insert_sql_id}}">
+        /*{{mapper_namespace}}.{{insert_sql_id}}*/
+        <foreach collection="list" item="item" separator=";">
+            WITH sdata AS (
+            UPDATE {{detail_table}}
+            SET {{foreach_update_set}},
+                fina_reg_pgm_id = #{item.reg_pgm_id},
+                fina_reg_dts = current_timestamp,
+                fina_reg_user_id = #{item.login_user_id},
+                fina_reg_ip = #{item.login_user_ip}
+            WHERE {{foreach_pk_conditions}}
+            RETURNING *
+            )
+            INSERT INTO {{detail_table}} (
+                {{foreach_insert_columns}},
+                firs_reg_pgm_id, firs_reg_dts, firs_reg_user_id, firs_reg_ip
+            )
+            SELECT
+                {{foreach_insert_values}},
+                #{item.reg_pgm_id}, current_timestamp, #{item.login_user_id}, #{item.login_user_ip}
+            WHERE NOT EXISTS (SELECT * FROM sdata)
+        </foreach>
+    </insert>
+    -->
+    /* OPTIONAL: foreach-upsert block end */
 
     <!-- 상세 삭제 -->
     <delete id="{{delete_sql_id}}">
+        /*{{mapper_namespace}}.{{delete_sql_id}}*/
         DELETE FROM {{detail_table}}
-        WHERE comp_cd = #{login_comp_cd}
-          AND {{delete_conditions}}
+        WHERE {{delete_conditions}}
     </delete>
+
+    /* OPTIONAL: foreach-delete block start */
+    <!-- 다건 삭제 -->
+    <!--
+    <delete id="{{delete_sql_id}}">
+        /*{{mapper_namespace}}.{{delete_sql_id}}*/
+        DELETE FROM {{detail_table}}
+        WHERE ({{pk_column_list}}) IN
+        <foreach collection="list" item="item" open="(" separator="," close=")">
+            ({{foreach_pk_values}})
+        </foreach>
+    </delete>
+    -->
+    /* OPTIONAL: foreach-delete block end */
+
+    /* OPTIONAL: with-cte start */
+    <!-- WITH CTE 패턴 (임시 데이터셋) -->
+    <!--
+    <select id="{{select_sql_id}}WithCte" resultType="java.util.Map">
+        /*{{mapper_namespace}}.{{select_sql_id}}WithCte*/
+        WITH cte_summary AS (
+            SELECT
+                {{fk_column}},
+                COUNT(*) AS detail_cnt,
+                SUM({{amount_column}}) AS total_amt
+            FROM {{detail_table}}
+            WHERE 1=1
+            GROUP BY {{fk_column}}
+        )
+        SELECT
+            a.*,
+            COALESCE(b.detail_cnt, 0) AS detail_cnt,
+            COALESCE(b.total_amt, 0) AS total_amt
+        FROM {{main_table}} a
+        LEFT JOIN cte_summary b ON a.{{pk_column}} = b.{{fk_column}}
+        WHERE 1=1
+        {{search_conditions_sql}}
+        ORDER BY {{order_columns}}
+    </select>
+    -->
+    /* OPTIONAL: with-cte end */
 
 </mapper>

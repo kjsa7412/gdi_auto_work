@@ -81,12 +81,15 @@ commands:
         - "work/task/2.Working/manifests/analyze.manifest.yml"
     skills_used:
       - name: "review"
+        file: ".claude/skills/review.md"
         purpose: "original vs final people_spec diff → final/machine_spec.yml 생성"
         order: 1
       - name: "generate"
+        file: ".claude/skills/generate.md"
         purpose: "final/machine_spec.yml → skeleton 기반 코드 생성"
         order: 2
       - name: "deploy"
+        file: ".claude/skills/deploy.md"
         purpose: "deliverables → target path 계산 및 자동 배포 (apply 기본)"
         order: 3
         optional: false
@@ -138,8 +141,21 @@ commands:
 
   fix:
     purpose: "fix 요청을 분석하여 영향 범위 판정 후 재분석/재생성/패치를 수행"
+    parameters:
+      policy_only:
+        description: "--policy-only: 산출물 수정 없이 원인 분석 + 정책 보강만 수행"
+        default: false
+        effects:
+          - "work/** 산출물 수정 금지"
+          - "deliverables 생성 금지"
+          - "deploy 생략"
+          - "phase 변경 없음 (fix_applied로 전이하지 않음)"
+          - "system/policies/**, system/templates/** 수정 허용"
+          - "fix.manifest.yml만 기록 (mode: policy_only)"
+        allowed_states: ["task_built", "fix_applied"]
     start_condition:
       required_state: ["task_built"]
+      required_state_policy_only: ["task_built", "fix_applied"]
       required_files:
         - "work/fix/1.Prep/*"
     inputs:
@@ -206,7 +222,8 @@ commands:
   clean:
     purpose: "work 전체를 archive로 이동하고 active context 초기화"
     start_condition:
-      required_state: ["task_analyzed", "task_built", "fix_applied", "failed"]
+      required_state: ["idle", "task_prepared", "task_analyzed", "task_built", "fix_prepared", "fix_analyzed", "fix_applied", "failed"]
+      description: "어떤 phase에서든 실행 가능. idle/task_prepared에서는 work에 내용이 있을 때만 archive 수행."
     inputs:
       required:
         - "work/**"
@@ -236,7 +253,7 @@ state_machine:
     idle:
       description: "초기 상태. 작업 없음"
       entry_condition: "clean 완료 또는 최초 상태"
-      allowed_commands: ["analyze"]
+      allowed_commands: ["analyze", "clean"]
       next_on_success: "task_prepared"
       next_on_error: "failed"
 

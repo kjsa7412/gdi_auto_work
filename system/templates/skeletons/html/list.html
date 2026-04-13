@@ -1,4 +1,11 @@
 <!DOCTYPE html>
+<pgm-info
+        data-id="{{screen_id}}"
+        data-name="{{screen_name}}"
+        data-desc="{{screen_desc}}"
+        data-date="{{create_date}}"
+        data-version="1.0.0"
+></pgm-info>
 <html xmlns:th="http://www.thymeleaf.org">
 <th:block th:replace="~{frame/top_title_button :: topTitleButtonFragment}"></th:block>
 
@@ -6,7 +13,8 @@
     <div th:id="|${PGM}searchForm|"></div>
     <div class="data-content-wrapper">
         <div class="data-content-fill">
-            <div th:id="|${PGM}mainGrid|"></div>
+            <div class="data-toolbar" th:id="|${PGM}grid1Toolbar|"></div>
+            <div class="data-grid" th:id="|${PGM}grid1|"></div>
         </div>
     </div>
 </div>
@@ -33,16 +41,21 @@
             ]
         });
 
+        /* OPTIONAL: grid toolbar */
+        listener.toolbar.toolbar1 = webix.ui({
+            container: `${PGM}grid1Toolbar`,
+            view: "dataToolbar",
+            pgm: PGM,
+            title: "{{grid_title}}"
+        });
+
         // === 메인 그리드 ===
-        listener.grid.mainGrid = webix.ui({
-            container: `${PGM}mainGrid`,
+        listener.grid.grid1 = webix.ui({
+            container: `${PGM}grid1`,
             view: "datagrid",
             listener: listener,
-            editable: true,
-            checkable: true,
-            rowNumber: true,
-            footer: false,
-            sort: true,
+            editable: {{grid_editable}},
+            checkable: {{grid_checkable}},
             columns: [
                 {{grid_columns}}
             ]
@@ -58,7 +71,7 @@
 
         const callback = new Callback(function (result) {
             if (result.resultCode === RESULT_CODE.OK) {
-                listener.grid.mainGrid.setData(result.resultData);
+                listener.grid.grid1.setData(result.resultData);
             }
         });
         platform.post(platform.url.select, param, callback);
@@ -67,9 +80,9 @@
     /* OPTIONAL: save block start */
     // === 저장 ===
     listener.button.save.click = function () {
-        if (!listener.grid.mainGrid.checkGridValidation()) return;
+        if (!listener.grid.grid1.checkGridValidation()) return;
 
-        const checkedData = listener.grid.mainGrid.getCheckedData();
+        const checkedData = listener.grid.grid1.getCheckedData();
         if (checkedData.length === 0) {
             popup.alert.show("선택된 데이터가 없습니다.");
             return;
@@ -82,8 +95,9 @@
 
                 const callback = new Callback(function (result) {
                     if (result.resultCode === RESULT_CODE.OK) {
-                        popup.alert.show("저장되었습니다.");
-                        listener.button.search.click();
+                        popup.alert.show("저장되었습니다.", function () {
+                            listener.button.search.click();
+                        });
                     }
                 });
                 platform.post(platform.url.saveAll, param.data, callback);
@@ -92,11 +106,187 @@
     };
     /* OPTIONAL: save block end */
 
+    /* OPTIONAL: delete block start */
+    // === 삭제 ===
+    listener.button.del.click = function () {
+        const checkedData = listener.grid.grid1.getCheckedData();
+        if (checkedData.length === 0) {
+            popup.alert.show("선택된 데이터가 없습니다.");
+            return;
+        }
+
+        popup.confirm.show("삭제 하시겠습니까?", function (confirmYn) {
+            if (confirmYn) {
+                const param = new Param();
+                param.add("{{mapper_namespace}}.{{delete_sql_id}}", checkedData);
+
+                const callback = new Callback(function (result) {
+                    if (result.resultCode === RESULT_CODE.OK) {
+                        popup.alert.show("삭제되었습니다.", function () {
+                            listener.button.search.click();
+                        });
+                    }
+                });
+                platform.post(platform.url.saveAll, param.data, callback);
+            }
+        });
+    };
+    /* OPTIONAL: delete block end */
+
     // === 초기화 ===
     listener.button.init.click = function () {
         listener.form.searchForm.init();
-        listener.grid.mainGrid.setData([]);
+        listener.grid.grid1.setData([]);
     };
+
+    /* OPTIONAL: paging grid pattern start */
+    // === 페이징 조회 ===
+    // listener.button.search.click = function () {
+    //     if (!listener.form.searchForm.formValidate()) return;
+    //
+    //     const param = listener.form.searchForm.getData();
+    //     param.statement = "{{mapper_namespace}}.{{select_sql_id}}";
+    //     param.countStatement = "{{mapper_namespace}}.{{select_sql_id}}Count";
+    //
+    //     const callback = new Callback(function (result) {
+    //         if (result.resultCode === RESULT_CODE.OK) {
+    //             listener.grid.grid1.setData(result.resultData.items);
+    //             listener.grid.grid1.setTotalCount(result.resultData.totalCount);
+    //         }
+    //     });
+    //     platform.post(platform.url.selectPager, param, callback);
+    // };
+    /* OPTIONAL: paging grid pattern end */
+
+    /* OPTIONAL: excel upload start */
+    // === 엑셀 업로드 ===
+    // listener.button.xlsUpload = {};
+    // listener.button.xlsUpload.click = function () {
+    //     const modal = new DataXlsModal({
+    //         pgm: PGM,
+    //         title: "엑셀 업로드",
+    //         url: `/{{module_id}}/uploadExcel`,
+    //         templateFile: "{{excel_template_file}}",
+    //         callback: function (result) {
+    //             if (result.resultCode === RESULT_CODE.OK) {
+    //                 listener.grid.grid1.setData(result.resultData);
+    //             }
+    //         }
+    //     });
+    //     modal.show();
+    // };
+    /* OPTIONAL: excel upload end */
+
+    /* OPTIONAL: grid footer summary start */
+    // === 그리드 footer 합계 ===
+    // 그리드 컬럼 정의에 footer 추가 예시:
+    // { header: "금액", id: "amt", width: 120, css: "textRight",
+    //   footer: true, footerContent: {content: "summColumn", css: "textRight"} }
+    // 그리드 설정에 footer: true 추가:
+    // listener.grid.grid1 = webix.ui({
+    //     ...
+    //     footer: true,
+    //     ...
+    // });
+    /* OPTIONAL: grid footer summary end */
+
+    /* OPTIONAL: grid addRow start */
+    // === 그리드 행 추가 ===
+    // 그리드 설정에 addRowable: true 추가:
+    // listener.grid.grid1 = webix.ui({
+    //     ...
+    //     addRowable: true,
+    //     ...
+    // });
+    // listener.gridRow.addRow = function (row, grid) {
+    //     if (grid === listener.grid.grid1) {
+    //         row["use_yn"] = "Y";
+    //         row["sort_no"] = listener.grid.grid1.count() + 1;
+    //     }
+    //     return row;
+    // };
+    /* OPTIONAL: grid addRow end */
+
+    /* OPTIONAL: grid editor changed start */
+    // === 그리드 셀 편집 이벤트 ===
+    // listener.gridEditor.changed = async function (record, editor, grid) {
+    //     if (grid === listener.grid.grid1) {
+    //         if (editor.column === "{{column_id}}") {
+    //             const param = { statement: "{{mapper_namespace}}.{{lookup_sql_id}}" };
+    //             param["{{column_id}}"] = editor.getValue();
+    //             const result = await new Promise(function (resolve) {
+    //                 platform.post(platform.url.selectOne, param, new Callback(resolve));
+    //             });
+    //             if (result.resultCode === RESULT_CODE.OK && result.resultData) {
+    //                 record["{{target_column}}"] = result.resultData["{{target_column}}"];
+    //                 listener.grid.grid1.updateItem(record.id, record);
+    //             }
+    //         }
+    //     }
+    // };
+    /* OPTIONAL: grid editor changed end */
+
+    /* OPTIONAL: popup modal start */
+    // === 팝업 모달 호출 ===
+    // function openPopupModal(record) {
+    //     const config = new DataModalConfig({
+    //         pgm: PGM,
+    //         width: 800,
+    //         height: 600,
+    //         title: "{{popup_title}}"
+    //     });
+    //     const modal = new DataModalNew(config, "/{{popup_screen_id}}", {
+    //         data: record,
+    //         callback: function (result) {
+    //             listener.button.search.click();
+    //         }
+    //     });
+    //     modal.show();
+    // }
+    /* OPTIONAL: popup modal end */
+
+    /* OPTIONAL: date range search start */
+    // === 날짜 범위 검색 필드 ===
+    // 검색 폼 elements에 추가:
+    // {view: DATA_VIEW.dateRange2, label: "기간", startName: "fr_dt", endName: "to_dt", gravity: 1}
+    /* OPTIONAL: date range search end */
+
+    /* OPTIONAL: delete with status validation start */
+    // === 삭제 전 상태 검증 ===
+    // listener.button.del.click = function () {
+    //     const checkedData = listener.grid.grid1.getCheckedData();
+    //     if (checkedData.length === 0) {
+    //         popup.alert.show("선택된 데이터가 없습니다.");
+    //         return;
+    //     }
+    //     if (checkedData.some(function (item) { return item.status === "LOCKED"; })) {
+    //         popup.alert.show("잠긴 데이터는 삭제할 수 없습니다.");
+    //         return;
+    //     }
+    //     popup.confirm.show("삭제 하시겠습니까?", function (confirmYn) {
+    //         if (confirmYn) {
+    //             const param = new Param();
+    //             param.add("{{mapper_namespace}}.{{delete_sql_id}}", checkedData);
+    //             const callback = new Callback(function (result) {
+    //                 if (result.resultCode === RESULT_CODE.OK) {
+    //                     popup.alert.show("삭제되었습니다.", function () {
+    //                         listener.button.search.click();
+    //                     });
+    //                 }
+    //             });
+    //             platform.post(platform.url.saveAll, param.data, callback);
+    //         }
+    //     });
+    // };
+    /* OPTIONAL: delete with status validation end */
+
+    /* OPTIONAL: grid events start */
+    {{grid_events}}
+    /* OPTIONAL: grid events end */
+
+    /* OPTIONAL: custom button handlers start */
+    {{custom_button_handlers}}
+    /* OPTIONAL: custom button handlers end */
 
     {{init_script}}
 

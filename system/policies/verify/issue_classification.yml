@@ -51,6 +51,16 @@ issue_types:
     recurrence: "높음 (미수정 시)"
     system_fix_required: true
 
+  policy_only:
+    id: IT-006
+    description: "--policy-only 모드: 산출물 수정 없이 정책 보강만 수행"
+    examples: ["반복 오류의 근본 원인 분석 후 정책 반영", "미래 build를 위한 규칙 선반영"]
+    impact: "향후 build/fix에 적용"
+    target: "system/policies/**, system/templates/**"
+    recurrence: "N/A (예방 목적)"
+    system_fix_required: true
+    work_modification: false
+
 patch_distinction:
   description: "단순 산출물 patch vs 정책 patch 판정 기준"
   criteria:

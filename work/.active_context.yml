@@ -1,30 +1,31 @@
 version: 1
-workspace_mode: "single-active"
+workspace_mode: single-active
 current:
-  type: null
-  phase: "idle"
-  command: null
-  started_at: null
-  updated_at: null
-  manifest_path: null
-  lock_owner: null
+  type: task
+  phase: task_analyzed
+  command: build
+  started_at: '2026-04-13T16:15:00'
+  updated_at: '2026-04-13T16:15:00'
+  manifest_path: work/task/2.Working/manifests/build.manifest.yml
+  lock_owner: 'LOCKED:task:build'
   retry_count: 0
 task:
-  status: "empty"
-  input_files: []
-  last_analyze_at: null
+  status: building
+  input_files:
+    - work/task/1.Prep/GDI_DE_331_화면설계서_통합본.pptx
+  last_analyze_at: '2026-04-13T16:12:00'
   last_build_at: null
-  people_spec_original_path: null
-  people_spec_final_path: null
-  machine_spec_original_path: null
+  people_spec_original_path: work/task/2.Working/original/people_spec.md
+  people_spec_final_path: work/task/2.Working/final/people_spec.md
+  machine_spec_original_path: work/task/2.Working/original/machine_spec.yml
   machine_spec_final_path: null
 fix:
-  status: "empty"
+  status: null
   input_files: []
   last_fix_at: null
   related_task_paths: []
 history:
-  last_success_command: null
-  last_success_at: null
+  last_success_command: analyze
+  last_success_at: '2026-04-13T16:12:00'
   last_error_command: null
   last_error_at: null

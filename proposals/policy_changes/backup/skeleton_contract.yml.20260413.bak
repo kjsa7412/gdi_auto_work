@@ -449,20 +449,6 @@ artifact_structure_contract:
         7. 기능정의서에 명시적으로 "커스텀 로직 필요"로 태깅된 경우
       severity: critical
 
-    - id: SC-003
-      description: "서브화면 CRUD 구조에서 메인 그리드 editable 금지 (PP-20260413-006)"
-      condition: "메인 화면의 그리드 데이터 생성/수정이 서브화면(openPgm)을 통해 이루어지는 경우"
-      action: >
-        메인 화면(끝자리 0)에서 서브화면(SEC011 등)을 열어 데이터를 생성/수정하는 구조에서는
-        메인 그리드에 editable: true, addRowable: true, editors를 설정하면 안 된다.
-        그리드는 읽기전용(editable: false)으로 설정하고, 데이터 입력/수정은 서브화면에서 수행한다.
-        상단 버튼에 save/news를 배치하지 않고, 그리드 툴바에 '등록' 섹션 버튼(BM-004)으로 서브화면을 연다.
-      판정_기준:
-        - "machine_spec에 서브화면이 존재하고 그 서브화면이 form 타입인 경우"
-        - "메인 그리드의 데이터가 서브화면에서 INSERT/UPDATE되는 구조"
-      severity: critical
-      근거: "SEC010.html — grid1이 잘못 editable로 생성되어 save/news 버튼이 불필요하게 추가됨"
-
     - id: CG-003
       description: "커스텀 Controller/Service 불필요 판단 기준"
       condition: "아래 조건 모두 해당 시 Common 사용"

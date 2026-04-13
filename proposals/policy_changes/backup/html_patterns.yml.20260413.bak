@@ -248,24 +248,7 @@ navigation:
       - "module_id는 업무구분 대문자 2자리 (예: 'SE', 'DT', 'PS')"
       - "pgm_id는 프로그램ID 대문자 (예: 'SEA011', 'SEB011')"
       - "2개 인자만 전달하면 pgm_id에 param 객체가 들어가는 버그 발생"
-    state_param_rule:
-      id: NAV-010
-      description: "openPgm param에 버튼 상태 조건용 필드 전달 필수 (PP-20260413-003)"
-      severity: critical
-      rule: >
-        서브화면에서 버튼 상태 조건(BM-006)을 체크하려면, 부모 그리드의 record에서
-        해당 상태값을 모두 param에 포함해야 한다.
-        필수 전달 필드: wrk_mast_id, rsch_prj_id(있으면), prgrs_stat_cd, rsch_prgrs_stat_cd(있으면).
-        서브화면의 activePgm에서 이 값들을 클로저 변수에 저장하여 사용한다.
-      example: >
-        APP_PGM.openPgm('SE', 'SEA011', {
-          isNew: false,
-          wrk_mast_id: record.wrk_mast_id,
-          rsch_prj_id: record.rsch_prj_id,
-          prgrs_stat_cd: record.prgrs_stat_cd,
-          rsch_prgrs_stat_cd: record.rsch_prgrs_stat_cd
-        });
-    근거: "SEA010.html, PP-20260413-003"
+    근거: "SEA010.html"
 
   active_pgm:
     pattern: "listener.activePgm = function (param) { ... }"
@@ -274,43 +257,7 @@ navigation:
       - "단일 인자 param만 수신 (isNew 등은 param 내부 속성)"
       - "isNew 비교: String(param.isNew) !== 'true' (문자열 변환 비교 필수)"
       - "수정 모드 판정: param && param.wrk_mast_id && String(param.isNew) !== 'true'"
-    pk_preservation:
-      id: NAV-011
-      description: "form 화면 PK 키값 보존 규칙 (PP-20260413-004)"
-      severity: critical
-      rule: >
-        form 타입 서브화면에서는 wrk_mast_id, rsch_prj_id 등 PK 필드가
-        dataForm elements에 정의되지 않으므로 getData()로 반환되지 않는다.
-        반드시 클로저 변수(var _wrk_mast_id, _rsch_prj_id 등)를 선언하여
-        activePgm의 param과 loadDetail의 result에서 저장하고,
-        save/delete/update 시 이 변수를 사용하여 키값을 전달해야 한다.
-      pattern: |
-        var _wrk_mast_id = null;
-        var _rsch_prj_id = null;
-        var _prgrs_stat_cd = null;
-        var _rsch_prgrs_stat_cd = null;
-
-        listener.activePgm = function (param) {
-            if (!_isNew && param.wrk_mast_id) {
-                _wrk_mast_id = param.wrk_mast_id;
-                _rsch_prj_id = param.rsch_prj_id;
-                _prgrs_stat_cd = param.prgrs_stat_cd;
-                _rsch_prgrs_stat_cd = param.rsch_prgrs_stat_cd;
-                loadDetail(param);
-            }
-        };
-
-        function loadDetail(data) {
-            // ... selectOne callback에서:
-            _wrk_mast_id = result.resultData.wrk_mast_id;
-            _rsch_prj_id = result.resultData.rsch_prj_id;
-        }
-
-        // delete/update에서: {wrk_mast_id: _wrk_mast_id} 사용
-      forbidden: >
-        listener.form.postForm.getData()의 반환값을 직접 delete/update param으로
-        사용하는 것 금지 — PK가 누락된다. 반드시 클로저 변수를 사용한다.
-    근거: "SEA011.html, SEA021.html, SEB011.html, SEC011.html"
+    근거: "SEA011.html"
 
   close_pgm:
     pattern: "APP_PGM.closePgm(PGM)"
@@ -517,29 +464,7 @@ form:
               // 파일 저장 후 file_id를 포함한 데이터 저장
           }
       });
-    section_file:
-      id: FC-001
-      description: "PPT ▶ 섹션 라벨로 분리된 첨부파일 영역은 독립 섹션으로 구현"
-      severity: critical
-      rule: >
-        PPT에서 첨부파일 영역이 ▶ 섹션 라벨(예: ▶심의첨부파일목록)로 독립 구분되면,
-        메인 폼(postForm)에 fileMulti를 넣지 않고 별도 dataForm(fileForm)으로 분리한다.
-        layout_rules.yml LR-012, LR-013 참조.
-      판정: "PPT section_labels에 '첨부' 또는 '파일' 키워드 포함 ▶ 라벨 존재 여부로 판단"
-      독립_섹션_패턴: |
-        // dataToolbar
-        listener.toolbar.fileToolbar = webix.ui({
-            container: `${PGM}fileToolbar`, view: 'dataToolbar', pgm: PGM, title: '첨부파일목록'
-        });
-        // 별도 dataForm
-        listener.form.fileForm = webix.ui({
-            container: `${PGM}fileForm`, view: 'dataForm', pgm: PGM,
-            elements: [{cols: [{view: DATA_VIEW.fileMulti, label: '첨부파일', name: 'attch_file_id', gravity: 5}]}]
-        });
-      폼_내부_패턴: |
-        // PPT에 ▶ 섹션 라벨이 없으면 기존대로 postForm 내부에 배치
-        {view: DATA_VIEW.fileMulti, label: '첨부파일', name: 'attch_file_id', gravity: 2}
-    근거: "SYY046.html (첨부파일 컴포넌트 샘플), PP-20260413-009 (SEC011/014 첨부파일 섹션 누락)"
+    근거: "SYY046.html (첨부파일 컴포넌트 샘플)"
 
 # -----------------------------------------------------------------------------
 # Platform 호출 패턴

@@ -37,62 +37,12 @@ standard_buttons:
 
 custom_buttons:
   id: BM-001
-  description: "비표준 버튼은 etc_desc1~etc_desc10 커스텀 슬롯 사용 (PP-20260413-008)"
-  severity: critical
-  rule: >
-    표준 버튼 7종(조회/신규/저장/삭제/출력/업로드/초기화)에 해당하지 않는
-    모든 버튼은 etc_desc1~etc_desc10에 순차적으로 할당한다.
-    최대 10개까지 사용 가능하며, 초과 시 [사용자 확인 필요] 태그를 부착한다.
-  mapping:
-    description: "3단계 매핑 구조 (sy_pgm_info ↔ listener ↔ 권한)"
-    sy_pgm_info:
-      column: "etc_desc{N}"
-      type: "character varying(30)"
-      value: "버튼 라벨 (예: '접수', '초안작성', '과제접수')"
-      range: "etc_desc1 ~ etc_desc10"
-      note: "etc_use_yn 컬럼은 존재하지 않음 — 사용 금지"
-    listener:
-      slot: "etc{N}"
-      path: "listener.button.etc{N}.click"
-      note: "etc_desc{N}이 아닌 etc{N}이 listener 슬롯명 (BM-002 교정 규칙 참조)"
-    auth:
-      pgm_auth: "sy_grp_auth_info.etc{N}_yn / sy_user_auth_info.etc{N}_yn"
-      range: "etc1_yn ~ etc10_yn"
-      description: "프레임워크가 etc{N}_yn='Y'인 경우에만 해당 버튼을 화면에 노출"
+  description: "비표준 버튼은 etc{N} 커스텀 슬롯 사용"
   rules:
-    - "N은 1부터 순차 할당 (빈 번호 없이)"
-    - "동일 화면에서 etc_desc{N}을 건너뛰지 않는다 (예: etc1, etc3 사용하고 etc2 미사용 금지)"
-    - "sy_pgm_info INSERT/UPDATE SQL에서 etc_desc{N}에 버튼 라벨을 등록해야 프레임워크가 버튼을 렌더링한다"
-    - "etc_desc{N}에 값이 없으면 해당 etc{N} 버튼은 화면에 표시되지 않는다"
-  examples:
-    - screen: "SEA010"
-      etc_desc1: "초안작성"
-      etc_desc2: "접수"
-      listener: "listener.button.etc1.click (초안작성), listener.button.etc2.click (접수)"
-    - screen: "SEA021"
-      etc_desc1: "과제저장"
-      etc_desc2: "과제접수"
-
-special_buttons:
-  id: BM-007
-  description: "특수 버튼은 spcl_desc1~spcl_desc10 슬롯 사용"
-  severity: critical
-  rule: >
-    닫기 등 프레임워크 특수 기능 버튼은 spcl_desc1~spcl_desc10에 할당한다.
-    etc와 동일한 3단계 매핑 구조를 따른다.
-  mapping:
-    sy_pgm_info:
-      column: "spcl_desc{N}"
-      type: "character varying(30)"
-      range: "spcl_desc1 ~ spcl_desc10"
-    listener:
-      slot: "spcl{N}"
-      path: "listener.button.spcl{N}.click"
-    auth:
-      pgm_auth: "sy_grp_auth_info.spcl{N}_yn / sy_user_auth_info.spcl{N}_yn"
-      range: "spcl1_yn ~ spcl10_yn"
-  reserved:
-    spcl1: "닫기 (BM-005, 서브화면 전용)"
+    - "표준 버튼 목록에 없는 버튼은 etc1, etc2, ... 순서로 할당"
+    - "listener 경로: listener.button.etc{N}.click"
+    - "sy_pgm_info 컬럼: etc_desc{N} (버튼 설명). etc_use_yn 컬럼은 존재하지 않으므로 사용 금지"
+    - "N은 1부터 순차 할당"
 
 auto_correction:
   id: BM-002
@@ -191,35 +141,6 @@ close_button:
     - "pgm_id에 '_T' 또는 '_P' 포함 → 닫기 버튼 필수"
     - "pgm_id.slice(-1) === '0' → 닫기 버튼 불필요"
   근거: "PP-20260413-001: 서브화면 닫기 버튼 누락 반복 오류 방지"
-
-button_state_conditions:
-  id: BM-006
-  description: "버튼 실행 전 상태 체크 정책 (PP-20260413-002)"
-  severity: critical
-  rules:
-    - id: BSC-001
-      description: "상태 조건은 AND + IN 조건이 기본이다"
-      rule: >
-        버튼 실행 전 상태 체크 조건이 여러 개일 때, 별도 지시가 없으면
-        모든 조건을 AND로 결합한다. 각 조건은 IN (허용 목록) 또는 NOT IN (차단 목록)이다.
-        예: 연구과제마스터 진행상태 IN ('010') AND 과제접수마스터 진행상태 IN ('010')
-    - id: BSC-002
-      description: "조건 불충족 시 알림 필수"
-      rule: >
-        버튼 상태 조건에 해당하지 않는 경우 반드시 popup.alert.show()로 알림을 제공한다.
-        알림 메시지에는 차단 사유를 포함한다 (예: "현재 상태에서는 삭제할 수 없습니다.").
-    - id: BSC-003
-      description: "다건 체크 처리 시 가능한 것만 처리"
-      rule: >
-        그리드에서 다건을 체크하여 처리하는 경우, 조건에 해당하는 건만 처리하고
-        조건에 해당하지 않는 건은 제외하여 알림을 제공한다.
-        모든 건이 조건 불충족이면 처리하지 않는다.
-        패턴: blockedItems/allowedItems 분리 → alert → confirm → 처리
-  적용_대상:
-    - "삭제 버튼 (del)"
-    - "접수/상태변경 버튼 (etc{N})"
-    - "저장 버튼 (save) — readonly 상태 체크"
-  근거: "PP-20260413-002: 버튼 상태 조건 정밀 수정 요청"
 
 verify_integration:
   description: "html_checks.yml의 버튼 매핑 검증과 연계"

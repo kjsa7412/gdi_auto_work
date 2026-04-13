@@ -80,10 +80,25 @@ checks:
   ddl_column_match:
     id: XC-008
     severity: critical
-    description: "DDL 컬럼과 SQL 컬럼 일치"
-    rule: "XML SQL에서 사용하는 컬럼이 DDL(convention cache table.txt)에 존재하는지 검증"
-    action_on_failure: "불일치 발견 시 self_diagnosis로 DDL보완 SQL 제안"
-    reference: "system/policies/verify/self_diagnosis.yml"
+    description: "DDL 컬럼과 SQL 컬럼 일치 — 실질적 검증 필수"
+    rule: >
+      XML SQL에서 사용하는 모든 비즈니스 컬럼(감사컬럼/파라미터 제외)이
+      convention cache table.txt에 실제로 존재하는지 검증한다.
+      형식적으로 pass를 기록하는 것을 금지하며, 반드시 table.txt를 읽어서
+      대상 테이블의 컬럼 목록과 1:1 대조해야 한다.
+    verification_procedure:
+      - "1. 생성된 XML 파일을 읽어 INSERT/SELECT에 사용된 모든 컬럼명을 추출"
+      - "2. system/cache/convention/table.txt에서 해당 테이블의 컬럼 목록을 조회"
+      - "3. XML 컬럼명이 table.txt 컬럼 목록에 존재하는지 1:1 대조"
+      - "4. 불일치 발견 시: table.txt에서 올바른 컬럼명을 찾아 자동 교정 시도"
+      - "5. 교정 불가 시: critical fail + self_diagnosis로 DDL보완 SQL 제안"
+    exclusions:
+      - "감사컬럼 (firs_reg_*, fina_reg_*) — 별도 XC-004/XC-005에서 검증"
+      - "파라미터 (P_*, login_*, reg_pgm_id) — 바인딩 변수이므로 제외"
+      - "가공 컬럼 (AS alias) — SQL 내 연산/서브쿼리로 생성된 컬럼"
+    action_on_failure: "불일치 발견 시 자동 교정 시도. 불가하면 critical fail"
+    auto_fixable: true
+    reference: "system/policies/verify/self_diagnosis.yml, system/policies/analyze/default_resolution.yml CR-001"
 
   coalesce_type:
     id: XC-009

@@ -6,8 +6,8 @@
 
 module_id:
   description: "화면/프로그램 단위 식별자"
-  pattern: "{module_group}{sub_group}{seq}"
-  examples: ["dta030", "syb020", "dtj010"]
+  pattern: "{module_group}{sub_letter}{seq}"
+  examples: ["dta030", "syb020", "dtj010", "seb020"]
   rules:
     - type: "강제"
       rule: "영문 소문자 + 숫자 조합"
@@ -16,6 +16,20 @@ module_id:
     - type: "관행"
       rule: "일련번호는 010 단위로 증가"
   근거: "C:/gdi/src/main/java/com/sjinc/proj/sy/syb/syb020/, C:/GitLap/FERP/FERP(TOBE)/ferp-backoffice/.../dt/dta/dta030/"
+
+sub_group:
+  description: "디렉토리 경로에서 사용하는 서브그룹 식별자 (3자리)"
+  pattern: "{module_group}{sub_letter}"
+  derivation: "module_id 앞 3자리 = module_group(2) + sub_letter(1)"
+  examples:
+    - module_id: "dta030" → sub_group: "dta"
+    - module_id: "syb020" → sub_group: "syb"
+    - module_id: "seb020" → sub_group: "seb"
+  rules:
+    - type: "강제"
+      rule: "디렉토리 경로에서 sub_group은 반드시 3자리 코드 사용 (단일 문자 금지)"
+    - type: "강제"
+      rule: "예: templates/project/se/seb/ (O), templates/project/se/b/ (X)"
 
 controller:
   class_name:
@@ -67,38 +81,45 @@ request_mapping:
 
 html:
   file_name:
-    pattern: "{MODULE_ID}.html"
+    pattern: "{SCREEN_ID}.html"
     case: "대문자"
     examples:
-      main: "DTA030.html"
-      popup: "DTA030_P01.html"
-      tab: "DTJ010_T10.html"
+      main: "SEA010.html"
+      sub: "SEA011.html"
+      tab: "SEB012.html"
     rules:
       - type: "강제"
-        rule: "모듈ID 대문자 변환"
+        rule: "화면ID(screen_id) 대문자 변환"
       - type: "강제"
-        rule: "팝업: {MODULE_ID}_P{seq}.html (01~)"
-      - type: "강제"
-        rule: "탭: {MODULE_ID}_T{seq}.html (10, 20, 30...)"
+        rule: "서브화면/팝업/탭도 독립 screen_id로 파일 생성 (예: SEA011.html)"
+      - type: "폐기"
+        rule: "_P{seq}.html, _T{seq}.html 접미사 패턴은 사용하지 않음. 모든 화면은 PPT 프로그램ID 기준으로 독립 파일 생성"
     location: "templates/project/{module_group}/{sub_group}/"
-    근거: "DTA030.html, DTJ010.html, DTJ010_T10.html, DTA030_P01.html"
+    근거: "sy_pgm_info.pgm_path 분석: 서브화면도 독립 경로 사용 (/se/sea/sea011 등)"
 
 xml_mapper:
   file_name:
-    pattern: "{module_id}.xml"
+    pattern: "{screen_id_lower}.xml"
     case: "소문자"
-    examples: ["dta030.xml", "dtc010.xml"]
+    examples: ["sea010.xml", "sea011.xml", "seb010.xml"]
+    rules:
+      - type: "강제"
+        rule: "각 화면(screen_id)별 독립 XML mapper 파일 생성"
+      - type: "강제"
+        rule: "서브화면도 독립 XML — 부모와 공유하지 않음"
+      - type: "폐기"
+        rule: "부모 module_id에 서브화면 SQL을 합치는 방식은 사용하지 않음"
     location: "mapper/sjerp/{module_group}/{sub_group}/"
-    근거: "dta030.xml, dtb010.xml"
+    근거: "sy_pgm_info.pgm_path 분석: 각 screen_id가 독립 경로 사용"
 
 namespace:
-  pattern: "{module_id}"
+  pattern: "{screen_id_lower}"
   rules:
     - type: "강제"
-      rule: "mapper namespace는 모듈ID 소문자와 동일"
+      rule: "mapper namespace는 화면ID 소문자와 동일 (예: sea011)"
     - type: "강제"
-      rule: "1 파일 = 1 namespace"
-  근거: "<mapper namespace=\"dta030\">, <mapper namespace=\"dta020\">"
+      rule: "1 파일 = 1 namespace = 1 screen_id"
+  근거: "각 화면의 독립 관리 원칙"
 
 sql_id:
   pattern: "{action}{Description}"

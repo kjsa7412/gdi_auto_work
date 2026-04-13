@@ -1,14 +1,18 @@
 <!DOCTYPE html>
+<pgm-info
+        data-id="{{screen_id}}"
+        data-name="{{screen_name}}"
+        data-desc="{{screen_desc}}"
+        data-date="{{create_date}}"
+        data-version="1.0.0"
+></pgm-info>
 <html xmlns:th="http://www.thymeleaf.org">
 <th:block th:replace="~{frame/top_title_button :: topTitleButtonFragment}"></th:block>
 
 <div class="data-page">
-    <div th:id="|${PGM}searchForm|"></div>
     <div class="data-content-wrapper">
         <div class="data-content-fill">
-            <div th:id="|${PGM}mainForm|"></div>
-            <!-- OPTIONAL: sub grid section -->
-            <div th:id="|${PGM}subGrid|"></div>
+            <div th:id="|${PGM}postForm|"></div>
         </div>
     </div>
 </div>
@@ -20,76 +24,47 @@
 
     listener.initPgm = function () {
 
-        /* OPTIONAL: search form for edit mode */
-        // === 검색 폼 (수정 대상 조회용) ===
-        listener.form.searchForm = webix.ui({
-            container: `${PGM}searchForm`,
-            view: 'dataForm',
-            pgm: PGM,
-            search: true,
-            elements: [
-                {
-                    cols: [
-                        {{search_fields}}
-                    ]
-                }
-            ]
-        });
-
         // === 메인 입력 폼 ===
-        listener.form.mainForm = webix.ui({
-            container: `${PGM}mainForm`,
+        listener.form.postForm = webix.ui({
+            container: `${PGM}postForm`,
             view: 'dataForm',
             pgm: PGM,
             elements: [
-                {
-                    cols: [
-                        {{detail_fields}}
-                    ]
-                }
+                {{detail_fields}}
             ]
         });
-
-        /* OPTIONAL: sub grid section start */
-        // === 하위 목록 그리드 ===
-        listener.grid.subGrid = webix.ui({
-            container: `${PGM}subGrid`,
-            view: "datagrid",
-            listener: listener,
-            editable: true,
-            checkable: true,
-            rowNumber: true,
-            addRowable: true,
-            columns: [
-                {{grid_columns}}
-            ]
-        });
-        /* OPTIONAL: sub grid section end */
     };
 
-    /* OPTIONAL: search for edit mode */
-    // === 조회 (수정 모드) ===
-    listener.button.search.click = function () {
-        if (!listener.form.searchForm.formValidate()) return;
+    /* OPTIONAL: activePgm handler start */
+    // === 서브화면 진입 ===
+    listener.activePgm = function (param) {
+        if (param) {
+            var isNew = String(param.isNew) === 'true';
+            if (!isNew && param.data) {
+                loadDetail(param.data);
+            }
+        }
+    };
 
-        const param = listener.form.searchForm.getData();
+    function loadDetail(data) {
+        const param = Object.assign({}, data);
         param.statement = "{{mapper_namespace}}.{{select_sql_id}}";
-
         const callback = new Callback(function (result) {
             if (result.resultCode === RESULT_CODE.OK && result.resultData) {
-                listener.form.mainForm.setData(result.resultData);
+                listener.form.postForm.setData(result.resultData);
             }
         });
         platform.post(platform.url.selectOne, param, callback);
-    };
+    }
+    /* OPTIONAL: activePgm handler end */
 
     // === 저장 ===
     listener.button.save.click = function () {
-        if (!listener.form.mainForm.formValidate()) return;
+        if (!listener.form.postForm.formValidate()) return;
 
         popup.confirm.show("저장 하시겠습니까?", function (confirmYn) {
             if (confirmYn) {
-                const formData = listener.form.mainForm.getData();
+                const formData = listener.form.postForm.getData();
                 formData.statement = "{{mapper_namespace}}.{{insert_sql_id}}";
 
                 const callback = new Callback(function (result) {
@@ -102,12 +77,34 @@
         });
     };
 
+    /* OPTIONAL: delete block start */
+    // === 삭제 ===
+    listener.button.del.click = function () {
+        popup.confirm.show("삭제 하시겠습니까?", function (confirmYn) {
+            if (confirmYn) {
+                const formData = listener.form.postForm.getData();
+                formData.statement = "{{mapper_namespace}}.{{delete_sql_id}}";
+
+                const callback = new Callback(function (result) {
+                    if (result.resultCode === RESULT_CODE.OK) {
+                        popup.alert.show("삭제되었습니다.");
+                        listener.form.postForm.init();
+                    }
+                });
+                platform.post(platform.url.save, formData, callback);
+            }
+        });
+    };
+    /* OPTIONAL: delete block end */
+
     // === 초기화 ===
     listener.button.init.click = function () {
-        listener.form.searchForm.init();
-        listener.form.mainForm.init();
-        /* OPTIONAL: listener.grid.subGrid.setData([]); */
+        listener.form.postForm.init();
     };
+
+    /* OPTIONAL: custom button handlers start */
+    {{custom_button_handlers}}
+    /* OPTIONAL: custom button handlers end */
 
     {{init_script}}
 

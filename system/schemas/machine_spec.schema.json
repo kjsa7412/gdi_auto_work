@@ -7,9 +7,9 @@
   "required": [
     "version", "screen_id", "screen_name", "screen_type",
     "module_id", "module_group", "sub_group", "mapper_namespace",
-    "skeleton_choice", "placeholders", "sql", "artifacts"
+    "skeleton_choice", "placeholders", "sql"
   ],
-  "additionalProperties": false,
+  "additionalProperties": true,
   "properties": {
     "version": {
       "type": "string",
@@ -163,6 +163,55 @@
             "type": "array",
             "items": { "type": "string" }
           }
+        },
+        "additionalProperties": true
+      }
+    },
+    "button_events": {
+      "type": "array",
+      "description": "화면 버튼별 이벤트 정의 (PPT [버튼] 섹션에서 추출)",
+      "items": {
+        "type": "object",
+        "properties": {
+          "slot": { "type": "string", "description": "버튼 슬롯 (search/save/del/news/init/etc1/etc2...)" },
+          "label": { "type": "string", "description": "버튼 한글 라벨" },
+          "action": { "type": "string", "description": "동작 설명 (PPT 원문)" },
+          "conditions": { "type": "array", "items": { "type": "string" }, "description": "실행 조건/제약" },
+          "target_screen": { "type": "string", "description": "이동 대상 화면 ID (있는 경우)" },
+          "status_change": { "type": "object", "description": "상태 변경 정보", "properties": {
+            "table": { "type": "string" },
+            "column": { "type": "string" },
+            "from": { "type": "string" },
+            "to": { "type": "string" }
+          }}
+        },
+        "additionalProperties": true
+      }
+    },
+    "business_rules": {
+      "type": "array",
+      "description": "비즈니스 규칙 (PPT [데이터], [그리드], [인풋폼] 섹션에서 추출)",
+      "items": {
+        "type": "object",
+        "properties": {
+          "rule_id": { "type": "string" },
+          "source": { "type": "string", "description": "PPT 섹션 ([버튼], [그리드], [데이터] 등)" },
+          "description": { "type": "string", "description": "PPT 원문 그대로" },
+          "type": { "type": "string", "enum": ["trigger", "readonly_condition", "status_check", "custom_codehelp", "grid_event", "data_display", "api_pending"] }
+        },
+        "additionalProperties": true
+      }
+    },
+    "sql_artifacts": {
+      "type": "array",
+      "description": "추가 SQL 산출물 요구 (트리거, DDL 보완 등)",
+      "items": {
+        "type": "object",
+        "properties": {
+          "type": { "type": "string", "enum": ["trigger", "function", "ddl", "procedure"] },
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "target_table": { "type": "string" }
         },
         "additionalProperties": true
       }

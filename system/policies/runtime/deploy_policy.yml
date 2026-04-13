@@ -44,6 +44,7 @@ deploy:
 
   target_path_resolution:
     source: "system/config/framework_manifest.yml → source_roots + supported_artifacts"
+    note: "{sub_group}은 3자리 코드 (module_group + sub_letter). 예: se+b=seb, dt+a=dta. naming.yml 참조."
     rules:
       html: "{templates_root}/project/{module_group}/{sub_group}/{MODULE_ID}.html"
       xml: "{mappers_root}/sjerp/{module_group}/{sub_group}/{module_id}.xml"

@@ -20,7 +20,7 @@ PPT를 분석하여 people_spec + machine_spec을 생성하는 **오케스트레
 | `system/policies/runtime/allowed_paths.yml` | 읽기/쓰기 허용 경로 |
 | `system/policies/runtime/context_isolation.yml` | task 격리, lock 형식 |
 | `system/policies/runtime/lifecycle.yml` | 필수 산출물 검증, unresolved 정책 |
-| `system/policies/analyze/ppt_extraction.yml` | PPT 추출 규칙 (PE-001~PE-006) |
+| `system/policies/analyze/ppt_extraction.yml` | PPT 추출 규칙 (PE-001~PE-007) |
 | `system/policies/analyze/classify_tags.yml` | 13개 태그 분류 |
 | `system/policies/analyze/screen_type_rules.yml` | 화면유형 판정 |
 | `system/policies/analyze/default_resolution.yml` | 보완 우선순위, 태그 규칙 |
@@ -47,9 +47,20 @@ PPT를 분석하여 people_spec + machine_spec을 생성하는 **오케스트레
 `lifecycle.yml` → `mandatory_output_check.analyze` 기준으로 필수 산출물 목록 확인.
 
 ### 5. PPT 분석 → 화면 추출 → 분류
-`ppt_extraction.yml` (PE-001~PE-006) 규칙으로 PPT 추출.
+`ppt_extraction.yml` (PE-001~PE-007) 규칙으로 PPT 추출.
 `classify_tags.yml` 규칙으로 태그 분류.
 `screen_type_rules.yml` 규칙으로 화면유형 판정.
+
+> **환각 방지 원칙 (PE-007, DSI-001~005)**:
+> - 콘솔 인코딩이 깨진 경우 반드시 추출 JSON을 Read 도구로 직접 읽어 원문 확인
+> - Agent 위임 시 데이터를 자연어로 설명하지 말고, 파일 경로를 전달하여 Agent가 직접 읽도록 지시
+> - 그리드 컬럼명/검색 필드명은 PPT TABLE/GROUP 원문만 사용. 추론 생성 절대 금지
+
+### 5-1. 추출 데이터 검증 (PE-007)
+추출된 JSON 파일을 Read 도구로 직접 읽어:
+- TABLE shape 헤더(row[0])의 컬럼명 확인
+- GROUP shape 라벨 텍스트 확인
+- 콘솔 출력과 불일치 시 JSON 파일 기준으로 진행
 
 ### 6. people_spec(original) 생성
 `spec_generation.yml` → `people_spec_rules` 적용.
@@ -63,6 +74,10 @@ PPT를 분석하여 people_spec + machine_spec을 생성하는 **오케스트레
 
 ### 8. people_spec(final) 초기 복사
 `spec_generation.yml` → `final_people_spec` 규칙 적용.
+
+### 9-1. 교차 검증 (DSI-005)
+생성된 people_spec의 그리드 컬럼명을 PPT TABLE 헤더와 1:1 대조.
+불일치 발견 시 PPT 원본 기준으로 교정.
 
 ### 9. Manifest 완료 + Active Context 갱신 + Lock 해제
 `runtime.yml` → `commands.analyze.success_state`: task_analyzed

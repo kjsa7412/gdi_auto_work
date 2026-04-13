@@ -29,7 +29,10 @@
 `context_isolation.yml` lock 형식: `LOCKED:task:build`
 
 ### 2. Review Skill 호출
+**반드시 `.claude/skills/review.md` 파일을 읽고 그 절차를 그대로 따라 실행한다.**
+
 `runtime.yml` → `commands.build.skills_used[0]`: review
+- **skill 파일 경로: `.claude/skills/review.md`**
 - 입력: original/final people_spec, original machine_spec
 - 반환: final/machine_spec.yml, diff_summary, unresolved
 - unresolved 존재 시 → `lifecycle.yml` → `unresolved_policy.build` 적용 (차단)
@@ -39,7 +42,11 @@
 결과를 build.manifest.cache 섹션에 기록.
 
 ### 4. Generate Skill 호출
+**반드시 `.claude/skills/generate.md` 파일을 읽고 그 절차를 그대로 따라 실행한다.**
+generate.md를 읽지 않고 이 섹션의 요약만으로 코드를 생성하는 것을 금지한다.
+
 `runtime.yml` → `commands.build.skills_used[1]`: generate
+- **skill 파일 경로: `.claude/skills/generate.md`**
 - 입력: final/machine_spec.yml + 전체 framework/verify 정책
 - 반환: generated_paths, verify_details, self_diagnosis, critical_pass, manual_required, auto_fixed
 
@@ -57,6 +64,8 @@ generate skill 반환 기반으로 `verify_result.yml` 생성.
 generated → deliverables, build_report.md 생성.
 
 ### 8. Deploy Skill 자동 호출
+**반드시 `.claude/skills/deploy.md` 파일을 읽고 그 절차를 그대로 따라 실행한다.**
+
 `deploy_policy.yml` → `entry_conditions.from_build` 충족 시 **deploy skill 자동 호출**.
 - 대상: `work/task/3.Result/deliverables/**`
 - 세부 절차는 `skills/deploy.md` 참조

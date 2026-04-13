@@ -22,36 +22,40 @@ class_structure:
   extends: "BaseService"
   dependency_injection:
     method: "생성자 주입"
-    # GDI 프레임워크: SqlSessionTemplate 1개 (txManager)
-    # FERP 레퍼런스: reader/writer 분리 (ferpReaderSqlSessionTemplate, ferpWriterSqlSessionTemplate)
     gdi_pattern:
-      - "SqlSessionTemplate sqlSessionTemplate (단일)"
-    ferp_pattern:
-      - "SqlSessionTemplate ferpWriterSqlSessionTemplate (쓰기용)"
-      - "SqlSessionTemplate ferpReaderSqlSessionTemplate (읽기용)"
+      - "SqlSessionTemplate sqlSessionTemplate (단일 — GDI 프로젝트 표준)"
     optional:
+      - "PasswordEncoder passwordEncoder (암호화 필요 시)"
       - "ObjectMapper objectMapper (JSON 변환 필요 시)"
-      - "CommonService commonService (공통 조회 필요 시)"
+    note: "CommonService는 개별 Service에 주입하지 않음. reader/writer 분리도 하지 않음."
+  access_modifier:
+    individual_service: "protected (같은 패키지 Controller에서만 호출)"
+    common_service: "public"
+  login_info:
+    description: "@AddUserInfo AOP가 param Map에 login_user_id, login_emp_no, login_user_ip, reg_pgm_id 등을 자동 주입"
+    rule: "Service 메서드에 LoginUserVo를 별도 파라미터로 받지 않음. param Map에서 직접 사용"
   example:
     code: |
-      @Service
       @Slf4j
-      public class Dta030Service extends BaseService {
-          private final SqlSessionTemplate ferpWriterSqlSessionTemplate;
-          private final SqlSessionTemplate ferpReaderSqlSessionTemplate;
-          private final ObjectMapper objectMapper;
-          public Dta030Service(
-              SqlSessionTemplate ferpWriterSqlSessionTemplate,
-              SqlSessionTemplate ferpReaderSqlSessionTemplate,
-              ObjectMapper objectMapper) {
-              this.ferpWriterSqlSessionTemplate = ferpWriterSqlSessionTemplate;
-              this.ferpReaderSqlSessionTemplate = ferpReaderSqlSessionTemplate;
-              this.objectMapper = objectMapper;
+      @Service
+      public class Syb020Service extends BaseService {
+          private final SqlSessionTemplate sqlSessionTemplate;
+          public Syb020Service(SqlSessionTemplate sqlSessionTemplate) {
+              this.sqlSessionTemplate = sqlSessionTemplate;
+          }
+
+          @Transactional(value = "txManager")
+          protected void delete(Map<String,Object> param) {
+              Integer cnt = sqlSessionTemplate.selectOne("syb020.checkCount", param);
+              if (cnt != null && cnt > 0) {
+                  throw new IllegalStateException("This record is referenced...");
+              }
+              sqlSessionTemplate.delete("syb020.delete", param);
           }
       }
   근거:
-    - "C:/GitLap/FERP/.../dt/dta/dta030/Dta030Service.java"
-    - "C:/GitLap/FERP/.../dt/DtService.java"
+    - "C:/gdi/src/main/java/com/sjinc/proj/sy/syb/syb020/Syb020Service.java"
+    - "C:/gdi/src/main/java/com/sjinc/proj/sy/syd/syd020/Syd020Service.java"
     - "C:/gdi/src/main/java/com/sjinc/proj/common/CommonService.java"
 
 # -----------------------------------------------------------------------------
@@ -67,8 +71,9 @@ role_boundary:
     - "벌크 데이터 처리 최적화"
   not_service_responsibilities:
     - "HTTP 요청/응답 처리 (Controller 담당)"
-    - "로그인 사용자 추출 (Controller에서 전달)"
+    - "LoginUserVo 추출/전달 (불필요 — @AddUserInfo AOP가 param Map에 자동 주입)"
     - "BaseResponse 생성 (Controller 담당)"
+    - "login_* 정보를 param에 수동 put (불필요 — @AddUserInfo가 자동 처리)"
 
 # -----------------------------------------------------------------------------
 # CRUD 메서드 패턴

@@ -1,16 +1,23 @@
 <!DOCTYPE html>
+<pgm-info
+        data-id="{{screen_id}}"
+        data-name="{{screen_name}}"
+        data-desc="{{screen_desc}}"
+        data-date="{{create_date}}"
+        data-version="1.0.0"
+></pgm-info>
 <html xmlns:th="http://www.thymeleaf.org">
 <th:block th:replace="~{frame/top_title_button :: topTitleButtonFragment}"></th:block>
 
 <div class="data-page">
-    <!-- OPTIONAL: search form for search-type popup -->
-    <div th:id="|${PGM}searchForm|"></div>
+    /* OPTIONAL: search form for search-type popup */
+    <!-- <div th:id="|${PGM}searchForm|"></div> -->
     <div class="data-content-wrapper">
         <div class="data-content-fill">
-            <!-- VARIANT: form for input-type popup -->
+            /* VARIANT: input-type popup form */
             <div th:id="|${PGM}postForm|"></div>
-            <!-- VARIANT: grid for search/confirm-type popup -->
-            <div th:id="|${PGM}popupGrid|"></div>
+            /* VARIANT: search/confirm-type popup grid */
+            <!-- <div class="data-grid" th:id="|${PGM}grid1|"></div> -->
         </div>
     </div>
 </div>
@@ -31,23 +38,32 @@
             view: 'dataForm',
             pgm: PGM,
             elements: [
-                {
-                    cols: [
-                        {{detail_fields}}
-                    ]
-                }
+                {{detail_fields}}
             ]
         });
 
         /* VARIANT: search/confirm-type popup grid */
         /*
-        listener.grid.popupGrid = webix.ui({
-            container: `${PGM}popupGrid`,
+        listener.form.searchForm = webix.ui({
+            container: `${PGM}searchForm`,
+            view: 'dataForm',
+            pgm: PGM,
+            search: true,
+            elements: [
+                {
+                    cols: [
+                        {{search_fields}}
+                    ]
+                }
+            ]
+        });
+
+        listener.grid.grid1 = webix.ui({
+            container: `${PGM}grid1`,
             view: "datagrid",
             listener: listener,
             editable: false,
             checkable: true,
-            rowNumber: true,
             columns: [
                 {{grid_columns}}
             ]
@@ -57,7 +73,6 @@
         // === 초기 데이터 세팅 ===
         if (modalParam) {
             listener.form.postForm.setData(modalParam);
-            listener.form.postForm.refresh();
         }
     };
 
@@ -69,16 +84,17 @@
 
         /* OPTIONAL: server processing before return */
         /*
-        popup.confirm.show("실행 하시겠습니까?", function (confirmYn) {
+        popup.confirm.show("저장 하시겠습니까?", function (confirmYn) {
             if (confirmYn) {
                 formData.statement = "{{mapper_namespace}}.{{insert_sql_id}}";
                 const callback = new Callback(function (result) {
                     if (result.resultCode === RESULT_CODE.OK) {
-                        popup.alert.show("처리되었습니다.");
-                        dataModal.ok(formData);
+                        popup.alert.show("저장되었습니다.", function () {
+                            dataModal.ok(formData);
+                        });
                     }
                 });
-                platform.post(platform.url.procedure, formData, callback);
+                platform.post(platform.url.save, formData, callback);
             }
         });
         */
@@ -94,29 +110,20 @@
         param.statement = "{{mapper_namespace}}.{{select_sql_id}}";
         const callback = new Callback(function (result) {
             if (result.resultCode === RESULT_CODE.OK) {
-                listener.grid.popupGrid.setData(result.resultData);
+                listener.grid.grid1.setData(result.resultData);
             }
         });
         platform.post(platform.url.select, param, callback);
     };
-    */
 
-    /* VARIANT: search-type - 선택 후 반환 */
-    /*
-    listener.button.select.click = function () {
-        const selected = listener.grid.popupGrid.getCheckedData();
-        if (selected.length === 0) { popup.alert.show("선택된 데이터가 없습니다."); return; }
-        dataModal.ok(selected);
+    listener.gridRow.dblclick = function (row, column, record, grid) {
+        dataModal.ok(record);
     };
     */
 
-    /* VARIANT: confirm-type - 확인 후 반환 */
-    /*
-    listener.button.save.click = function () {
-        const checkedData = listener.grid.popupGrid.getCheckedData();
-        dataModal.ok({type: 'confirm', list: checkedData});
-    };
-    */
+    /* OPTIONAL: custom button handlers start */
+    {{custom_button_handlers}}
+    /* OPTIONAL: custom button handlers end */
 
     {{init_script}}
 

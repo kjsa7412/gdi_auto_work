@@ -281,10 +281,10 @@ PPT를 분석하여 다음 3개를 만든다.
 2. active context를 task/analyze 상태로 설정
 3. convention cache refresh를 **무조건 1회 수행**
 4. 필요 시 DB fallback으로 cache 보강
-5. PPT 추출
-6. 화면 후보 식별
+5. PPT 추출 (PE-001~007 규칙, 환각 방지 원칙 적용)
+6. 화면 후보 식별 + 교차 검증 (PPT TABLE 헤더 vs spec 그리드 컬럼 1:1 대조)
 7. screen type 분류
-8. people_spec(original) 생성
+8. people_spec(original) 생성 (컬럼명 해석 절차 CR-001 적용)
 9. machine_spec(original) 생성
 10. people_spec(final) 복사
 11. manifest 기록 후 `task_analyzed` 상태로 종료
@@ -341,7 +341,7 @@ work/task/2.Working/final/people_spec.md
 8. skeleton 기반 산출물 생성
 9. `verify_result.yml` 생성
 10. deliverables / report 정리
-11. 조건 만족 시 `deploy` skill을 **prepare-only** 모드로 호출
+11. 조건 만족 시 `deploy` skill을 **apply** 모드로 자동 호출 (실제 파일 복사)
 12. `task_built` 상태로 종료
 
 ### build의 핵심 포인트
@@ -357,14 +357,15 @@ work/task/2.Working/final/people_spec.md
 work/task/2.Working/final/machine_spec.yml
 ```
 
-#### 3) deploy는 기본적으로 준비만 한다
-실제 복사는 하지 않는다.
+#### 3) deploy는 기본적으로 apply 모드로 자동 실행된다
+verify 결과가 pass 또는 warn이고, deliverables가 존재하면 **자동으로 실제 파일 복사**를 수행한다.
 
 즉,
 - target path 계산
 - overwrite/conflict 탐지
+- **실제 파일 복사 (apply)**
 - deploy summary 생성
-까지만 수행한다.
+을 수행한다. deploy 실패는 build 실패로 취급하지 않는다.
 
 ### build 결과로 확인할 파일
 
@@ -380,6 +381,8 @@ work/task/2.Working/final/machine_spec.yml
 - generated 파일 수가 예상과 맞는지
 - deliverables에 HTML/XML만 있는지, Controller/Service도 필요한지
 - deploy_summary에 target path 충돌이 없는지
+- deploy가 apply 모드로 정상 완료되었는지 (실제 프로젝트에 파일 배포 확인)
+- sy_pgm_info 등록이 필요한 화면 목록 확인 (build_report.md 참조)
 
 ---
 
@@ -451,6 +454,32 @@ work/task/2.Working/final/machine_spec.yml
 - 일부만 정리하는 방식은 허용되지 않는다
 - archive 내 파일 삭제는 금지다
 - failed 상태에서 빠져나오려면 clean이 사실상 필수다
+
+---
+
+## 8.6 Deploy 대상 경로 규칙
+
+build 완료 후 자동 deploy 시, 다음 경로 규칙에 따라 파일이 배포된다.
+
+| 산출물 | 배포 경로 |
+|--------|----------|
+| HTML | `{templates_root}/project/{module_group}/{sub_group}/{MODULE_ID}.html` |
+| XML | `{mappers_root}/sjerp/{module_group}/{sub_group}/{module_id}.xml` |
+| Controller | `{java_root}/proj/{module_group}/{sub_group}/{module_id}/{ModuleId}Controller.java` |
+| Service | `{java_root}/proj/{module_group}/{sub_group}/{module_id}/{ModuleId}Service.java` |
+
+- `{sub_group}`은 3자리 코드 (module_group + sub_letter). 예: se+a=sea, se+b=seb
+- SSOT: `system/config/framework_manifest.yml` → `supported_artifacts`, `system/policies/runtime/deploy_policy.yml`
+
+### build 후 수동 후속 작업
+
+deploy가 파일을 복사한 후에도 수동으로 해야 하는 작업이 있다:
+
+1. **sy_pgm_info 등록** — 각 화면의 프로그램 정보를 DB에 INSERT (build_report.md의 sy_pgm_info 테이블 참조)
+2. **DDL 보완** — verify_result에 ddl_supplements가 있으면 해당 ALTER TABLE 실행
+3. **코드 등록** — verify_result에 code_registrations가 있으면 해당 INSERT 실행
+4. **codeCustomMapper.xml** — 커스텀 코드헬프 SQL이 필요하면 help 폴더에 추가
+5. **execution_order.md** — 생성된 경우, DDL → 코드등록 → 메뉴등록 순서로 실행
 
 ---
 
@@ -614,7 +643,10 @@ work/task/2.Working/final/people_spec.md
 - [ ] `final/machine_spec.yml` 생성됐는가
 - [ ] verify_result가 pass/warn인가
 - [ ] deliverables가 기대한 개수/형식인가
-- [ ] deploy_summary의 충돌 여부를 확인했는가
+- [ ] deploy가 apply 모드로 성공했는가 (deploy_summary 확인)
+- [ ] 실제 프로젝트 경로에 파일이 배포되었는가
+- [ ] sy_pgm_info 등록이 필요한 화면을 확인했는가 (build_report.md)
+- [ ] DDL 보완 / 코드 등록 등 후속 수동 작업을 확인했는가
 
 ## fix 후
 - [ ] fix 유형이 정확히 분류됐는가

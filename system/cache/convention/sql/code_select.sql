@@ -7,29 +7,27 @@
 
 -- 코드 마스터 조회 (코드유형 목록)
 SELECT
-    scm.comp_cd,
     scm.wrk_tp_cd,
     scm.cd_tp_cd,
     scm.cd_tp_nm,
     scm.use_yn,
-    scm.rmk
+    scm.wrk_rmk
 FROM sy_code_mst scm
 WHERE scm.use_yn = 'Y'
-ORDER BY scm.comp_cd, scm.wrk_tp_cd, scm.cd_tp_cd;
+ORDER BY scm.wrk_tp_cd, scm.cd_tp_cd;
 
 -- 코드 상세 조회 (코드값 목록)
 SELECT
-    scd.comp_cd,
     scd.wrk_tp_cd,
     scd.cd_tp_cd,
-    scd.cd,
-    scd.cd_nm,
-    scd.cd_rmk,
+    scd.comm_cd,
+    scd.comm_cd_nm,
+    scd.comm_cd_desc,
     scd.sort_ord,
     scd.use_yn
 FROM sy_code_dtl scd
 WHERE scd.use_yn = 'Y'
-ORDER BY scd.comp_cd, scd.wrk_tp_cd, scd.cd_tp_cd, scd.sort_ord, scd.cd;
+ORDER BY scd.wrk_tp_cd, scd.cd_tp_cd, scd.sort_ord, scd.comm_cd;
 
 -- TODO: comp_cd 필터 조건 추가 필요 (실제 운영 시 특정 회사 코드로 제한)
 -- TODO: wrk_tp_cd 목록 확인 필요 (PS, DT, SY 등 업무구분 코드)

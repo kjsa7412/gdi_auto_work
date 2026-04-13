@@ -1,16 +1,27 @@
 <!DOCTYPE html>
+<pgm-info
+        data-id="{{screen_id}}"
+        data-name="{{screen_name}}"
+        data-desc="{{screen_desc}}"
+        data-date="{{create_date}}"
+        data-version="1.0.0"
+></pgm-info>
 <html xmlns:th="http://www.thymeleaf.org">
 <th:block th:replace="~{frame/top_title_button :: topTitleButtonFragment}"></th:block>
 
 <div class="data-page">
     <div th:id="|${PGM}searchForm|"></div>
     <div class="data-content-wrapper">
-        <div class="data-content-5-left">
-            <div th:id="|${PGM}masterGrid|"></div>
+        <div class="{{left_layout_class}}">
+            <div class="data-toolbar" th:id="|${PGM}toolbar1|"></div>
+            <div class="data-grid" th:id="|${PGM}grid1|"></div>
         </div>
-        <div class="data-content-fill">
-            <div th:id="|${PGM}btnToolbar2|"></div>
-            <div th:id="|${PGM}detailGrid|"></div>
+        <div class="{{right_layout_class}}">
+            <div class="data-toolbar" th:id="|${PGM}toolbar2|"></div>
+            /* VARIANT: detail-grid */
+            <div class="data-grid" th:id="|${PGM}grid2|"></div>
+            /* VARIANT: detail-form */
+            <!-- <div th:id="|${PGM}postForm|"></div> -->
         </div>
     </div>
 </div>
@@ -37,58 +48,82 @@
             ]
         });
 
+        // === 좌측 툴바 ===
+        listener.toolbar.toolbar1 = webix.ui({
+            container: `${PGM}toolbar1`,
+            view: "dataToolbar",
+            pgm: PGM,
+            title: "{{master_title}}"
+        });
+
         // === 마스터 그리드 (좌측) ===
-        listener.grid.masterGrid = webix.ui({
-            container: `${PGM}masterGrid`,
+        listener.grid.grid1 = webix.ui({
+            container: `${PGM}grid1`,
             view: "datagrid",
             listener: listener,
             editable: false,
             checkable: false,
-            rowNumber: true,
-            sort: true,
             columns: [
                 {{grid_columns}}
             ]
         });
 
-        /* OPTIONAL: detail toolbar */
-        // === 상세 영역 툴바 (우측) ===
+        // === 우측 툴바 ===
         listener.toolbar.toolbar2 = webix.ui({
-            container: `${PGM}btnToolbar2`,
+            container: `${PGM}toolbar2`,
             view: "dataToolbar",
             pgm: PGM,
             title: "{{detail_title}}"
         });
 
-        // === 상세 그리드 (우측) ===
-        listener.grid.detailGrid = webix.ui({
-            container: `${PGM}detailGrid`,
+        /* VARIANT: detail-grid - 상세 그리드 (우측) */
+        listener.grid.grid2 = webix.ui({
+            container: `${PGM}grid2`,
             view: "datagrid",
             listener: listener,
             editable: true,
             checkable: true,
-            rowNumber: true,
-            sort: true,
-            /* OPTIONAL: addRowable: true, */
             columns: [
-                {{detail_fields}}
+                {{detail_columns}}
             ]
         });
+
+        /* VARIANT: detail-form - 상세 폼 (우측) */
+        /*
+        listener.form.postForm = webix.ui({
+            container: `${PGM}postForm`,
+            view: 'dataForm',
+            pgm: PGM,
+            elements: [
+                {
+                    cols: [
+                        {{detail_fields}}
+                    ]
+                }
+            ]
+        });
+        listener.form.postForm.formReadonly(true);
+        */
     };
 
     // === 마스터 행 클릭 → 상세 로드 ===
     listener.gridRow.click = function (record, grid) {
-        if (listener.grid.masterGrid === grid) {
+        if (grid === listener.grid.grid1) {
+            /* VARIANT: detail-grid */
             const param = listener.form.searchForm.getData();
             Object.assign(param, record);
             param.statement = "{{mapper_namespace}}.{{detail_sql_id}}";
 
             const callback = new Callback(function (result) {
                 if (result.resultCode === RESULT_CODE.OK) {
-                    listener.grid.detailGrid.setData(result.resultData);
+                    listener.grid.grid2.setData(result.resultData);
                 }
             });
             platform.post(platform.url.select, param, callback);
+
+            /* VARIANT: detail-form */
+            // listener.form.postForm.formReadonly(true);
+            // listener.form.postForm.setData(record);
         }
     };
 
@@ -101,18 +136,33 @@
 
         const callback = new Callback(function (result) {
             if (result.resultCode === RESULT_CODE.OK) {
-                listener.grid.masterGrid.setData(result.resultData);
-                listener.grid.detailGrid.setData([]);
+                listener.grid.grid1.setData(result.resultData);
+                /* VARIANT: detail-grid */
+                listener.grid.grid2.setData([]);
+                /* VARIANT: detail-form */
+                // listener.form.postForm.init();
+                // listener.form.postForm.formReadonly(true);
             }
         });
         platform.post(platform.url.select, param, callback);
     };
 
+    /* OPTIONAL: news block start */
+    // === 신규 ===
+    listener.button.news.click = function () {
+        /* VARIANT: detail-form */
+        // listener.form.postForm.formReset();
+        // listener.form.postForm.formReadonly(false);
+        // listener.form.postForm.editMode(EDIT_MODE.NEW);
+    };
+    /* OPTIONAL: news block end */
+
     // === 저장 ===
     listener.button.save.click = function () {
-        if (!listener.grid.detailGrid.checkGridValidation()) return;
+        /* VARIANT: detail-grid */
+        if (!listener.grid.grid2.checkGridValidation()) return;
 
-        const checkedData = listener.grid.detailGrid.getCheckedData();
+        const checkedData = listener.grid.grid2.getCheckedData();
         if (checkedData.length === 0) {
             popup.alert.show("선택된 데이터가 없습니다.");
             return;
@@ -122,46 +172,118 @@
             if (confirmYn) {
                 const param = new Param();
                 param.add("{{mapper_namespace}}.{{insert_sql_id}}", checkedData);
-                /* OPTIONAL: param.add("{{mapper_namespace}}.{{delete_sql_id}}", deleteData); */
 
                 const callback = new Callback(function (result) {
                     if (result.resultCode === RESULT_CODE.OK) {
-                        popup.alert.show("저장되었습니다.");
-                        listener.button.search.click();
+                        popup.alert.show("저장되었습니다.", function () {
+                            listener.button.search.click();
+                        });
                     }
                 });
                 platform.post(platform.url.saveAll, param.data, callback);
             }
         });
+
+        /* VARIANT: detail-form */
+        // if (!listener.form.postForm.formValidate()) return;
+        //
+        // popup.confirm.show("저장 하시겠습니까?", function (confirmYn) {
+        //     if (confirmYn) {
+        //         const formData = listener.form.postForm.getData();
+        //         formData.statement = "{{mapper_namespace}}.{{insert_sql_id}}";
+        //
+        //         const callback = new Callback(function (result) {
+        //             if (result.resultCode === RESULT_CODE.OK) {
+        //                 popup.alert.show("저장되었습니다.", function () {
+        //                     listener.button.search.click();
+        //                 });
+        //             }
+        //         });
+        //         platform.post(platform.url.save, formData, callback);
+        //     }
+        // });
     };
 
-    // === 저장 이벤트 (상세 그리드 개별) ===
-    listener.saveEvent = function (grid) {
-        if (!grid.checkGridValidation()) return;
-        const checkedData = grid.getCheckedData();
-        if (checkedData.length === 0) { popup.alert.show("선택된 데이터가 없습니다."); return; }
+    /* OPTIONAL: delete block start */
+    // === 삭제 ===
+    listener.button.del.click = function () {
+        /* VARIANT: detail-grid */
+        const checkedData = listener.grid.grid2.getCheckedData();
+        if (checkedData.length === 0) {
+            popup.alert.show("선택된 데이터가 없습니다.");
+            return;
+        }
 
-        popup.confirm.show("저장 하시겠습니까?", function (confirmYn) {
+        popup.confirm.show("삭제 하시겠습니까?", function (confirmYn) {
             if (confirmYn) {
                 const param = new Param();
-                param.add("{{mapper_namespace}}.{{insert_sql_id}}", checkedData);
+                param.add("{{mapper_namespace}}.{{delete_sql_id}}", checkedData);
+
                 const callback = new Callback(function (result) {
                     if (result.resultCode === RESULT_CODE.OK) {
-                        popup.alert.show("저장되었습니다.");
-                        listener.button.search.click();
+                        popup.alert.show("삭제되었습니다.", function () {
+                            listener.button.search.click();
+                        });
                     }
                 });
                 platform.post(platform.url.saveAll, param.data, callback);
             }
         });
     };
+    /* OPTIONAL: delete block end */
 
     // === 초기화 ===
     listener.button.init.click = function () {
         listener.form.searchForm.init();
-        listener.grid.masterGrid.setData([]);
-        listener.grid.detailGrid.setData([]);
+        listener.grid.grid1.setData([]);
+        /* VARIANT: detail-grid */
+        listener.grid.grid2.setData([]);
+        /* VARIANT: detail-form */
+        // listener.form.postForm.init();
+        // listener.form.postForm.formReadonly(true);
     };
+
+    /* OPTIONAL: tab structure start */
+    // === 탭 구조 VARIANT ===
+    // HTML에 탭 컨테이너 추가:
+    //   <div class="data-tab" th:id="|${PGM}tab1|"></div>
+    //   <div th:id="|${PGM}tabContent1|"></div>
+    //   <div th:id="|${PGM}tabContent2|" style="display:none;"></div>
+    //
+    // listener.tab.tab1 = webix.ui({
+    //     container: `${PGM}tab1`,
+    //     view: "DataTab",
+    //     pgm: PGM,
+    //     tabs: [
+    //         {id: "tab1", value: "{{tab1_title}}"},
+    //         {id: "tab2", value: "{{tab2_title}}"}
+    //     ]
+    // });
+    //
+    // listener.child.tab1 = function (tabId) {
+    //     if (tabId === "tab1") {
+    //         document.getElementById(`${PGM}tabContent1`).style.display = "";
+    //         document.getElementById(`${PGM}tabContent2`).style.display = "none";
+    //     } else if (tabId === "tab2") {
+    //         document.getElementById(`${PGM}tabContent1`).style.display = "none";
+    //         document.getElementById(`${PGM}tabContent2`).style.display = "";
+    //     }
+    // };
+    /* OPTIONAL: tab structure end */
+
+    /* OPTIONAL: activePgm sub-screen start */
+    // === activePgm으로 서브화면 진입 시 데이터 로드 ===
+    // listener.activePgm = function (param) {
+    //     if (param && param.data) {
+    //         listener.form.searchForm.setData(param.data);
+    //         listener.button.search.click();
+    //     }
+    // };
+    /* OPTIONAL: activePgm sub-screen end */
+
+    /* OPTIONAL: custom button handlers start */
+    {{custom_button_handlers}}
+    /* OPTIONAL: custom button handlers end */
 
     {{init_script}}
 

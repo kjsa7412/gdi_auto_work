@@ -23,6 +23,7 @@ framework:
     project_common: "com.sjinc.proj.common"
     project_modules: "com.sjinc.proj"
 
+  # {sub_group}은 3자리 코드 (module_group + sub_letter). 예: se+b=seb, dt+a=dta
   supported_artifacts:
     - type: "controller"
       extension: ".java"
@@ -79,6 +80,65 @@ framework:
 
   convention_priority: true
   convention_cache_path: "system/cache/convention/"
+
+  framework_source_fallback:
+    description: "정책이나 cache에서 구현 방법을 찾을 수 없을 때 프레임워크 소스 코드를 직접 확인"
+    applies_to: ["build", "fix"]
+    priority: "정책 → convention cache → 프레임워크 소스 → 에이전트 판단(최후 수단)"
+    source_roots:
+      framework:
+        path: "C:/gdi/src/main"
+        description: "GDI 프레임워크 전체 (Java, Resources, Templates, Static)"
+        includes:
+          java: "java/com/sjinc/**/*.java"
+          templates: "resources/templates/**/*.html"
+          mappers: "resources/mapper/**/*.xml"
+          help: "resources/mapper/sjerp/help/*.xml"
+          static_js: "resources/static/assets/js/**/*.js"
+      reference_java:
+        path: "C:/GitLap/FERP/FERP(TOBE)/ferp-backoffice/src/main/java/com/sjinc/sjerp/proj/dt"
+        description: "레퍼런스 Controller/Service — dt 모듈 전체 (31개 Java 파일)"
+      reference_xml:
+        path: "C:/GitLap/FERP/FERP(TOBE)/ferp-backoffice/src/main/resources/mapper/sjerp/dt"
+        description: "레퍼런스 XML Mapper — dt 모듈 전체 (97개 XML 파일)"
+      reference_html:
+        path: "C:/GitLap/FERP/FERP(TOBE)/ferp-backoffice/src/main/resources/templates/project/dt"
+        description: "레퍼런스 HTML Template — dt 모듈 전체 HTML 템플릿"
+    lookup_order:
+      - "1. framework (GDI 프레임워크) — 현재 프로젝트의 실제 구현"
+      - "2. reference_html/xml/java (FERP dt 레퍼런스) — 검증된 패턴 참조"
+      - "3. framework > reference 불일치 시 framework 우선"
+    trigger_condition: >
+      다음 상황에서 프레임워크 소스 참조를 수행한다:
+      1. 정책 파일(system/policies/**)에 해당 구현 패턴이 정의되어 있지 않을 때
+      2. convention cache에서 필요한 정보를 찾을 수 없을 때
+      3. 구현해야 하는 UI 컴포넌트/이벤트/API 호출 방식이 불확실할 때
+      4. 에이전트가 추론한 구현 방식의 정확성을 검증해야 할 때
+    procedure:
+      - step: 1
+        action: "정책 파일 확인"
+        detail: "system/policies/framework/*.yml에서 해당 패턴 검색"
+      - step: 2
+        action: "convention cache 확인"
+        detail: "system/cache/convention/*.txt에서 테이블/코드/함수 정보 검색"
+      - step: 3
+        action: "프레임워크 소스 검색"
+        detail: >
+          Grep 도구로 프레임워크 소스에서 관련 키워드를 검색한다.
+          예: 더블클릭 구현법 → grep 'dblclick' templates/project/**/*.html
+          예: 파일 업로드 → grep 'fileMulti\|saveFile' templates/project/**/*.html
+          예: 커스텀 코드헬프 → grep 'DATA_CODE_TYPE.custom' templates/project/**/*.html
+      - step: 4
+        action: "패턴 검증"
+        detail: "최소 2개 이상 파일에서 동일 패턴이 사용되는지 확인. 1개만 있으면 실험적 패턴일 수 있으므로 주의"
+      - step: 5
+        action: "구현 적용 + 정책 반영"
+        detail: "확인된 패턴을 코드에 적용하고, 해당 패턴을 정책 파일에 추가하여 재발 방지"
+    rules:
+      - "build/fix 모두에서 정책 미비 시 프레임워크 소스를 직접 검색하여 정답을 찾는다"
+      - "확인된 패턴은 반드시 정책에 반영하여 동일 문제 재발을 방지한다"
+      - "프레임워크 소스 참조 시 최소 2개 이상 파일에서 동일 패턴 확인 후 채택"
+      - "에이전트 추론만으로 구현하지 않는다 — 반드시 실제 소스에서 검증 후 적용"
 
   unresolved_policy:
     action: "block_and_report"

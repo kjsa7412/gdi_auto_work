@@ -5,51 +5,218 @@
 
     <!-- 목록 조회 -->
     <select id="{{select_sql_id}}" resultType="java.util.Map">
+        /*{{mapper_namespace}}.{{select_sql_id}}*/
         SELECT
             {{grid_columns_sql}}
         FROM {{main_table}} a
-        /* OPTIONAL: LEFT OUTER JOIN {{lookup_table}} b ON a.comp_cd = b.comp_cd AND a.xxx = b.xxx */
-        WHERE a.comp_cd = #{login_comp_cd}
-        <if test="P_brndz_cd != null and P_brndz_cd != ''">
-            AND a.brndz_cd = #{P_brndz_cd}
-        </if>
+        {{join_clauses}}
+        WHERE 1=1
         {{search_conditions_sql}}
         ORDER BY {{order_columns}}
     </select>
 
-    /* OPTIONAL: upsert block start */
-    <!-- 저장 (upsert) -->
+    /* OPTIONAL: paging block start */
+    <!-- 목록 카운트 (페이징용) -->
+    <select id="{{select_sql_id}}Count" resultType="int">
+        /*{{mapper_namespace}}.{{select_sql_id}}Count*/
+        SELECT COUNT(*) AS cnt
+        FROM {{main_table}} a
+        {{join_clauses}}
+        WHERE 1=1
+        {{search_conditions_sql}}
+    </select>
+    /* OPTIONAL: paging block end */
+
+    /* OPTIONAL: upsert-onconflict block start */
+    <!-- 저장 (ON CONFLICT UPSERT) -->
     <insert id="{{insert_sql_id}}">
+        /*{{mapper_namespace}}.{{insert_sql_id}}*/
         INSERT INTO {{main_table}} (
-            comp_cd,
             {{insert_columns}},
             firs_reg_pgm_id, firs_reg_dts, firs_reg_user_id, firs_reg_ip,
             fina_reg_pgm_id, fina_reg_dts, fina_reg_user_id, fina_reg_ip
         ) VALUES (
-            #{login_comp_cd},
             {{insert_values}},
-            #{reg_pgm_id}, now(), #{login_emp_no}, #{login_user_ip},
-            #{reg_pgm_id}, now(), #{login_emp_no}, #{login_user_ip}
+            #{reg_pgm_id}, now(), #{login_user_id}, #{login_user_ip},
+            #{reg_pgm_id}, now(), #{login_user_id}, #{login_user_ip}
         )
-        <if test='allow_update == "Y"'>
         ON CONFLICT ({{pk_columns}})
         DO UPDATE SET
             {{update_set_columns}},
-            fina_reg_pgm_id = excluded.firs_reg_pgm_id,
+            fina_reg_pgm_id = #{reg_pgm_id},
             fina_reg_dts = now(),
-            fina_reg_user_id = excluded.firs_reg_user_id,
-            fina_reg_ip = excluded.firs_reg_ip
-        </if>
+            fina_reg_user_id = #{login_user_id},
+            fina_reg_ip = #{login_user_ip}
     </insert>
-    /* OPTIONAL: upsert block end */
+    /* OPTIONAL: upsert-onconflict block end */
+
+    /* OPTIONAL: upsert-with block start */
+    <!-- 저장 (WITH UPSERT) -->
+    <!--
+    <insert id="{{insert_sql_id}}">
+        /*{{mapper_namespace}}.{{insert_sql_id}}*/
+        WITH sdata AS (
+        UPDATE {{main_table}}
+        SET {{update_set_columns}},
+            fina_reg_pgm_id = #{reg_pgm_id},
+            fina_reg_dts = current_timestamp,
+            fina_reg_user_id = #{login_user_id},
+            fina_reg_ip = #{login_user_ip}
+        WHERE {{pk_conditions}}
+        RETURNING *
+        )
+        INSERT INTO {{main_table}} (
+            {{insert_columns}},
+            firs_reg_pgm_id, firs_reg_dts, firs_reg_user_id, firs_reg_ip
+        )
+        SELECT
+            {{insert_values}},
+            #{reg_pgm_id}, current_timestamp, #{login_user_id}, #{login_user_ip}
+        WHERE NOT EXISTS (SELECT * FROM sdata)
+    </insert>
+    -->
+    /* OPTIONAL: upsert-with block end */
 
     /* OPTIONAL: delete block start */
     <!-- 삭제 -->
     <delete id="{{delete_sql_id}}">
+        /*{{mapper_namespace}}.{{delete_sql_id}}*/
         DELETE FROM {{main_table}}
-        WHERE comp_cd = #{login_comp_cd}
-          AND {{delete_conditions}}
+        WHERE {{delete_conditions}}
     </delete>
     /* OPTIONAL: delete block end */
+
+    /* OPTIONAL: choose-when dynamic branch start */
+    <!-- 동적 분기 조건 (CHOOSE/WHEN) -->
+    <!--
+    <select id="{{select_sql_id}}ByType" resultType="java.util.Map">
+        /*{{mapper_namespace}}.{{select_sql_id}}ByType*/
+        SELECT
+            {{grid_columns_sql}}
+        FROM {{main_table}} a
+        WHERE 1=1
+        <choose>
+            <when test='search_type == "A"'>
+                AND a.type_cd = 'A'
+            </when>
+            <when test='search_type == "B"'>
+                AND a.type_cd = 'B'
+            </when>
+            <otherwise>
+                AND a.type_cd IS NOT NULL
+            </otherwise>
+        </choose>
+        ORDER BY {{order_columns}}
+    </select>
+    -->
+    /* OPTIONAL: choose-when dynamic branch end */
+
+    /* OPTIONAL: foreach-in start */
+    <!-- FOREACH IN 절 (배열 파라미터) -->
+    <!--
+    <select id="{{select_sql_id}}ByIds" resultType="java.util.Map">
+        /*{{mapper_namespace}}.{{select_sql_id}}ByIds*/
+        SELECT
+            {{grid_columns_sql}}
+        FROM {{main_table}} a
+        WHERE 1=1
+          AND a.{{pk_column}} IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        ORDER BY {{order_columns}}
+    </select>
+    -->
+    /* OPTIONAL: foreach-in end */
+
+    /* OPTIONAL: fn-function call start */
+    <!-- fn_* 함수 호출 (코드명 변환) -->
+    <!--
+    <select id="{{select_sql_id}}WithCodeNm" resultType="java.util.Map">
+        /*{{mapper_namespace}}.{{select_sql_id}}WithCodeNm*/
+        SELECT
+            a.*,
+            fn_code_nm('{{code_group}}', a.{{code_column}}) AS {{code_column}}_nm
+        FROM {{main_table}} a
+        WHERE 1=1
+        {{search_conditions_sql}}
+        ORDER BY {{order_columns}}
+    </select>
+    -->
+    /* OPTIONAL: fn-function call end */
+
+    /* OPTIONAL: cdata escape start */
+    <!-- CDATA 부등호 이스케이프 -->
+    <!--
+    <select id="{{select_sql_id}}Range" resultType="java.util.Map">
+        /*{{mapper_namespace}}.{{select_sql_id}}Range*/
+        SELECT
+            {{grid_columns_sql}}
+        FROM {{main_table}} a
+        WHERE 1=1
+        <if test="fr_dt != null and fr_dt != ''">
+            <![CDATA[ AND a.reg_dt >= #{fr_dt} ]]>
+        </if>
+        <if test="to_dt != null and to_dt != ''">
+            <![CDATA[ AND a.reg_dt <= #{to_dt} ]]>
+        </if>
+        ORDER BY {{order_columns}}
+    </select>
+    -->
+    /* OPTIONAL: cdata escape end */
+
+    /* OPTIONAL: coalesce null handling start */
+    <!-- COALESCE NULL 처리 -->
+    <!--
+    <select id="{{select_sql_id}}Coalesce" resultType="java.util.Map">
+        /*{{mapper_namespace}}.{{select_sql_id}}Coalesce*/
+        SELECT
+            a.{{pk_column}},
+            COALESCE(a.{{nullable_column}}, '{{default_value}}') AS {{nullable_column}}
+        FROM {{main_table}} a
+        WHERE 1=1
+        {{search_conditions_sql}}
+        ORDER BY {{order_columns}}
+    </select>
+    -->
+    /* OPTIONAL: coalesce null handling end */
+
+    /* OPTIONAL: procedure call start */
+    <!-- 프로시저 호출 (CALL sp_*) -->
+    <!--
+    <select id="{{procedure_sql_id}}" statementType="CALLABLE" resultType="java.util.Map">
+        /*{{mapper_namespace}}.{{procedure_sql_id}}*/
+        CALL sp_{{procedure_name}}(
+            #{param1, mode=IN, jdbcType=VARCHAR},
+            #{param2, mode=IN, jdbcType=VARCHAR},
+            #{login_user_id, mode=IN, jdbcType=VARCHAR}
+        )
+    </select>
+    -->
+    /* OPTIONAL: procedure call end */
+
+    /* OPTIONAL: delete-insert replace start */
+    <!-- DELETE+INSERT 교체 패턴 -->
+    <!--
+    <delete id="{{delete_before_insert_sql_id}}">
+        /*{{mapper_namespace}}.{{delete_before_insert_sql_id}}*/
+        DELETE FROM {{main_table}}
+        WHERE {{fk_conditions}}
+    </delete>
+
+    <insert id="{{reinsert_sql_id}}">
+        /*{{mapper_namespace}}.{{reinsert_sql_id}}*/
+        INSERT INTO {{main_table}} (
+            {{insert_columns}},
+            firs_reg_pgm_id, firs_reg_dts, firs_reg_user_id, firs_reg_ip,
+            fina_reg_pgm_id, fina_reg_dts, fina_reg_user_id, fina_reg_ip
+        ) VALUES (
+            {{insert_values}},
+            #{reg_pgm_id}, now(), #{login_user_id}, #{login_user_ip},
+            #{reg_pgm_id}, now(), #{login_user_id}, #{login_user_ip}
+        )
+    </insert>
+    -->
+    /* OPTIONAL: delete-insert replace end */
 
 </mapper>

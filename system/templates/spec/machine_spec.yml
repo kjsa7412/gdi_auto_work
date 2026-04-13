@@ -44,4 +44,26 @@ service:
   required: false
   class_name: null
 
+button_events: []
+  # PPT [버튼] 섹션에서 추출한 버튼별 이벤트 정의
+  # - slot: "etc1"
+  #   label: "커스텀버튼명"
+  #   action: "PPT 원문 동작 설명"
+  #   conditions: ["조건1", "조건2"]
+  #   target_screen: "XXX011"
+
+business_rules: []
+  # PPT [데이터], [그리드], [인풋폼] 섹션에서 추출한 비즈니스 규칙
+  # - rule_id: "BR-001"
+  #   source: "[데이터]"
+  #   description: "PPT 원문"
+  #   type: "trigger"
+
+sql_artifacts: []
+  # 추가 SQL 산출물 요구 (트리거, DDL 보완 등)
+  # - type: "trigger"
+  #   name: "fn_xxx"
+  #   description: "설명"
+  #   target_table: "테이블명"
+
 unresolved: []
